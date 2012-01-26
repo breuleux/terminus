@@ -1,0 +1,50 @@
+
+<html>
+  <head>
+    <meta charset="utf-8">
+    <title>Terminus</title>
+    <link rel="stylesheet" href="/resources/style.css" />
+    <script src="/resources/jquery.js"></script>
+    <script src="/resources/terminus.js"></script>
+  </head>
+  <body>
+    <div id="font_control_div">
+      <span id="font_control" class="term_area">X</div>
+    </div>
+    <div id="terminal" class="term_area" style="height:100%; overflow:auto;">
+      <!-- <div id="scrollback"></div> -->
+      <!-- <div id="content"></div> -->
+    </div>
+    <script>
+      $(document).ready(function() {
+        <!-- content = $("#content"); -->
+        terminal = $("#terminal");
+        d_terminal = terminal[0];
+        <!-- terminal.append($("#font_control").width()); -->
+        <!-- terminal.append(" x "); -->
+        <!-- terminal.append($("#font_control").height()); -->
+        term = Terminus(terminal);
+
+      <!-- content = $("#content"); -->
+      <!-- command = $("#command"); -->
+      <!-- command.bind('keypress', function(e) { -->
+      <!--   if (e.which == 13) { -->
+      <!--     content.append(command.val()); -->
+      <!--     content.append("<br />"); -->
+      <!--     command.val(""); -->
+      <!--   }; -->
+      <!-- }); -->
+
+      <!-- form = $("#prompt_form"); -->
+      <!-- form.submit(function() { -->
+      <!--   content.append(command.val()); -->
+      <!--   command.text(""); -->
+      <!--   return false; -->
+      <!-- }) -->
+      <!-- content.append("test2"); -->
+      });
+    </script>
+  </body>
+</html>
+
+

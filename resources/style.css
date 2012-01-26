@@ -1,0 +1,27 @@
+
+.cursor {
+}
+
+.term_area {
+    background-color: black;
+    color: white;
+    font-family: monospace;
+    font-size: 12pt;
+    visibility: visible;
+}
+
+.cursor {
+    color: lime;
+}
+
+#font_control {
+    visibility: hidden;
+}
+
+#font_control_div {
+    height: 0px;
+}
+
+
+
+

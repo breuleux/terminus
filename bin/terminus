@@ -1,0 +1,10 @@
+#!/usr/bin/python
+
+from terminus_server.core import *
+
+import sys
+
+path = sys.argv[1]
+app = Terminus(path, Proc())
+app.run(host='localhost', port=8080)
+
