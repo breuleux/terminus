@@ -64,7 +64,10 @@ class Proc:
                 data += self.queue.get_nowait()
             except Empty:
                 break
+        if data == "":
+            data += self.queue.get(True)
         # print 'recv:', data
+        # data += self.queue.get(True)
         return data
 
 
@@ -94,7 +97,8 @@ class Terminus:
         @self.app.post('/send')
         def send():
             self.handler.send(request.forms.data)
-            return {'data': self.handler.receive()}
+            return {'data': ''}
+            # return {'data': self.handler.receive()}
 
         @self.app.route('/resources/<name>')
         def get_resource(name):
@@ -107,7 +111,7 @@ class Terminus:
     def resource(self, name):
         return static_file(name, root = self.path)
 
-    def run(self, host, port):
-        run(self.app, host = host, port = port)
+    def run(self, **kwargs):
+        run(self.app, **kwargs)
 
 
