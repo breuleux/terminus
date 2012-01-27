@@ -14,42 +14,101 @@ function obj() {
     return self;
 }
 
-function Screen(nlines, ncols, char_height, char_width) {
+
+function makenode(type) {
+    return document.createElement(type);
+}
+
+function makediv() {
+    return makenode('div');
+}
+
+function Nest(element) {
     var self = obj();
 
-    // INITIALIZE
-    self.scrollback = [];
-    
-    self.nlines = nlines;
-    self.ncols = ncols;
-    self.char_height = char_height;
-    self.char_width = char_width;
+    self.n = 1;
+    self.element = element;
+    self.children = {};
 
-    self.matrix = [];
-    self.lines = [];
-    self.modified = [];
-    self.ext = []
-    self.virgin = [];
-    self.heights = [];
+    self.get_child = function(id, create) {
+        if (create && (!id || self.children[id] === undefined)) {
+            id = self.set_child(id, EmptyNest());
+        }
+        return self.children[id];
+    }
+
+    self.find = function(nest, create) {
+        try {
+            return self._find(nest, create);
+        }
+        catch(err) {
+            if (err == 'no_nest') {
+                // Errors from ._find might be incomplete.
+                throw "The nest [" + nest + "] does not exist.";
+            }
+            else {
+                throw err;
+            }
+        }
+    }
+
+    self._find = function(nest, create) {
+        if (!nest.length) {
+            return self;
+        }
+        var first = nest[0];
+        var child = self.get_child(first, create);
+        if (child === undefined) {
+            throw 'no_nest'; // "The nest [" + nest + "] does not exist.";
+        }
+        return child.find(nest.slice(1), create);
+    }
+    return self;
+}
+
+function DivNest(div) {
+    var self = Nest(div);
+
+    self.set_child = function(id, child) {
+        if (id == 0) {
+            id = self.n++;
+        }
+        var existing = self.children[id]
+        if (existing !== undefined) {
+            self.element.replaceChild(child.element,
+                                      existing.element);
+            existing.set = undefined;
+        }
+        else {
+            self.element.appendChild(child.element)
+        }
+        self.children[id] = child;
+        child.set = function (new_child) {
+            self.set_child(id, new_child);
+        }
+        return id;
+    }
+
+    self.append = function(sub_element) {
+        self.element.appendChild(sub_element)
+    }
+
+    return self;
+}
+
+function EmptyNest() {
+    // var div = document.createElement('div');
+    var div = makediv();
+    return DivNest(div);
+}
+
+
+function Screen(nlines, ncols, char_height, char_width) {
+    var self = obj();
 
     self.no_text_properties = function() {
         return new Array();
     };
-
-    self.text_properties = self.no_text_properties();
-    self.default_character = "&nbsp;";
-
-    for (var i = 0; i < self.nlines; i++) {
-        self.matrix[i] = [];
-        for (var j = 0; j < self.ncols; j++) {
-            self.matrix[i][j] = [self.default_character,
-                                 self.no_text_properties()];
-        }
-        self.virgin[i] = true;
-        self.heights[i] = 1;
-        self.modified[i] = true;
-        self.ext[i] = false;
-    }
 
     self.total_height = function() {
         var total = 0;
@@ -68,6 +127,48 @@ function Screen(nlines, ncols, char_height, char_width) {
                 break;
         }
         return total;
+    }
+
+    self.resize = function(nlines, ncols) {
+        // -- DON'T USE --
+        // Scroll lost lines up
+        // Add new lines down
+        // Remove rightmost characters
+        // Add characters to the right
+
+        if (ncols > self.ncols) {
+            var old_ncol = self.ncols;
+            self.ncols = ncols;
+            for (var i = 0; i < self.nlines; i++){
+                self.clear_line(old_ncol);
+            }
+        }
+        else if (ncols < self.ncols) {
+            self.ncols = ncols;
+            for (var i = 0; i < self.nlines; i++){
+                self.matrix[i].splice(self.ncols);
+            }
+        }
+
+        if (nlines > self.nlines) {
+            for (var i = self.nlines; i < nlines; i++){
+                self.matrix[i] = [];
+                self.clear_line(i);
+            }
+        }
+        else if (nlines < self.nlines) {
+            for (var i = self.nlines; i < nlines; i++){
+                self.scroll();
+            }
+            for (var i = self.nlines; i < nlines; i++){
+                self.matrix[i] = undefined;
+                self.lines[i] = undefined;
+                self.virgin[i] = undefined;
+                self.modified[i] = undefined;
+                self.ext[i] = undefined;
+            }
+        }
+        self.nlines = nlines;
     }
 
     // CURSOR
@@ -97,7 +198,10 @@ function Screen(nlines, ncols, char_height, char_width) {
 
     self.cursor_here = function() {
         self.push_prop(self.line, self.column, 200);
-        self.touch_line(self.line);
+        self.modified[self.line] = true;
+
+        // self.touch_line(self.line);
+
         // self.modified[self.line] = true;
         // self.ext[self.line] = false;
         // self.virgin[self.line] = false;
@@ -256,10 +360,40 @@ function Screen(nlines, ncols, char_height, char_width) {
         self.write_at(self.line, self.column, things);
     }
 
+    // INITIALIZE
+    self.scrollback = [];
+    
+    self.nlines = nlines;
+    self.ncols = ncols;
+    self.char_height = char_height;
+    self.char_width = char_width;
+
+    self.matrix = [];
+    self.lines = [];
+    self.modified = [];
+    self.ext = []
+    self.virgin = [];
+    self.heights = [];
+
+    self.text_properties = self.no_text_properties();
+    self.default_character = "&nbsp;";
+
+    for (var i = 0; i < self.nlines; i++) {
+        self.matrix[i] = [];
+        for (var j = 0; j < self.ncols; j++) {
+            self.matrix[i][j] = [self.default_character,
+                                 self.no_text_properties()];
+        }
+        self.virgin[i] = true;
+        self.heights[i] = 1;
+        self.modified[i] = true;
+        self.ext[i] = false;
+    }
+
     self.write_ext = function(type, data, parameters) {
         if (type == 'html') {
             self.next_line();
-            var div = document.createElement('div');
+            var div = makediv();
             if (parameters.height) { $(div).height(parameters.height); }
             if (parameters.width) { $(div).width(parameters.width); }
             div.innerHTML = data;
@@ -301,7 +435,7 @@ function Screen(nlines, ncols, char_height, char_width) {
     }
 
     self.send_line_to_scroll = function(i) {
-        var div = document.createElement('div');
+        var div = makediv();
         var line = self.get_line(i);
         div.appendChild(self.lines[i]);
         self.scrollback.push(div);
@@ -503,7 +637,7 @@ function Screen(nlines, ncols, char_height, char_width) {
             }
             s += c;
         }
-        var span = document.createElement('span');
+        var span = makenode('span');
         span.innerHTML = s;
         self.lines[i] = span;
     };
@@ -542,21 +676,21 @@ function Terminus(div) {
 
     self.n_scrolls = 10;
     self.scroll_block_size = 100;
-    var scrollbacks = document.createElement('div');
+    var scrollbacks = makediv();
     scrollbacks.setAttribute('id', 'scrollbacks');
     self.scrollbacks = $(scrollbacks);
     self.d_terminal.appendChild(scrollbacks);
 
     self.rotate_scrollback = function () {
         self.scrollbacks.children().first().remove();
-        var new_div = document.createElement('div');
+        var new_div = makediv();
         self.scrollbacks.append(new_div);
     }
 
     self.clear_scrollback = function(x) {
         self.scrollbacks.empty();
         for (var i = 0; i < self.n_scrolls; i++) {
-            var new_div = document.createElement('div');
+            var new_div = makediv();
             self.scrollbacks.append(new_div);
         }
     }
@@ -580,10 +714,10 @@ function Terminus(div) {
     // CONTENTS
     
     var contents = [];
-    var container = document.createElement('div');
+    var container = makediv();
     container.setAttribute('id', 'contents');
     for (var i = 0; i < self.nlines; i++) {
-        var new_div = document.createElement('div');
+        var new_div = makediv();
         new_div.setAttribute('id', 'content' + i);
         contents.push(new_div);
         container.appendChild(new_div);
@@ -603,7 +737,7 @@ function Terminus(div) {
     // text area, check what appears in it, and we'll send the
     // contents over to the pty. I don't yet know how to make middle
     // click paste work, unfortunately, so we'll make do with Ctrl+V.
-    var textarea = document.createElement('textarea');
+    var textarea = makenode('textarea');
     self.textarea = $(textarea);
     self.textarea.css('height', 0).css('width', 0);
     self.d_terminal.appendChild(textarea);

@@ -65,7 +65,10 @@ class Proc:
             except Empty:
                 break
         if data == "":
-            data += self.queue.get(True)
+            try:
+                data += self.queue.get(True, 1)
+            except Empty:
+                pass
         # print 'recv:', data
         # data += self.queue.get(True)
         return data
