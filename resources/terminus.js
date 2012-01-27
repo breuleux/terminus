@@ -360,6 +360,48 @@ function Screen(nlines, ncols, char_height, char_width) {
         self.write_at(self.line, self.column, things);
     }
 
+    self.write_html_line = function(node) {
+        var line = self.line; // - 1;
+        self.lines[line] = node;
+        self.modified[line] = true;
+        self.ext[line] = true;
+        self.virgin[line] = false;
+        var h = $(node).height();
+        if (h != 0) {
+            self.heights[line] = Math.ceil(h / self.char_height);
+        }
+        else {
+            setTimeout(function () {
+                    self.heights[line] = Math.ceil($(node).height() / self.char_height);
+                }, 100);
+        }
+    }
+
+    self.next_line = function() {
+        var next = (self.line + 1) % self.nlines;
+        if (next == 0) {
+            self.no_cursor_here();
+            self.scroll();
+            self.move_to(self.line, 0);
+        }
+        else {
+            self.move_to(next, 0);
+        }
+    }
+
+    self.get_line = function(i) {
+        if (self.modified[i] && !self.ext[i])
+            self.make_line(i);
+        return self.lines[i];
+    }
+
+    self.send_line_to_scroll = function(i) {
+        var div = makediv();
+        var line = self.get_line(i);
+        div.appendChild(self.lines[i]);
+        self.scrollback.push(div);
+    }
+
     // INITIALIZE
     self.scrollback = [];
     
@@ -388,57 +430,6 @@ function Screen(nlines, ncols, char_height, char_width) {
         self.heights[i] = 1;
         self.modified[i] = true;
         self.ext[i] = false;
-    }
-
-    self.write_ext = function(type, data, parameters) {
-        if (type == 'html') {
-            self.next_line();
-            var div = makediv();
-            if (parameters.height) { $(div).height(parameters.height); }
-            if (parameters.width) { $(div).width(parameters.width); }
-            div.innerHTML = data;
-            var line = self.line - 1;
-            self.lines[line] = div
-            self.modified[line] = true;
-            self.ext[line] = true;
-            self.virgin[line] = false;
-            if (parameters.height) {
-                self.heights[line] = (parameters.height / self.char_height);
-            }
-            else {
-                setTimeout(function () {
-                        self.heights[line] = Math.ceil($(div).height() / self.char_height);
-                    }, 5);
-            }
-        }
-        else if (type == 'js') {
-            eval(data);
-        }
-    }
-
-    self.next_line = function() {
-        var next = (self.line + 1) % self.nlines;
-        if (next == 0) {
-            self.no_cursor_here();
-            self.scroll();
-            self.move_to(self.line, 0);
-        }
-        else {
-            self.move_to(next, 0);
-        }
-    }
-
-    self.get_line = function(i) {
-        if (self.modified[i] && !self.ext[i])
-            self.make_line(i);
-        return self.lines[i];
-    }
-
-    self.send_line_to_scroll = function(i) {
-        var div = makediv();
-        var line = self.get_line(i);
-        div.appendChild(self.lines[i]);
-        self.scrollback.push(div);
     }
 
     // KILL
@@ -641,6 +632,33 @@ function Screen(nlines, ncols, char_height, char_width) {
         span.innerHTML = s;
         self.lines[i] = span;
     };
+
+
+    self.write_ext = function(type, data, parameters) {
+        if (type == 'html') {
+            self.next_line();
+            var div = makediv();
+            if (parameters.height) { $(div).height(parameters.height); }
+            if (parameters.width) { $(div).width(parameters.width); }
+            div.innerHTML = data;
+            var line = self.line - 1;
+            self.lines[line] = div
+            self.modified[line] = true;
+            self.ext[line] = true;
+            self.virgin[line] = false;
+            if (parameters.height) {
+                self.heights[line] = (parameters.height / self.char_height);
+            }
+            else {
+                setTimeout(function () {
+                        self.heights[line] = Math.ceil($(div).height() / self.char_height);
+                    }, 5);
+            }
+        }
+        else if (type == 'js') {
+            eval(data);
+        }
+    }
 
     return self;
 }
