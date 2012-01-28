@@ -23,6 +23,7 @@ function makediv() {
     return makenode('div');
 }
 
+
 function Nest(element) {
     var self = obj();
 
@@ -130,7 +131,6 @@ function Screen(nlines, ncols, char_height, char_width) {
     }
 
     self.resize = function(nlines, ncols) {
-        // -- DON'T USE --
         // Scroll lost lines up
         // Add new lines down
         // Remove rightmost characters
@@ -172,15 +172,11 @@ function Screen(nlines, ncols, char_height, char_width) {
     }
 
     // CURSOR
-    self.line = 0;
-    self.column = 0;
-    self.cursor_blink = false;
 
     self.save_cursor = function() {
         self.stored_line = self.line;
         self.stored_column = self.column;
     }
-    self.save_cursor(); // init save to (0, 0)
 
     self.restore_cursor = function() {
         self.line = self.stored_line;
@@ -190,7 +186,6 @@ function Screen(nlines, ncols, char_height, char_width) {
     self.show_cursor = function() {
         self.cursor_visible = true;
     }
-    self.show_cursor();
 
     self.hide_cursor = function() {
         self.cursor_visible = false;
@@ -402,36 +397,6 @@ function Screen(nlines, ncols, char_height, char_width) {
         self.scrollback.push(div);
     }
 
-    // INITIALIZE
-    self.scrollback = [];
-    
-    self.nlines = nlines;
-    self.ncols = ncols;
-    self.char_height = char_height;
-    self.char_width = char_width;
-
-    self.matrix = [];
-    self.lines = [];
-    self.modified = [];
-    self.ext = []
-    self.virgin = [];
-    self.heights = [];
-
-    self.text_properties = self.no_text_properties();
-    self.default_character = "&nbsp;";
-
-    for (var i = 0; i < self.nlines; i++) {
-        self.matrix[i] = [];
-        for (var j = 0; j < self.ncols; j++) {
-            self.matrix[i][j] = [self.default_character,
-                                 self.no_text_properties()];
-        }
-        self.virgin[i] = true;
-        self.heights[i] = 1;
-        self.modified[i] = true;
-        self.ext[i] = false;
-    }
-
     // KILL
 
     self.kill_line_segment = function (line, column0, column1) {
@@ -479,8 +444,6 @@ function Screen(nlines, ncols, char_height, char_width) {
     }
 
     // SCROLLING
-    self.scroll0 = 0;
-    self.scroll1 = self.nlines;
 
     self.rotate = function(arr) {
         var rval = arr.slice(0, self.scroll0);
@@ -490,13 +453,16 @@ function Screen(nlines, ncols, char_height, char_width) {
         return rval;
     }
 
-    self.clear_line = function(i) {
-        for (var j = 0; j < self.ncols; j++) {
+    self.clear_line = function(i, start_col) {
+        if (!start_col)
+            start_col = 0;
+        for (var j = start_col; j < self.ncols; j++) {
             self.matrix[i][j] = [self.default_character,
                                  self.no_text_properties()];
         }
         self.touch_line(i);
-        self.virgin[i] = true;
+        if (!start_col)
+            self.virgin[i] = true;
         // self.modified[i] = true;
         // self.ext[i] = false;
     }
@@ -628,44 +594,65 @@ function Screen(nlines, ncols, char_height, char_width) {
             }
             s += c;
         }
+        // var span = document.createElement('span');
         var span = makenode('span');
         span.innerHTML = s;
         self.lines[i] = span;
     };
 
 
-    self.write_ext = function(type, data, parameters) {
-        if (type == 'html') {
-            self.next_line();
-            var div = makediv();
-            if (parameters.height) { $(div).height(parameters.height); }
-            if (parameters.width) { $(div).width(parameters.width); }
-            div.innerHTML = data;
-            var line = self.line - 1;
-            self.lines[line] = div
-            self.modified[line] = true;
-            self.ext[line] = true;
-            self.virgin[line] = false;
-            if (parameters.height) {
-                self.heights[line] = (parameters.height / self.char_height);
-            }
-            else {
-                setTimeout(function () {
-                        self.heights[line] = Math.ceil($(div).height() / self.char_height);
-                    }, 5);
-            }
-        }
-        else if (type == 'js') {
-            eval(data);
-        }
-    }
+    // INITIALIZE
+    self.scrollback = [];
+    
+    var nlines = nlines;
+    var ncols = ncols;
+    self.char_height = char_height;
+    self.char_width = char_width;
+
+    self.matrix = [];
+    self.lines = [];
+    self.modified = [];
+    self.ext = []
+    self.virgin = [];
+    self.heights = [];
+
+    self.text_properties = self.no_text_properties();
+    self.default_character = "&nbsp;";
+
+    self.nlines = 0;
+    self.ncols = 0;
+    self.resize(nlines, ncols);
+
+    self.scroll0 = 0;
+    self.scroll1 = self.nlines;
+
+    self.line = 0;
+    self.column = 0;
+    self.cursor_blink = false;
+    self.save_cursor(); // init save to (0, 0)
+    self.show_cursor();
+    
+
+    // for (var i = 0; i < self.nlines; i++) {
+    //     self.matrix[i] = [];
+    //     self.clear_line(i);
+    //     // for (var j = 0; j < self.ncols; j++) {
+    //     //     self.matrix[i][j] = [self.default_character,
+    //     //                          self.no_text_properties()];
+    //     // }
+    //     // self.virgin[i] = true;
+    //     // self.heights[i] = 1;
+    //     // self.modified[i] = true;
+    //     // self.ext[i] = false;
+    // }
 
     return self;
 }
 
 
 function Terminus(div) {
-    var self = obj();
+    var self = Nest(div); // obj();
+
 
     // HANDY POINTERS
 
@@ -674,13 +661,25 @@ function Terminus(div) {
 
     // SIZE
 
-    self.char_width = $("#font_control").width();
-    self.char_height = $("#font_control").height();
+    self.adjust_size = function () {        
+        self.char_width = $("#font_control").width();
+        self.char_height = $("#font_control").height();
         
-    self.nlines = Math.floor(self.terminal.height() / self.char_height) - 0;
-    self.ncols = Math.floor(self.terminal.width() / self.char_width) - 2;
+        self.nlines = Math.floor(self.terminal.height() / self.char_height) - 0;
+        self.ncols = Math.floor(self.terminal.width() / self.char_width) - 2;
 
-    $.post('/setsize', {h: self.nlines, w: self.ncols});
+        // for (var i = 0; i < self.screens.length; i++) {
+        //     self.screens[i].resize(self.nlines, self.ncols);
+        // }
+
+        $.post('/setsize', {h: self.nlines, w: self.ncols});
+    }
+
+    self.adjust_size();
+
+    // setInterval(function () {
+    //         self.adjust_size();
+    //     }, 100);
 
     // var block = document.createElement('div');
     // var diff = self.terminal.height() - (self.nlines * self.char_height);
@@ -690,25 +689,46 @@ function Terminus(div) {
     // self.d_terminal.appendChild(block);
 
 
+    // STRUCTURE
+    // var inner = '';
+    // inner += '<div id="top">A</div>';
+    // inner += '<table height=100% id="middle"><tr>';
+    // inner += '<td><div id="left"></div></td>';
+    // inner += '<td><div id="center" style="height:100%; overflow:auto;></div></td>';
+    // inner += '<td><div id="right"></div></td>';
+    // inner += '</table>';
+    // inner += '<div id="bottom">D</div>';
+    // self.d_terminal.innerHTML = inner;
+
+    self.add_thing = function(thing) {
+        self.d_terminal.appendChild(thing);
+        // $('#center').append(thing);
+    }
+    self.scroll_to_top = function() {
+        // var x = $('#center')[0];
+        // x.scrollTop = x.scrollHeight + 100;
+        self.d_terminal.scrollTop = self.d_terminal.scrollHeight + 100;
+    }
+
     // SCROLLING
 
     self.n_scrolls = 10;
     self.scroll_block_size = 100;
-    var scrollbacks = makediv();
+    var scrollbacks = document.createElement('div');
     scrollbacks.setAttribute('id', 'scrollbacks');
     self.scrollbacks = $(scrollbacks);
-    self.d_terminal.appendChild(scrollbacks);
+    self.add_thing(scrollbacks);
 
     self.rotate_scrollback = function () {
         self.scrollbacks.children().first().remove();
-        var new_div = makediv();
+        var new_div = document.createElement('div');
         self.scrollbacks.append(new_div);
     }
 
     self.clear_scrollback = function(x) {
         self.scrollbacks.empty();
         for (var i = 0; i < self.n_scrolls; i++) {
-            var new_div = makediv();
+            var new_div = document.createElement('div');
             self.scrollbacks.append(new_div);
         }
     }
@@ -725,17 +745,18 @@ function Terminus(div) {
     }
 
     self.log = function(x) {
-        self.add_scroll(x + "<br/>");
+        $('#log').append(x + ' ');
+        // self.add_scroll(x + "<br/>");
     }
 
 
     // CONTENTS
     
     var contents = [];
-    var container = makediv();
+    var container = document.createElement('div');
     container.setAttribute('id', 'contents');
     for (var i = 0; i < self.nlines; i++) {
-        var new_div = makediv();
+        var new_div = document.createElement('div');
         new_div.setAttribute('id', 'content' + i);
         contents.push(new_div);
         container.appendChild(new_div);
@@ -748,17 +769,107 @@ function Terminus(div) {
     // diff - 4 is a bit arbitrary, but it works well for me in
     // Chrome. I don't know about others.
     $(container).css('margin-bottom', (diff - 4) + 'px');
-    self.d_terminal.appendChild(container);
+    self.add_thing(container);
 
     // Major hack to allow pasting: we'll constantly put focus on an
     // invisible text area, then when the user pastes, we'll clear the
     // text area, check what appears in it, and we'll send the
     // contents over to the pty. I don't yet know how to make middle
     // click paste work, unfortunately, so we'll make do with Ctrl+V.
-    var textarea = makenode('textarea');
+    var textarea = document.createElement('textarea');
     self.textarea = $(textarea);
     self.textarea.css('height', 0).css('width', 0);
-    self.d_terminal.appendChild(textarea);
+    self.add_thing(textarea);
+ 
+
+    // CHILDREN
+
+    self.children_wrappers = {};
+
+    self.set_child = function(id, child) {
+        if (!id) {
+            id = self.n++;
+        }
+        var existing = self.children[id];
+        var wrap;
+        if (existing !== undefined) {
+            wrap = self.children_wrappers[id];
+            wrap.replaceChild(child.element,
+                              existing.element);
+            existing.set = undefined;
+        }
+        else {
+            wrap = makediv();
+            wrap.appendChild(child.element);
+            self.screen.write_html_line(wrap);
+            self.screen.move_to(self.screen.line, self.ncols);
+            // self.screen.next_line();
+        }
+        self.children_wrappers[id] = wrap;
+        self.children[id] = child;
+        child.set = function (new_child) {
+            self.set_child(id, new_child);
+        }
+        return id;
+    }
+
+    self.append = function(sub_element) {
+        self.element.appendChild(sub_element)
+    }
+
+    self.create_div_for_html = function(html, parameters) {
+        var div = makediv();
+        if (parameters.height) {
+            $(div).height(parameters.height * self.char_height);
+        }
+        if (parameters.width) {
+            $(div).width(parameters.width * self.char_width);
+        }
+        div.innerHTML = html;
+        return div;
+    }
+
+    self.handlers = {
+
+        html_set: function (data, parameters) {
+            var div = self.create_div_for_html(data, parameters);
+            // alert(parameters.nest);
+            // var target = self.find(parameters.nest);
+            // target.set(DivNest(div));
+            var nest = parameters.nest;
+            var target = self.find(nest.slice(1, nest.length));
+            var id = target.set_child(nest[nest.length-1], DivNest(div));
+            var wrap = self.children_wrappers[id];
+            if(parameters.height)
+                $(wrap.element).height($(div).height());
+            if(parameters.width)
+                $(wrap.element).width($(div).width());
+        },
+
+        html_append: function (data, parameters) {
+            var div = self.create_div_for_html(data, parameters);
+            self.screen.write_html_line(div);
+            self.screen.move_to(self.screen.line, self.ncols);
+            // self.screen.next_line();
+        },
+
+        js: function (data, parameters) {
+            try {
+                var target = self.find(parameters.nest);
+                var f = function() {
+                    eval(data);
+                }
+                f.call(target.element);
+            }
+            catch(whatever) {
+                self.write_all("JS ERROR -> " + whatever);
+            }
+        }
+    }
+
+    self.handle_ext = function(type, data, parameters) {
+        self.handlers[type](data, parameters);
+    }
 
 
     // DISPLAY
@@ -792,7 +903,7 @@ function Terminus(div) {
         for (var i = 0; i < scrollback.length; i++) {
             self.add_scroll(scrollback[i]);
         }
-        d_terminal.scrollTop = d_terminal.scrollHeight + 100;
+        self.scroll_to_top();
     }
 
     self.use_screen = function(n) {
@@ -810,6 +921,7 @@ function Terminus(div) {
         for (var i in data) {
             var s = data[i];
             var c = s.charCodeAt();
+            self.log(s);
             self.write(c);
         }
     }
@@ -946,8 +1058,8 @@ function Terminus(div) {
         _z0: function (_) { }, // invalid (no-op)
         _z1: function (_) { }, // invalid (no-op)
         _z: function (n) {
-            var types = {0: ['html', '|height', '-width'],
-                         1: ['js']};
+            var types = {0: ['html_set', 'height', 'width', '*nest'],
+                         1: ['js', '*nest']};
             var type = n[0];
             var count = n[1];
             if (isFinite(count)) {
@@ -956,22 +1068,20 @@ function Terminus(div) {
                     self.ext_type = desc[0];
                     self.ext_data = {};
                     for (var i = 1; i < desc.length; i++) {
-                        var value = n[i + 1];
-                        if (value !== undefined) {
-                            var propname = desc[i];
-                            if (propname[0] == '|') {
-                                value = value * self.char_height;
-                                propname = propname.substring(1);
-                            }
-                            else if (propname[0] == '-') {
-                                value = value * self.char_width;
-                                propname = propname.substring(1);
-                            }
+                        var propname = desc[i];
+                        if (propname[0] == '*') {
+                            var value = n.slice(i + 1);
+                            propname = propname.substring(1);
+                            self.ext_data[propname] = value;
+                        }
+                        else {
+                            var value = n[i + 1]; // undefined if absent
                             self.ext_data[propname] = value;
                         }
                     }
                     self.ext_accum = "";
                     self.ext_count = count;
+                    self.ext_check_termination = false;
                 }
             }
         },
@@ -1013,7 +1123,7 @@ function Terminus(div) {
         else {
             // self.log(String.fromCharCode(esc.mode) + esc.contents + alt + esc.type + " " + nums.join("/") + " " + (alt + esc.type + nums.length));
         }
-        // self.log(String.fromCharCode(esc.mode) + esc.contents + alt + esc.type + " " + nums.join("/") + " " + (alt + esc.type + nums.length));
+        self.log(String.fromCharCode(esc.mode) + esc.contents + alt + esc.type + " " + nums.join("/") + " " + (alt + esc.type + nums.length));
     }
 
     var deco = function (x) {
@@ -1092,19 +1202,38 @@ function Terminus(div) {
 
         if (self.ext_count > 0) {
             self.ext_accum += s;
-            self.ext_count--;
+            if (c == 0x1B) {
+                self.ext_count = undefined;
+                self.ext_check_termination = true
+            }
+
+            // self.ext_count--;
+            // if (self.ext_count <= 0) {
+            //     self.ext_count = undefined;
+            //     self.display();
+            //     self.handle_ext(self.ext_type, self.ext_accum, self.ext_data);
+            //     self.ext_accum = "";
+            // }
         }
-        else if (self.ext_count <= 0) {
-            self.ext_count = undefined;
-            try {
-                self.display();
-                self.screen.write_ext(self.ext_type, self.ext_accum, self.ext_data);
-            }
-            catch(whatever) {
-                self.write_all("JS ERROR -> " + whatever);
-            }
+        else if (self.ext_check_termination) {
+            self.ext_check_termination = false;
+            var accum = self.ext_accum;
             self.ext_accum = "";
+            if (c == 0x5C) {
+                // alert(c);
+                // self.display();
+                self.handle_ext(self.ext_type, accum, self.ext_data);
+            }
+            else {
+                // alert(c);
+                self.handle_ext(self.ext_type, accum, self.ext_data);
+                self.escape = {mode: false,
+                               type: false,
+                               contents: ""};
+                return self.write(c);
+            }            
         }
+
         else if (self.escape !== false) {
             if (self.escape.mode === false) {
                 self.escape.mode = c;
@@ -1156,16 +1285,34 @@ function Terminus(div) {
         },
         200)
 
-    setInterval(function () {
-            $.get("/get",
-                  function(data) {
-                      if (data != "") {
-                          self.write_all(data);
-                          d_terminal.scrollTop = d_terminal.scrollHeight + 100;
-                      }
-                  })
-        },
-        100);
+    // setInterval(function () {
+    //         $.get("/get",
+    //               function(data) {
+    //                   if (data != "") {
+    //                       self.write_all(data);
+    //                       self.scroll_to_top();
+    //                   }
+    //               })
+    //     },
+    //     100);
+
+
+    self.get_data = function () {
+        // setTimeout avoids the annoying "waiting..." message
+        // browsers display while the request hangs.
+        setTimeout(function () {
+                $.get("/get",
+                      function(data) {
+                          if (data != "") {
+                              self.write_all(data);
+                              self.scroll_to_top();
+                          }
+                          self.get_data();
+                      })
+            }, 0)
+    }
+
+    self.get_data();
 
     self.to_send = "";
     setInterval(function () {
@@ -1175,7 +1322,7 @@ function Terminus(div) {
                 $.post("/send", {data: to_send},
                        function (data) {
                            self.write_all(data.data);
-                           d_terminal.scrollTop = d_terminal.scrollHeight;
+                           self.scroll_to_top();
                        });
             }
         },
