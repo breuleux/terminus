@@ -1,17 +1,14 @@
 
-.cursor {
-}
-
 .term_area {
     background-color: black;
     color: white;
     font-family: monospace;
     font-size: 12pt;
     visibility: visible;
-}
-
-.cursor {
-    color: lime;
+    height: 100%;
+    overflow-x: hidden;
+    overflow-y: auto;
+    white-space: nowrap;
 }
 
 #font_control {
@@ -21,7 +18,3 @@
 #font_control_div {
     height: 0px;
 }
-
-
-
-

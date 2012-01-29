@@ -31,8 +31,16 @@ function Nest(element) {
     self.element = element;
     self.children = {};
 
+    self.create = function() {
+        while (self.children[self.n] !== undefined) {
+            self.n++;
+        }
+        self.set_child(self.n, EmptyNest());
+        return self.n;
+    }
+
     self.get_child = function(id, create) {
-        if (create && (!id || self.children[id] === undefined)) {
+        if (create && (self.children[id] === undefined)) {
             id = self.set_child(id, EmptyNest());
         }
         return self.children[id];
@@ -44,7 +52,7 @@ function Nest(element) {
         }
         catch(err) {
             if (err == 'no_nest') {
-                // Errors from ._find might be incomplete.
+                // Errors from ._find would be incomplete.
                 throw "The nest [" + nest + "] does not exist.";
             }
             else {
@@ -60,9 +68,9 @@ function Nest(element) {
         var first = nest[0];
         var child = self.get_child(first, create);
         if (child === undefined) {
-            throw 'no_nest'; // "The nest [" + nest + "] does not exist.";
+            throw 'no_nest';
         }
-        return child.find(nest.slice(1), create);
+        return child._find(nest.slice(1), create);
     }
     return self;
 }
@@ -71,9 +79,9 @@ function DivNest(div) {
     var self = Nest(div);
 
     self.set_child = function(id, child) {
-        if (id == 0) {
-            id = self.n++;
-        }
+        // if (id == 0) {
+        //     id = self.n++;
+        // }
         var existing = self.children[id]
         if (existing !== undefined) {
             self.element.replaceChild(child.element,
@@ -98,13 +106,12 @@ function DivNest(div) {
 }
 
 function EmptyNest() {
-    // var div = document.createElement('div');
     var div = makediv();
     return DivNest(div);
 }
 
 
-function Screen(nlines, ncols, char_height, char_width) {
+function Screen(term) {
     var self = obj();
 
     self.no_text_properties = function() {
@@ -140,13 +147,17 @@ function Screen(nlines, ncols, char_height, char_width) {
             var old_ncol = self.ncols;
             self.ncols = ncols;
             for (var i = 0; i < self.nlines; i++){
-                self.clear_line(old_ncol);
+                self.clear_line(i, old_ncol);
             }
         }
         else if (ncols < self.ncols) {
             self.ncols = ncols;
             for (var i = 0; i < self.nlines; i++){
                 self.matrix[i].splice(self.ncols);
+                self.modified[i] = true;
+            }
+            if (self.column >= ncols) {
+                self.column = ncols - 1;
             }
         }
 
@@ -157,18 +168,25 @@ function Screen(nlines, ncols, char_height, char_width) {
             }
         }
         else if (nlines < self.nlines) {
-            for (var i = self.nlines; i < nlines; i++){
-                self.scroll();
+            for (var i = nlines; i <= self.line; i++) {
+                self.scroll()
             }
-            for (var i = self.nlines; i < nlines; i++){
+            self.line = Math.min(self.line, nlines - 1);
+            for (var i = self.nlines; i > nlines; i--){
                 self.matrix[i] = undefined;
                 self.lines[i] = undefined;
                 self.virgin[i] = undefined;
                 self.modified[i] = undefined;
                 self.ext[i] = undefined;
             }
+            if (self.line >= nlines) {
+                self.line = nlines - 1;
+            }
         }
         self.nlines = nlines;
+
+        self.scroll0 = 0;
+        self.scroll1 = self.nlines;
     }
 
     // CURSOR
@@ -194,13 +212,6 @@ function Screen(nlines, ncols, char_height, char_width) {
     self.cursor_here = function() {
         self.push_prop(self.line, self.column, 200);
         self.modified[self.line] = true;
-
-        // self.touch_line(self.line);
-
-        // self.modified[self.line] = true;
-        // self.ext[self.line] = false;
-        // self.virgin[self.line] = false;
-        // self.heights[self.line] = 1;
     }
 
     self.no_cursor_here = function() {
@@ -356,18 +367,21 @@ function Screen(nlines, ncols, char_height, char_width) {
     }
 
     self.write_html_line = function(node) {
-        var line = self.line; // - 1;
+        if (self.column == self.ncols) {
+            self.next_line();
+        }
+        var line = self.line;
         self.lines[line] = node;
         self.modified[line] = true;
         self.ext[line] = true;
         self.virgin[line] = false;
         var h = $(node).height();
         if (h != 0) {
-            self.heights[line] = Math.ceil(h / self.char_height);
+            self.heights[line] = Math.ceil(h / self.term.char_height);
         }
         else {
             setTimeout(function () {
-                    self.heights[line] = Math.ceil($(node).height() / self.char_height);
+                    self.heights[line] = Math.ceil($(node).height() / self.term.char_height);
                 }, 100);
         }
     }
@@ -404,13 +418,10 @@ function Screen(nlines, ncols, char_height, char_width) {
             column1 = self.ncols;
         }
         for (var i = column0; i < column1; i++) {
-            // var all = self.matrix[line][i];
-            // all[0] = ".";
-            self.matrix[line][i] = [self.default_character, self.no_text_properties()];
+            self.matrix[line][i] = [self.default_character,
+                                    self.no_text_properties()];
         }
         self.touch_line(line);
-        // self.modified[line] = true;
-        // self.ext[line] = false;
         self.cursor_here();
     }
 
@@ -463,8 +474,6 @@ function Screen(nlines, ncols, char_height, char_width) {
         self.touch_line(i);
         if (!start_col)
             self.virgin[i] = true;
-        // self.modified[i] = true;
-        // self.ext[i] = false;
     }
 
     self.insert_blanks = function(line, start, n) {
@@ -479,8 +488,6 @@ function Screen(nlines, ncols, char_height, char_width) {
         }
         self.matrix[line] = rval;
         self.touch_line(line);
-        // self.modified[line] = true;
-        // self.ext[line] = false;
     }
 
     self.delete_characters = function(line, start, n) {
@@ -495,8 +502,6 @@ function Screen(nlines, ncols, char_height, char_width) {
         }
         self.matrix[line] = rval;
         self.touch_line(line);
-        // self.modified[line] = true;
-        // self.ext[line] = false;
     }
 
     self.push_to_end = function(arr, start, end) {
@@ -594,130 +599,94 @@ function Screen(nlines, ncols, char_height, char_width) {
             }
             s += c;
         }
-        // var span = document.createElement('span');
         var span = makenode('span');
         span.innerHTML = s;
         self.lines[i] = span;
     };
 
 
-    // INITIALIZE
-    self.scrollback = [];
-    
-    var nlines = nlines;
-    var ncols = ncols;
-    self.char_height = char_height;
-    self.char_width = char_width;
+    self.init = function (term) {
+        // INITIALIZE
+        self.scrollback = [];
+        self.term = term;
 
-    self.matrix = [];
-    self.lines = [];
-    self.modified = [];
-    self.ext = []
-    self.virgin = [];
-    self.heights = [];
+        var nlines = term.nlines;
+        var ncols = term.ncols;
 
-    self.text_properties = self.no_text_properties();
-    self.default_character = "&nbsp;";
+        self.matrix = [];
+        self.lines = [];
+        self.modified = [];
+        self.ext = []
+        self.virgin = [];
+        self.heights = [];
 
-    self.nlines = 0;
-    self.ncols = 0;
-    self.resize(nlines, ncols);
+        self.text_properties = self.no_text_properties();
+        self.default_character = "&nbsp;";
 
-    self.scroll0 = 0;
-    self.scroll1 = self.nlines;
+        self.nlines = 0;
+        self.ncols = 0;
+        self.resize(nlines, ncols);
 
-    self.line = 0;
-    self.column = 0;
-    self.cursor_blink = false;
-    self.save_cursor(); // init save to (0, 0)
-    self.show_cursor();
-    
+        // self.scroll0 = 0;
+        // self.scroll1 = self.nlines;
 
-    // for (var i = 0; i < self.nlines; i++) {
-    //     self.matrix[i] = [];
-    //     self.clear_line(i);
-    //     // for (var j = 0; j < self.ncols; j++) {
-    //     //     self.matrix[i][j] = [self.default_character,
-    //     //                          self.no_text_properties()];
-    //     // }
-    //     // self.virgin[i] = true;
-    //     // self.heights[i] = 1;
-    //     // self.modified[i] = true;
-    //     // self.ext[i] = false;
-    // }
+        self.line = 0;
+        self.column = 0;
+        self.cursor_blink = false;
+        self.save_cursor(); // init save to (0, 0)
+        self.show_cursor();
+    }
 
+    self.init(term);
     return self;
 }
 
 
-function Terminus(div) {
-    var self = Nest(div); // obj();
+function ScreenDisplay(screen, scrollback) {
 
-
-    // HANDY POINTERS
-
-    self.terminal = div;
-    self.d_terminal = div[0];
-
-    // SIZE
-
-    self.adjust_size = function () {        
-        self.char_width = $("#font_control").width();
-        self.char_height = $("#font_control").height();
-        
-        self.nlines = Math.floor(self.terminal.height() / self.char_height) - 0;
-        self.ncols = Math.floor(self.terminal.width() / self.char_width) - 2;
-
-        // for (var i = 0; i < self.screens.length; i++) {
-        //     self.screens[i].resize(self.nlines, self.ncols);
-        // }
-
-        $.post('/setsize', {h: self.nlines, w: self.ncols});
-    }
-
-    self.adjust_size();
-
-    // setInterval(function () {
-    //         self.adjust_size();
-    //     }, 100);
-
-    // var block = document.createElement('div');
-    // var diff = self.terminal.height() - (self.nlines * self.char_height);
-    // // alert(diff);
-    // block.setAttribute("height", diff);
-    // $(block).append('x');
-    // self.d_terminal.appendChild(block);
-
-
-    // STRUCTURE
-    // var inner = '';
-    // inner += '<div id="top">A</div>';
-    // inner += '<table height=100% id="middle"><tr>';
-    // inner += '<td><div id="left"></div></td>';
-    // inner += '<td><div id="center" style="height:100%; overflow:auto;></div></td>';
-    // inner += '<td><div id="right"></div></td>';
-    // inner += '</table>';
-    // inner += '<div id="bottom">D</div>';
-    // self.d_terminal.innerHTML = inner;
+    var self = obj();
 
     self.add_thing = function(thing) {
-        self.d_terminal.appendChild(thing);
-        // $('#center').append(thing);
-    }
-    self.scroll_to_top = function() {
-        // var x = $('#center')[0];
-        // x.scrollTop = x.scrollHeight + 100;
-        self.d_terminal.scrollTop = self.d_terminal.scrollHeight + 100;
+        self.box.appendChild(thing);
     }
 
-    // SCROLLING
+    self.display = function(force) {
+        var scr = self.screen;
 
-    self.n_scrolls = 10;
-    self.scroll_block_size = 100;
-    var scrollbacks = document.createElement('div');
-    scrollbacks.setAttribute('id', 'scrollbacks');
-    self.scrollbacks = $(scrollbacks);
-    self.add_thing(scrollbacks);
+        if (self.invalid) {
+            force = true;
+            self.invalid = false;
+        }
+        var changes = false;
+        var n_displayed = (scr.nlines
+                           - Math.min(scr.total_height() - scr.nlines,
+                                      scr.bottom_virgins()));
+
+        for (var i = 0; i < n_displayed; i++) {
+            if (scr.modified[i] || force) {
+                var line = scr.get_line(i);
+                $(self.contents[i]).empty();
+                self.contents[i].appendChild(line);
+                scr.modified[i] = false;
+                changes = true;
+            }
+        }
+        for (var i = n_displayed; i < scr.nlines; i++) {
+            $(self.contents[i]).empty();
+        }
+
+        if (!changes && !force) {
+            return false;
+        }
+        var scrollback = scr.scrollback;
+        scr.scrollback = [];
+        for (var i = 0; i < scrollback.length; i++) {
+            self.add_scroll(scrollback[i]);
+        }
+
+        return true;
+        // self.scroll_to_top();
+    }
 
     self.rotate_scrollback = function () {
         self.scrollbacks.children().first().remove();
@@ -733,8 +702,6 @@ function Terminus(div) {
         }
     }
 
-    self.clear_scrollback();
-
     self.add_scroll = function(x) {
         var add_to = self.scrollbacks.children().last();
         add_to.append(x);
@@ -744,52 +711,367 @@ function Terminus(div) {
         }
     }
 
+    self.resize = function (nlines, ncols) {
+
+        self.nlines = nlines;
+        self.ncols = ncols;
+
+        var contents = [];
+        var container = self.container;
+        $(container).empty();
+        for (var i = 0; i < self.nlines; i++) {
+            var new_div = document.createElement('div');
+            contents.push(new_div);
+            container.appendChild(new_div);
+        }
+
+        // Pad the bottom so that the first line is flush with the top of
+        // the screen when we're scrolled down completely.
+        var diff = (self.screen.term.terminal.height()
+                    - (self.screen.nlines * self.screen.term.char_height));
+        // diff - 4 is a bit arbitrary, but it works well for me in
+        // Chrome. I don't know about others.
+        $(container).css('margin-bottom', (diff - 4) + 'px');
+
+        self.contents = contents;
+        self.invalid = true;
+    }
+
+    self.init = function (screen, scrollback) {
+
+        self.screen = screen;
+
+        self.box = makediv();
+
+        // SCROLLBACK
+
+        if (!scrollback) { scrollback = 0; }
+        self.scroll_block_size = 100;
+        self.n_scrolls = Math.ceil(scrollback / self.scroll_block_size);
+
+        var scrollbacks = document.createElement('div');
+        scrollbacks.setAttribute('id', 'scrollbacks');
+        self.scrollbacks = $(scrollbacks);
+        self.add_thing(scrollbacks);
+
+        self.clear_scrollback();
+
+        // CONTENTS (populated by resize, resize called elsewhere)
+        
+        var container = document.createElement('div');
+        container.setAttribute('id', 'contents');
+        self.container = container;
+        self.add_thing(container);
+
+        self.resize(self.screen.nlines, self.screen.ncols);
+    }
+
+    self.init(screen, scrollback);
+    return self;
+}
+
+
+
+function Terminus(div) {
+    var self = Nest(div);
+
+    self.init = function (div) {
+
+        // HANDY POINTERS
+
+        self.terminal = div;
+        self.d_terminal = div[0];
+
+        // STRUCTURE
+        // var inner = '';
+        // inner += '<div id="top">A</div>';
+        // inner += '<table height=100% id="middle"><tr>';
+        // inner += '<td><div id="left"></div></td>';
+        // inner += '<td><div id="center" style="height:100%; overflow:auto;></div></td>';
+        // inner += '<td><div id="right"></div></td>';
+        // inner += '</table>';
+        // inner += '<div id="bottom">D</div>';
+        // self.d_terminal.innerHTML = inner;
+
+        // // SCROLLING
+
+        // self.n_scrolls = 10;
+        // self.scroll_block_size = 100;
+        // var scrollbacks = document.createElement('div');
+        // scrollbacks.setAttribute('id', 'scrollbacks');
+        // self.scrollbacks = $(scrollbacks);
+        // self.add_thing(scrollbacks);
+
+        // self.clear_scrollback();
+
+        // // CONTENTS
+    
+        // // var contents = [];
+        // var container = document.createElement('div');
+        // container.setAttribute('id', 'contents');
+        // // for (var i = 0; i < self.nlines; i++) {
+        // //     var new_div = document.createElement('div');
+        // //     new_div.setAttribute('id', 'content' + i);
+        // //     contents.push(new_div);
+        // //     container.appendChild(new_div);
+        // // }
+        // // self.contents = contents;
+        
+
+        // // // Pad the bottom so that the first line is flush with the top of
+        // // // the screen when we're scrolled down completely.
+        // // var diff = self.terminal.height() - (self.nlines * self.char_height);
+        // // // diff - 4 is a bit arbitrary, but it works well for me in
+        // // // Chrome. I don't know about others.
+        // // $(container).css('margin-bottom', (diff - 4) + 'px');
+        // self.add_thing(container);
+        // self.container = container;
+
+        // SIZE
+        
+        self.adjust_size();
+
+        // CHILDREN
+
+        self.children_wrappers = {};
+
+        // SCREENS
+
+        self.screens = [Screen(self),
+                        Screen(self)];
+        self.screends = [ScreenDisplay(self.screens[0], 1000),
+                         ScreenDisplay(self.screens[1])];
+        self.use_screen(0);
+
+        // Major hack to allow pasting: we'll constantly put focus on an
+        // invisible text area, then when the user pastes, we'll clear the
+        // text area, check what appears in it, and we'll send the
+        // contents over to the pty. I don't yet know how to make middle
+        // click paste work, unfortunately, so we'll make do with Ctrl+V.
+        var textarea = document.createElement('textarea');
+        self.textarea = $(textarea);
+        self.textarea.css('height', 0).css('width', 0);
+        self.add_thing(textarea);
+
+        // ESCAPE
+
+        self.escape = false;
+
+        // WORKERS
+
+        setInterval(function () {
+                self.adjust_size();
+            }, 100)
+
+        setInterval(function () {
+                self.display();
+            },
+            10)
+
+        setInterval(function () {
+                $('.cursor').each (function () {
+                        var elem = $(this);
+                        var c = elem.css('color');
+                        var bgc = elem.css('background-color');
+                        elem.css('color', bgc);
+                        elem.css('background-color', c);
+                    })
+                    },
+            200)
+
+        self.get_data();
+
+        self.to_send = "";
+        setInterval(function () {
+                if (self.to_send != "") {
+                    var to_send = self.to_send;
+                    self.to_send = "";
+                    $.post("/send", {data: to_send},
+                           function (data) {
+                               self.write_all(data.data);
+                               self.scroll_to_top();
+                           });
+                }
+            },
+            10);
+
+        // BINDINGS
+
+        $(document).bind('paste', function(e) {
+                var target = self.textarea;
+                target.val("");
+                setTimeout(function() {
+                        var text = target.val();
+                        self.to_send += text;
+                    }, 0);
+            });
+
+        $(document).bind('keydown', function(e) {
+                self.textarea.focus();
+                var key = e.keyCode;
+                var keymap = {
+                    8: "\x7F",       // Backspace
+                    9: "\x09",       // Tab
+                    27: "\x1B",      // Esc
+                    33: "\x1B[5~",   // PgUp
+                    34: "\x1B[6~",   // PgDn
+                    35: "\x1B[4~",   // End
+                    36: "\x1B[1~",   // Home
+                    37: self.app_key ? "\x1BOD" : "\x1B[D",    // Left
+                    38: self.app_key ? "\x1BOA" : "\x1B[A",    // Up
+                    39: self.app_key ? "\x1BOC" : "\x1B[C",    // Right
+                    40: self.app_key ? "\x1BOB" : "\x1B[B",    // Down
+                    // 38: "\x1B[A",    // Up
+                    // 39: "\x1B[C",    // Right
+                    // 40: "\x1B[B",    // Down
+                    45: "\x1B[2~",   // Ins
+                    46: "\x1B[3~",   // Del
+                    112: "\x1B[[A",  // F1
+                    113: "\x1B[[B",  // F2
+                    114: "\x1B[[C",  // F3
+                    115: "\x1B[[D",  // F4
+                    // 116: "\x1B[[E",  // F5
+                    117: "\x1B[17~", // F6
+                    118: "\x1B[18~", // F7
+                    119: "\x1B[19~", // F8
+                    120: "\x1B[20~", // F9
+                    121: "\x1B[21~", // F10
+                    122: "\x1B[23~", // F11
+                    123: "\x1B[24~", // F12
+                }
+            
+                var s;
+                if (e.ctrlKey && !e.shiftKey) {
+                    if (key >= 97 && key <= 122)
+                        key -= 32;
+                    if (key != 86) {
+                        if (key >= 65 && key <= 90) {
+                            key -= 64;
+                            s = String.fromCharCode(key);
+                        }
+                    }
+                } else if (e.ctrlKey && e.shiftKey) {
+                    if (key >= 97 && key <= 122)
+                        key -= 32;
+                    if (key == 76) {
+                        self.screend.clear_scrollback();
+                    }
+                }
+                else {
+                    s = keymap[key];
+                }
+
+                if (s !== undefined) {
+                    self.to_send += s;
+                    e.stopPropagation();
+                    e.preventDefault();
+                }
+            });
+
+        $(document).bind('keypress', function(e) {
+                if (!e.ctrlKey) {
+                    var key = e.keyCode;
+                    var s;
+                    s = String.fromCharCode(key);
+                    self.to_send += s;
+                }
+            });
+    }
+
+
+    // SIZE
+
+    self.adjust_size = function () {        
+        self.char_width = $("#font_control").width();
+        self.char_height = $("#font_control").height();
+        
+        var nlines = Math.floor(self.terminal.height() / self.char_height) - 0;
+        var ncols = Math.floor(self.terminal.width() / self.char_width) - 2;
+
+        if (nlines == self.nlines && ncols == self.ncols) {
+            return;
+        }
+
+        self.nlines = nlines;
+        self.ncols = ncols;
+
+        // var contents = [];
+        // var container = self.container;
+        // $(container).empty();
+        // for (var i = 0; i < self.nlines; i++) {
+        //     var new_div = document.createElement('div');
+        //     contents.push(new_div);
+        //     container.appendChild(new_div);
+        // }
+
+        // // Pad the bottom so that the first line is flush with the top of
+        // // the screen when we're scrolled down completely.
+        // var diff = self.terminal.height() - (self.nlines * self.char_height);
+        // // diff - 4 is a bit arbitrary, but it works well for me in
+        // // Chrome. I don't know about others.
+        // $(container).css('margin-bottom', (diff - 4) + 'px');
+
+        // self.contents = contents;
+        // self.invalid = true;
+
+        if (self.screens) {
+            for (var i = 0; i < self.screens.length; i++) {
+                self.screens[i].resize(self.nlines, self.ncols);
+                self.screends[i].resize(self.nlines, self.ncols);
+            }
+        }
+
+        $.post('/setsize', {h: self.nlines, w: self.ncols});
+    }
+
+
+    self.add_thing = function(thing) {
+        self.d_terminal.appendChild(thing);
+        // $('#center').append(thing);
+    }
+    self.scroll_to_top = function() {
+        // var x = $('#center')[0];
+        // x.scrollTop = x.scrollHeight + 100;
+        self.d_terminal.scrollTop = self.d_terminal.scrollHeight + 100;
+    }
+
+    // SCROLLING
+
+    // self.rotate_scrollback = function () {
+    //     self.scrollbacks.children().first().remove();
+    //     var new_div = document.createElement('div');
+    //     self.scrollbacks.append(new_div);
+    // }
+
+    // self.clear_scrollback = function(x) {
+    //     self.scrollbacks.empty();
+    //     for (var i = 0; i < self.n_scrolls; i++) {
+    //         var new_div = document.createElement('div');
+    //         self.scrollbacks.append(new_div);
+    //     }
+    // }
+
+    // self.add_scroll = function(x) {
+    //     var add_to = self.scrollbacks.children().last();
+    //     add_to.append(x);
+    //     var len = add_to.children().length;
+    //     if (len == self.scroll_block_size) {
+    //         self.rotate_scrollback();
+    //     }
+    // }
+
     self.log = function(x) {
         $('#log').append(x + ' ');
         // self.add_scroll(x + "<br/>");
     }
 
 
-    // CONTENTS
-    
-    var contents = [];
-    var container = document.createElement('div');
-    container.setAttribute('id', 'contents');
-    for (var i = 0; i < self.nlines; i++) {
-        var new_div = document.createElement('div');
-        new_div.setAttribute('id', 'content' + i);
-        contents.push(new_div);
-        container.appendChild(new_div);
-    }
-    self.contents = contents;
-
-    // Pad the bottom so that the first line is flush with the top of
-    // the screen when we're scrolled down completely.
-    var diff = self.terminal.height() - (self.nlines * self.char_height);
-    // diff - 4 is a bit arbitrary, but it works well for me in
-    // Chrome. I don't know about others.
-    $(container).css('margin-bottom', (diff - 4) + 'px');
-    self.add_thing(container);
-
-    // Major hack to allow pasting: we'll constantly put focus on an
-    // invisible text area, then when the user pastes, we'll clear the
-    // text area, check what appears in it, and we'll send the
-    // contents over to the pty. I don't yet know how to make middle
-    // click paste work, unfortunately, so we'll make do with Ctrl+V.
-    var textarea = document.createElement('textarea');
-    self.textarea = $(textarea);
-    self.textarea.css('height', 0).css('width', 0);
-    self.add_thing(textarea);
- 
-
     // CHILDREN
 
-    self.children_wrappers = {};
-
     self.set_child = function(id, child) {
-        if (!id) {
-            id = self.n++;
-        }
+        // if (!id) {
+        //     id = self.n++;
+        // }
         var existing = self.children[id];
         var wrap;
         if (existing !== undefined) {
@@ -803,7 +1085,6 @@ function Terminus(div) {
             wrap.appendChild(child.element);
             self.screen.write_html_line(wrap);
             self.screen.move_to(self.screen.line, self.ncols);
-            // self.screen.next_line();
         }
         self.children_wrappers[id] = wrap;
         self.children[id] = child;
@@ -814,7 +1095,8 @@ function Terminus(div) {
     }
 
     self.append = function(sub_element) {
-        self.element.appendChild(sub_element)
+        self.screen.write_html_line(sub_element);
+        self.screen.move_to(self.screen.line, self.ncols);
     }
 
     self.create_div_for_html = function(html, parameters) {
@@ -832,12 +1114,12 @@ function Terminus(div) {
     self.handlers = {
 
         html_set: function (data, parameters) {
+            if (!parameters.nest.length) {
+                return;
+            }
             var div = self.create_div_for_html(data, parameters);
-            // alert(parameters.nest);
-            // var target = self.find(parameters.nest);
-            // target.set(DivNest(div));
             var nest = parameters.nest;
-            var target = self.find(nest.slice(1, nest.length));
+            var target = self.find(nest.slice(0, nest.length - 1), true);
             var id = target.set_child(nest[nest.length-1], DivNest(div));
             var wrap = self.children_wrappers[id];
             if(parameters.height)
@@ -848,14 +1130,14 @@ function Terminus(div) {
 
         html_append: function (data, parameters) {
             var div = self.create_div_for_html(data, parameters);
-            self.screen.write_html_line(div);
-            self.screen.move_to(self.screen.line, self.ncols);
-            // self.screen.next_line();
+            var nest = parameters.nest;
+            var target = self.find(nest, true);
+            target.append(div);
         },
 
         js: function (data, parameters) {
             try {
-                var target = self.find(parameters.nest);
+                var target = self.find(parameters.nest, true);
                 var f = function() {
                     eval(data);
                 }
@@ -864,6 +1146,14 @@ function Terminus(div) {
             catch(whatever) {
                 self.write_all("JS ERROR -> " + whatever);
             }
+        },
+
+        create: function (data, parameters) {
+            var target = self.find(parameters.nest, true);
+            var id = self.create();
+            var new_nest = parameters.nest.slice(0);
+            new_nest.push(id);
+            self.to_send += ('\x1B[?200;' + new_nest.join(';') + 'z');
         }
     }
 
@@ -875,45 +1165,53 @@ function Terminus(div) {
     // DISPLAY
 
     self.display = function(force) {
-        var changes = false;
-        var n_displayed = self.nlines - Math.min(self.screen.total_height() - self.nlines,
-                                                 self.screen.bottom_virgins());
-        // if (n_displayed != self.nlines)
-        //     self.log(n_displayed + " " + self.screen.total_height() + " " + self.screen.bottom_virgins());
-        // var n_displayed = self.nlines;
+        // if (self.invalid) {
+        //     force = true;
+        //     self.invalid = false;
+        // }
+        // var changes = false;
+        // var n_displayed = self.nlines - Math.min(self.screen.total_height() - self.nlines,
+        //                                          self.screen.bottom_virgins());
 
-        for (var i = 0; i < n_displayed; i++) {
-            if (self.screen.modified[i] || force) {
-                var line = self.screen.get_line(i);
-                $(self.contents[i]).empty();
-                self.contents[i].appendChild(line);
-                self.screen.modified[i] = false;
-                changes = true;
-            }
-        }
-        for (var i = n_displayed; i < self.nlines; i++) {
-            $(self.contents[i]).empty();
-        }
+        // for (var i = 0; i < n_displayed; i++) {
+        //     if (self.screen.modified[i] || force) {
+        //         var line = self.screen.get_line(i);
+        //         $(self.contents[i]).empty();
+        //         self.contents[i].appendChild(line);
+        //         self.screen.modified[i] = false;
+        //         changes = true;
+        //     }
+        // }
+        // for (var i = n_displayed; i < self.nlines; i++) {
+        //     $(self.contents[i]).empty();
+        // }
 
-        if (!changes && !force) {
-            return;
+        // if (!changes && !force) {
+        //     return;
+        // }
+        // var scrollback = self.screen.scrollback;
+        // self.screen.scrollback = [];
+        // for (var i = 0; i < scrollback.length; i++) {
+        //     self.add_scroll(scrollback[i]);
+        // }
+        if (self.screend.display(force)) {
+            self.scroll_to_top();
         }
-        var scrollback = self.screen.scrollback;
-        self.screen.scrollback = [];
-        for (var i = 0; i < scrollback.length; i++) {
-            self.add_scroll(scrollback[i]);
-        }
-        self.scroll_to_top();
     }
 
     self.use_screen = function(n) {
         self.screen = self.screens[n];
+        var new_screend = self.screends[n];
+        if (self.screend !== undefined) {
+            self.d_terminal.replaceChild(new_screend.box,
+                                         self.screend.box);
+        }
+        else {
+            self.d_terminal.appendChild(new_screend.box);
+        }
+        self.screend = new_screend;
         self.display(true);
     }
-
-    self.screens = [Screen(self.nlines, self.ncols, self.char_height, self.char_width),
-                    Screen(self.nlines, self.ncols, self.char_height, self.char_width)];
-    self.use_screen(0);
 
     // WRITING
 
@@ -921,12 +1219,10 @@ function Terminus(div) {
         for (var i in data) {
             var s = data[i];
             var c = s.charCodeAt();
-            self.log(s);
+            // self.log(s);
             self.write(c);
         }
     }
-    
-    self.escape = false;
 
     self.apply_all = function(nums, policies, which) {
         for (var i = 0; i < nums.length; i++) {
@@ -1056,33 +1352,69 @@ function Terminus(div) {
         u0: function (_) { self.screen.restore_cursor(); },
 
         _z0: function (_) { }, // invalid (no-op)
-        _z1: function (_) { }, // invalid (no-op)
         _z: function (n) {
-            var types = {0: ['html_set', 'height', 'width', '*nest'],
-                         1: ['js', '*nest']};
+            var types = {0: [['html_set', 'height', 'width', ';;', '*nest'],
+                             false],
+                         10: [['html_append', 'height', 'width', ';;', '*nest'],
+                              false],
+                         100: [['js', ';;', '*nest'],
+                               false],
+                         200: [['create', '*nest'],
+                               true]
+            };
             var type = n[0];
-            var count = n[1];
-            if (isFinite(count)) {
-                var desc = types[type];
-                if (desc !== undefined) {
-                    self.ext_type = desc[0];
-                    self.ext_data = {};
-                    for (var i = 1; i < desc.length; i++) {
-                        var propname = desc[i];
-                        if (propname[0] == '*') {
-                            var value = n.slice(i + 1);
-                            propname = propname.substring(1);
-                            self.ext_data[propname] = value;
+            // var count = n[1];
+            // if (isFinite(count)) {
+            if (types[type] === undefined) {
+                return;
+            }
+            var desc = types[type][0];
+            var now = types[type][1];
+            if (desc !== undefined) {
+                var data = {};
+                var j = 1;
+                var edge = function() {
+                    return n[j] === undefined || isNaN(n[j]);
+                }
+                for (var i = 1; i < desc.length; i++) {
+                    var propname = desc[i];
+                    if (propname[0] == '*') {
+                        var value = [];
+                        while (!edge()) { //(n[j] !== undefined && !isNaN(n[j])) {
+                            value.push(n[j]);
+                            j++;
                         }
-                        else {
-                            var value = n[i + 1]; // undefined if absent
-                            self.ext_data[propname] = value;
+                        data[propname.substring(1)] = value;
+                        // var value = n.slice(i + 1);
+                        // propname = propname.substring(1);
+                        // self.ext_data[propname] = value;
+                    }
+                    else if (propname == ';;') {
+                        if (!edge()) {
+                            return;
+                        }
+                        j++;
+                    }
+                    else {
+                        if (!edge()) {
+                            var value = n[j]; // undefined if absent
+                            data[propname] = value;
+                            j++;
                         }
                     }
+                }
+                if (now) {
+                    self.handle_ext(desc[0], "", data);
+                }
+                else {
+                    // alert([desc[0], data.height, data.width, data.nest.join('/')].join(" "));
+                    self.ext_type = desc[0];
+                    self.ext_data = data;
                     self.ext_accum = "";
-                    self.ext_count = count;
+                    // self.ext_count = count;
                     self.ext_check_termination = false;
                 }
+                // }
             }
         },
     }
@@ -1123,7 +1455,8 @@ function Terminus(div) {
         else {
             // self.log(String.fromCharCode(esc.mode) + esc.contents + alt + esc.type + " " + nums.join("/") + " " + (alt + esc.type + nums.length));
         }
-        self.log(String.fromCharCode(esc.mode) + esc.contents + alt + esc.type + " " + nums.join("/") + " " + (alt + esc.type + nums.length));
+        // self.log(String.fromCharCode(esc.mode) + esc.contents + alt + esc.type + " " + nums.join("/") + " " + (alt + esc.type + nums.length));
+        self.log(String.fromCharCode(esc.mode) + esc.contents + alt + esc.type + "<br/>");
     }
 
     var deco = function (x) {
@@ -1191,7 +1524,6 @@ function Terminus(div) {
         30: deco('s'),
         31: deco('t'),
         32: '&nbsp;',
-        // 32: '_',
         38: '&amp;',
         60: '&lt;',
         62: '&gt;',
@@ -1200,38 +1532,29 @@ function Terminus(div) {
     self.write = function(c) {
         var s = String.fromCharCode(c);
 
-        if (self.ext_count > 0) {
-            self.ext_accum += s;
-            if (c == 0x1B) {
-                self.ext_count = undefined;
-                self.ext_check_termination = true
-            }
-
-            // self.ext_count--;
-            // if (self.ext_count <= 0) {
-            //     self.ext_count = undefined;
-            //     self.display();
-            //     self.handle_ext(self.ext_type, self.ext_accum, self.ext_data);
-            //     self.ext_accum = "";
-            // }
-        }
-        else if (self.ext_check_termination) {
+        if (self.ext_check_termination) {
             self.ext_check_termination = false;
             var accum = self.ext_accum;
+            var ext_type = self.ext_type;
             self.ext_accum = "";
+            self.ext_type = undefined;
             if (c == 0x5C) {
-                // alert(c);
-                // self.display();
-                self.handle_ext(self.ext_type, accum, self.ext_data);
+                self.handle_ext(ext_type, accum, self.ext_data);
             }
             else {
-                // alert(c);
-                self.handle_ext(self.ext_type, accum, self.ext_data);
+                self.handle_ext(ext_type, accum, self.ext_data);
                 self.escape = {mode: false,
                                type: false,
                                contents: ""};
                 return self.write(c);
             }            
+        }
+        else if (self.ext_type) {
+            self.ext_accum += s;
+            if (c == 0x1B) {
+                // self.ext_count = undefined;
+                self.ext_check_termination = true;
+            }
         }
 
         else if (self.escape !== false) {
@@ -1269,34 +1592,6 @@ function Terminus(div) {
         }
     }
 
-    setInterval(function () {
-            self.display();
-        },
-        10)
-
-    setInterval(function () {
-            $('.cursor').each (function () {
-                    var elem = $(this);
-                    var c = elem.css('color');
-                    var bgc = elem.css('background-color');
-                    elem.css('color', bgc);
-                    elem.css('background-color', c);
-                })
-        },
-        200)
-
-    // setInterval(function () {
-    //         $.get("/get",
-    //               function(data) {
-    //                   if (data != "") {
-    //                       self.write_all(data);
-    //                       self.scroll_to_top();
-    //                   }
-    //               })
-    //     },
-    //     100);
-
-
     self.get_data = function () {
         // setTimeout avoids the annoying "waiting..." message
         // browsers display while the request hangs.
@@ -1312,102 +1607,7 @@ function Terminus(div) {
             }, 0)
     }
 
-    self.get_data();
-
-    self.to_send = "";
-    setInterval(function () {
-            if (self.to_send != "") {
-                var to_send = self.to_send;
-                self.to_send = "";
-                $.post("/send", {data: to_send},
-                       function (data) {
-                           self.write_all(data.data);
-                           self.scroll_to_top();
-                       });
-            }
-        },
-        10);
-
-    $(document).bind('paste', function(e) {
-            var target = self.textarea;
-            target.val("");
-            setTimeout(function() {
-                    var text = target.val();
-                    self.to_send += text;
-                }, 0);
-        });
-
-    $(document).bind('keydown', function(e) {
-            self.textarea.focus();
-            var key = e.keyCode;
-            var keymap = {
-                8: "\x7F",       // Backspace
-                9: "\x09",       // Tab
-                27: "\x1B",      // Esc
-                33: "\x1B[5~",   // PgUp
-                34: "\x1B[6~",   // PgDn
-                35: "\x1B[4~",   // End
-                36: "\x1B[1~",   // Home
-                37: self.app_key ? "\x1BOD" : "\x1B[D",    // Left
-                38: self.app_key ? "\x1BOA" : "\x1B[A",    // Up
-                39: self.app_key ? "\x1BOC" : "\x1B[C",    // Right
-                40: self.app_key ? "\x1BOB" : "\x1B[B",    // Down
-                // 38: "\x1B[A",    // Up
-                // 39: "\x1B[C",    // Right
-                // 40: "\x1B[B",    // Down
-                45: "\x1B[2~",   // Ins
-                46: "\x1B[3~",   // Del
-                112: "\x1B[[A",  // F1
-                113: "\x1B[[B",  // F2
-                114: "\x1B[[C",  // F3
-                115: "\x1B[[D",  // F4
-                // 116: "\x1B[[E",  // F5
-                117: "\x1B[17~", // F6
-                118: "\x1B[18~", // F7
-                119: "\x1B[19~", // F8
-                120: "\x1B[20~", // F9
-                121: "\x1B[21~", // F10
-                122: "\x1B[23~", // F11
-                123: "\x1B[24~", // F12
-            }
-            
-            var s;
-            if (e.ctrlKey && !e.shiftKey) {
-                if (key >= 97 && key <= 122)
-                    key -= 32;
-                if (key != 86) {
-                    if (key >= 65 && key <= 90) {
-                        key -= 64;
-                        s = String.fromCharCode(key);
-                    }
-                }
-            } else if (e.ctrlKey && e.shiftKey) {
-                if (key >= 97 && key <= 122)
-                    key -= 32;
-                if (key == 76) {
-                    self.clear_scrollback();
-                }
-            }
-            else {
-                s = keymap[key];
-            }
-
-            if (s !== undefined) {
-                self.to_send += s;
-                e.stopPropagation();
-                e.preventDefault();
-            }
-        });
-
-    $(document).bind('keypress', function(e) {
-            if (!e.ctrlKey) {
-                var key = e.keyCode;
-                var s;
-                s = String.fromCharCode(key);
-                self.to_send += s;
-            }
-        });
-
+    self.init(div);
     return self;
 }
 
