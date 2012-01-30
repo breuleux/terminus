@@ -622,6 +622,7 @@ function Screen(term) {
 
         self.text_properties = self.no_text_properties();
         self.default_character = "&nbsp;";
+        // self.default_character = ".";
 
         self.nlines = 0;
         self.ncols = 0;
@@ -642,7 +643,7 @@ function Screen(term) {
 }
 
 
-function ScreenDisplay(screen, scrollback) {
+function ScreenDisplay(terminal, screen, scrollback) {
 
     var self = obj();
 
@@ -665,8 +666,13 @@ function ScreenDisplay(screen, scrollback) {
         for (var i = 0; i < n_displayed; i++) {
             if (scr.modified[i] || force) {
                 var line = scr.get_line(i);
-                $(self.contents[i]).empty();
-                self.contents[i].appendChild(line);
+                var cont = self.contents[i];
+                if (cont.hasChildNodes()) {
+                    cont.replaceChild(line, cont.childNodes[0]);
+                }
+                else {
+                    cont.appendChild(line);
+                }
                 scr.modified[i] = false;
                 changes = true;
             }
@@ -727,8 +733,8 @@ function ScreenDisplay(screen, scrollback) {
 
         // Pad the bottom so that the first line is flush with the top of
         // the screen when we're scrolled down completely.
-        var diff = (self.screen.term.terminal.height()
-                    - (self.screen.nlines * self.screen.term.char_height));
+        var diff = (self.terminal.center_outer.height()
+                    - (self.screen.nlines * self.terminal.char_height));
         // diff - 4 is a bit arbitrary, but it works well for me in
         // Chrome. I don't know about others.
         $(container).css('margin-bottom', (diff - 4) + 'px');
@@ -737,8 +743,9 @@ function ScreenDisplay(screen, scrollback) {
         self.invalid = true;
     }
 
-    self.init = function (screen, scrollback) {
+    self.init = function (terminal, screen, scrollback) {
 
+        self.terminal = terminal;
         self.screen = screen;
 
         self.box = makediv();
@@ -766,7 +773,7 @@ function ScreenDisplay(screen, scrollback) {
         self.resize(self.screen.nlines, self.screen.ncols);
     }
 
-    self.init(screen, scrollback);
+    self.init(terminal, screen, scrollback);
     return self;
 }
 
@@ -782,65 +789,145 @@ function Terminus(div) {
         self.terminal = div;
         self.d_terminal = div[0];
 
+        // CHILDREN
+
+        self.children_wrappers = {};
+
         // STRUCTURE
-        // var inner = '';
-        // inner += '<div id="top">A</div>';
-        // inner += '<table height=100% id="middle"><tr>';
-        // inner += '<td><div id="left"></div></td>';
+        var inner = '';
+        // inner += '<div id="top" style="background-color: red">A</div>';
+        // inner += '<table height=100% width=100% id="middle"><tr>';
+        // inner += '<td><div id="left" style="background-color: blue">BUR</div></td>';
         // inner += '<td><div id="center" style="height:100%; overflow:auto;></div></td>';
-        // inner += '<td><div id="right"></div></td>';
-        // inner += '</table>';
-        // inner += '<div id="bottom">D</div>';
+        // inner += '<td><div id="right" style="background-color: green">CHARD</div></td>';
+        // inner += '</tr></table>';
+        // inner += '<div id="bottom" style="background-color: yellow">D</div>';
+
+        //////
+        // inner += '<div id="top" style="background-color: red">A</div><br/>';
+        // inner += '<div id="left" style="float: left; background-color: blue">BUR</div><br/>';
+        // // inner += '<div id="center" style="float: left; height:100%; overflow:auto;>O</div>';
+        // inner += '<div id="centerx" style="float: left; background-color: magenta>fuckoff</div><br/>';
+        // // inner += '<div id="right1" style="float: left; background-color: green">X</div><br/>';
+        // inner += '<div id="right" style="float: left; background-color: green">CHARD</div><br/>';
+        // // inner += '<div id="right" style="float: left; background-color: green">CHARD</div><br/>';
+        // inner += '<div id="bottom" style="background-color: yellow">D</div>';
         // self.d_terminal.innerHTML = inner;
 
-        // // SCROLLING
+        function make_positional_nojscroll(parent, name, index) {
+            var div = makediv();
+            var jdiv = $(div);
+            jdiv.attr('id', name);
+            // jdiv.append("A");
+            parent.append(div);
+            self[name] = jdiv;
 
-        // self.n_scrolls = 10;
-        // self.scroll_block_size = 100;
-        // var scrollbacks = document.createElement('div');
-        // scrollbacks.setAttribute('id', 'scrollbacks');
-        // self.scrollbacks = $(scrollbacks);
-        // self.add_thing(scrollbacks);
+            if (index) {
+                // self.children_wrappers[index] = jdiv;
+                self.children_wrappers[index] = div;
+                var nest = EmptyNest();
+                jdiv.append(nest.element);
+                self.children[index] = nest;
+            }
+        }
 
-        // self.clear_scrollback();
+        function make_positional(parent, name, index) {
+            // var OUTER = makediv();
+            // $(OUTER).attr('id', name);
 
-        // // CONTENTS
-    
-        // // var contents = [];
-        // var container = document.createElement('div');
-        // container.setAttribute('id', 'contents');
-        // // for (var i = 0; i < self.nlines; i++) {
-        // //     var new_div = document.createElement('div');
-        // //     new_div.setAttribute('id', 'content' + i);
-        // //     contents.push(new_div);
-        // //     container.appendChild(new_div);
-        // // }
-        // // self.contents = contents;
-        
+            var div = makediv();
+            var jdiv = $(div);
+            jdiv.attr('id', name);
+            // OUTER.appendChild(div);
 
-        // // // Pad the bottom so that the first line is flush with the top of
-        // // // the screen when we're scrolled down completely.
-        // // var diff = self.terminal.height() - (self.nlines * self.char_height);
-        // // // diff - 4 is a bit arbitrary, but it works well for me in
-        // // // Chrome. I don't know about others.
-        // // $(container).css('margin-bottom', (diff - 4) + 'px');
-        // self.add_thing(container);
-        // self.container = container;
+            // jdiv.jScrollPane();
+            // jdiv.jScrollPane({autoReinitialise: true,
+            //             stickToBottom: true});
+            jdiv.jScrollPane({stickToBottom: true});
+
+            var api = jdiv.data('jsp');
+            var pane = api.getContentPane();
+            // jdiv.append("A");
+
+            // var inndiv = $(makediv());
+            // pane.append(inndiv);
+            var inndiv = pane;
+            parent.append(jdiv);
+            self[name] = inndiv;
+            self[name+'_outer'] = jdiv;
+
+            if (index) {
+                // self.children_wrappers[index] = inndiv;
+                self.children_wrappers[index] = inndiv[0];
+                var nest = EmptyNest();
+                inndiv.append(nest.element);
+                self.children[index] = nest;
+            }
+        }
+
+        make_positional_nojscroll(self.terminal, 'top', 1);
+        // make_positional(self.terminal, 'middle');
+        make_positional_nojscroll(self.terminal, 'middle');
+        make_positional_nojscroll(self.middle, 'left', 2);
+        make_positional(self.middle, 'center');
+        make_positional_nojscroll(self.middle, 'right', 4);
+        make_positional_nojscroll(self.terminal, 'bottom', 5);
+
+
+        // var top = makediv();
+        // $(top).attr('id', 'top');
+        // $(top).append('TOP');
+        // self.d_terminal.appendChild(top);
+        // self.top = $(top);
+
+        // var middle = makediv();
+        // $(middle).attr('id', 'middle');
+        // self.middle = middle;
+        // self.d_terminal.appendChild(middle);
+
+        // var left = makediv();
+        // $(left).attr('id', 'left');
+        // $(left).append('LEFT');
+        // self.middle.appendChild(left);
+        // self.left = $(left);
+
+        // var center = makediv();
+        // $(center).attr('id', 'center');
+        // self.middle.appendChild(center);
+        // self.center = $(center);
+
+        // var right = makediv();
+        // $(right).attr('id', 'right');
+        // $(right).append('RIGHT');
+        // self.middle.appendChild(right);
+        // self.right = $(right);
+
+        // var bottom = makediv();
+        // $(bottom).attr('id', 'bottom');
+        // // $(bottom).append('BOTTOM');
+        // self.d_terminal.appendChild(bottom);
+        // self.bottom = $(bottom);
+
+        // self.children_wrappers[2] = right;
+        // var right_elem = EmptyNest();
+        // right.appendChild(right_elem.element);
+        // self.children[2] = right_elem;
+
+        // allaa
+        // self.center = $("#center");
+        // self.center.css('width', '100%');
+        // self.center.css('height', '100%');
 
         // SIZE
         
         self.adjust_size();
 
-        // CHILDREN
-
-        self.children_wrappers = {};
-
         // SCREENS
 
         self.screens = [Screen(self),
                         Screen(self)];
-        self.screends = [ScreenDisplay(self.screens[0], 1000),
-                         ScreenDisplay(self.screens[1])];
+        self.screends = [ScreenDisplay(self, self.screens[0], 1000),
+                         ScreenDisplay(self, self.screens[1], 0)];
         self.use_screen(0);
 
         // Major hack to allow pasting: we'll constantly put focus on an
@@ -866,7 +953,7 @@ function Terminus(div) {
         setInterval(function () {
                 self.display();
             },
-            10)
+            100)
 
         setInterval(function () {
                 $('.cursor').each (function () {
@@ -984,9 +1071,46 @@ function Terminus(div) {
     self.adjust_size = function () {        
         self.char_width = $("#font_control").width();
         self.char_height = $("#font_control").height();
+
+        // self.left_outer.data('jsp').reinitialise();
+        // self.right_outer.data('jsp').reinitialise();
+        // self.top_outer.data('jsp').reinitialise();
+        // self.bottom_outer.data('jsp').reinitialise();
+
+        // var h = self.terminal.height() - (self.top_outer.height() + self.bottom_outer.height()) - 0;
+        // var w = self.terminal.width() - (self.left_outer.width() + self.right_outer.width()) - 0;
+
+        var h = self.terminal.height() - (self.top.height() + self.bottom.height()) - 0;
+        var w = self.terminal.width() - (self.left.width() + self.right.width()) - 0;
+
+        // alert(h + " " + w);
+
+        // self.center.height(h);
+        // self.center.width(w);
+        self.left.height(h);
+        self.right.height(h);
+
+        self.center_outer.height(h);
+        self.center_outer.width(w);
+
+        // self.center.css('height', h);
+        // self.center.css('width', w);
         
-        var nlines = Math.floor(self.terminal.height() / self.char_height) - 0;
-        var ncols = Math.floor(self.terminal.width() / self.char_width) - 2;
+        // self.center.jScrollPane();
+        self.center_outer.data('jsp').reinitialise();
+
+        // var nlines = Math.floor(self.center.height() / self.char_height);
+
+        // // We subtract one column because of the scrollbar
+        // var ncols = Math.floor(self.center.width() / self.char_width) - 1;
+
+        var nlines = Math.floor(h / self.char_height);
+
+        // We subtract one column because of the scrollbar
+        var ncols = Math.floor(w / self.char_width);
+
+        // var nlines = Math.floor(self.terminal.height() / self.char_height) - 0;
+        // var ncols = Math.floor(self.terminal.width() / self.char_width) - 2;
 
         if (nlines == self.nlines && ncols == self.ncols) {
             return;
@@ -1026,13 +1150,20 @@ function Terminus(div) {
 
 
     self.add_thing = function(thing) {
-        self.d_terminal.appendChild(thing);
-        // $('#center').append(thing);
+        // self.d_terminal.appendChild(thing);
+        self.center.append(thing);
     }
     self.scroll_to_top = function() {
+        self.center_outer.data('jsp').reinitialise();
+
+        // setTimeout(function () {
+        //         self.center_outer.data('jsp').scrollToPercentY(100);
+        //     }, 100);
+
         // var x = $('#center')[0];
-        // x.scrollTop = x.scrollHeight + 100;
-        self.d_terminal.scrollTop = self.d_terminal.scrollHeight + 100;
+        // x.scrollTop = x.scrollHeight;
+
+        // self.d_terminal.scrollTop = self.d_terminal.scrollHeight + 100;
     }
 
     // SCROLLING
@@ -1069,9 +1200,6 @@ function Terminus(div) {
     // CHILDREN
 
     self.set_child = function(id, child) {
-        // if (!id) {
-        //     id = self.n++;
-        // }
         var existing = self.children[id];
         var wrap;
         if (existing !== undefined) {
@@ -1202,12 +1330,13 @@ function Terminus(div) {
     self.use_screen = function(n) {
         self.screen = self.screens[n];
         var new_screend = self.screends[n];
+        var target = self.center[0];
         if (self.screend !== undefined) {
-            self.d_terminal.replaceChild(new_screend.box,
-                                         self.screend.box);
+            target.replaceChild(new_screend.box,
+                                self.screend.box);
         }
         else {
-            self.d_terminal.appendChild(new_screend.box);
+            target.appendChild(new_screend.box);
         }
         self.screend = new_screend;
         self.display(true);
@@ -1600,7 +1729,9 @@ function Terminus(div) {
                       function(data) {
                           if (data != "") {
                               self.write_all(data);
-                              self.scroll_to_top();
+                              self.display();
+
+                              // self.scroll_to_top();
                           }
                           self.get_data();
                       })

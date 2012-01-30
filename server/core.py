@@ -103,7 +103,7 @@ class Terminus:
             return {'data': ''}
             # return {'data': self.handler.receive()}
 
-        @self.app.route('/resources/<name>')
+        @self.app.route('/resources/<name:path>')
         def get_resource(name):
             return self.resource(name)
 
