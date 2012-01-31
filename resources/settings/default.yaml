@@ -15,10 +15,6 @@ ncols_min: 1
 # vertical scrollbar if there is one.
 nlines_sub: 0
 ncols_sub: 0
-    
-# Whether to reduce the number of lines/columns
-# when elements are put at the top/bottom/left/right
-shrink: true
 
 
 ## BUFFERS
@@ -30,18 +26,18 @@ shrink: true
 
 screens:
 
+  # 0
   # Main screen (default)
-  0:
-    scrollback: 1000
+  - scrollback: 1000
     scroll_chunk: 100
 
+  # 1
   # The alternate screen, used by most full-screen applications like
   # emacs, vi, screen, etc. has no scrollback.
-  1:
-    scrollback: 0,
+  - scrollback: 0
     scroll_chunk: 100
 
-  # You can add screens if it suits your fancy, but right now
+  # You can add more screens if it suits your fancy, but right now
   # there is no way to access them.
 
 
@@ -50,11 +46,14 @@ screens:
 scrolling:
   # If true, we use jscrollpane to display scrollbars. If
   # false, we use the standard OS-issue scrollbars.
-  jscrollpane: true
+  jscrollpane: false
   
   # true iff we want a horizontal scrollbar when appropriate
+  # note: if jscrollpane is false, use css on .center (overflow-x = auto or hidden)
   scrollh: true
   
   # true iff we want a vertical scrollbar when appropriate
+  # note: if jscrollpane is false, use css on .center (overflow-y = auto or hidden)
+  # note: a false value is somewhat buggy with jscrollpane
   scrollv: true
 

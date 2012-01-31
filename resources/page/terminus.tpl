@@ -26,16 +26,20 @@
 
     <script>
       $(document).ready(function() {
-        var termtype = "{{termtype}}";
-        var id = "{{id}}";
-        var magic = "{{magic}}";
-        var path = "/" + termtype + "/" + id;
-        var settings_file = "/resources/settings/{{settings}}";
-        <!-- var settings = jsyaml.load(); -->
 
-        terminal = $("#terminal");
-        d_terminal = terminal[0];
-        term = Terminus(terminal, path, magic);
+        var setting_files = "{{settings}}".split(":");
+
+        grab_settings({}, setting_files, function (settings) {
+            console.log(settings);
+            settings.termtype = "{{termtype}}";
+            settings.id = "{{id}}";
+            settings.magic = "{{magic}}";
+            settings.path = "/" + settings.termtype + "/" + settings.id;
+            term_div = $("#terminal");
+            terminal = Terminus(term_div, settings);
+            term = terminal;
+        });
+
       });
     </script>
 

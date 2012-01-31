@@ -15,6 +15,20 @@ function obj() {
 }
 
 
+function grab_settings(accum, files, fn) {
+    if (!files.length) {
+        fn(accum);
+    }
+    else {
+        var file = files.shift();
+        $.get(file, function (data) {
+            data = jsyaml.load(data);
+            $.extend(true, accum, data);
+            grab_settings(accum, files, fn);
+        });
+    }
+}
+
 function makenode(type) {
     return document.createElement(type);
 }
@@ -643,7 +657,7 @@ function Screen(term) {
 }
 
 
-function ScreenDisplay(terminal, screen, scrollback) {
+function ScreenDisplay(terminal, screen, settings) {
 
     var self = obj();
 
@@ -712,7 +726,7 @@ function ScreenDisplay(terminal, screen, scrollback) {
         var add_to = self.scrollbacks.children().last();
         add_to.append(x);
         var len = add_to.children().length;
-        if (len == self.scroll_block_size) {
+        if (len == self.scroll_chunk) {
             self.rotate_scrollback();
         }
     }
@@ -743,18 +757,19 @@ function ScreenDisplay(terminal, screen, scrollback) {
         self.invalid = true;
     }
 
-    self.init = function (terminal, screen, scrollback) {
+    self.init = function (terminal, screen, settings) {
 
         self.terminal = terminal;
         self.screen = screen;
+        self.settings = settings;
 
         self.box = makediv();
 
         // SCROLLBACK
 
-        if (!scrollback) { scrollback = 0; }
-        self.scroll_block_size = 100;
-        self.n_scrolls = Math.ceil(scrollback / self.scroll_block_size);
+        if (!settings.scrollback) { settings.scrollback = 0; }
+        self.scroll_chunk = settings.scroll_chunk || 100;
+        self.n_scrolls = Math.ceil(settings.scrollback / self.scroll_chunk);
 
         var scrollbacks = document.createElement('div');
         scrollbacks.setAttribute('id', 'scrollbacks');
@@ -773,277 +788,39 @@ function ScreenDisplay(terminal, screen, scrollback) {
         self.resize(self.screen.nlines, self.screen.ncols);
     }
 
-    self.init(terminal, screen, scrollback);
+    self.init(terminal, screen, settings);
     return self;
 }
 
 
 
-function Terminus(div, path, magic) {
+function Terminus(div, settings) {
     var self = Nest(div);
-
-    self.init = function (div) {
-
-        // HANDY POINTERS
-
-        self.terminal = div;
-        self.d_terminal = div[0];
-
-        // CHILDREN
-
-        self.children_wrappers = {};
-
-        // STRUCTURE
-        var inner = '';
-        // inner += '<div id="top" style="background-color: red">A</div>';
-        // inner += '<table height=100% width=100% id="middle"><tr>';
-        // inner += '<td><div id="left" style="background-color: blue">BUR</div></td>';
-        // inner += '<td><div id="center" style="height:100%; overflow:auto;></div></td>';
-        // inner += '<td><div id="right" style="background-color: green">CHARD</div></td>';
-        // inner += '</tr></table>';
-        // inner += '<div id="bottom" style="background-color: yellow">D</div>';
-
-        //////
-        // inner += '<div id="top" style="background-color: red">A</div><br/>';
-        // inner += '<div id="left" style="float: left; background-color: blue">BUR</div><br/>';
-        // // inner += '<div id="center" style="float: left; height:100%; overflow:auto;>O</div>';
-        // inner += '<div id="centerx" style="float: left; background-color: magenta>fuckoff</div><br/>';
-        // // inner += '<div id="right1" style="float: left; background-color: green">X</div><br/>';
-        // inner += '<div id="right" style="float: left; background-color: green">CHARD</div><br/>';
-        // // inner += '<div id="right" style="float: left; background-color: green">CHARD</div><br/>';
-        // inner += '<div id="bottom" style="background-color: yellow">D</div>';
-        // self.d_terminal.innerHTML = inner;
-
-        function make_positional_nojscroll(parent, name, index) {
-            var div = makediv();
-            var jdiv = $(div);
-            jdiv.attr('id', name);
-            // jdiv.append("A");
-            parent.append(div);
-            self[name] = jdiv;
-            self[name + "_outer"] = jdiv;
-
-            if (index) {
-                // self.children_wrappers[index] = jdiv;
-                self.children_wrappers[index] = div;
-                var nest = EmptyNest();
-                jdiv.append(nest.element);
-                self.children[index] = nest;
-            }
-        }
-
-        function make_positional(parent, name, index) {
-            // var OUTER = makediv();
-            // $(OUTER).attr('id', name);
-
-            var div = makediv();
-            var jdiv = $(div);
-            jdiv.attr('id', name);
-            // OUTER.appendChild(div);
-
-            // jdiv.jScrollPane();
-            // jdiv.jScrollPane({autoReinitialise: true,
-            //             stickToBottom: true});
-            jdiv.jScrollPane({
-                stickToBottom: true,
-                enableKeyboardNavigation: false,
-                isScrollableH: true,
-                isScrollableV: true
-            });
-            
-            var api = jdiv.data('jsp');
-            var pane = api.getContentPane();
-            // jdiv.append("A");
-
-            // var inndiv = $(makediv());
-            // pane.append(inndiv);
-            var inndiv = pane;
-            parent.append(jdiv);
-            self[name] = inndiv;
-            self[name+'_outer'] = jdiv;
-
-            if (index) {
-                // self.children_wrappers[index] = inndiv;
-                self.children_wrappers[index] = inndiv[0];
-                var nest = EmptyNest();
-                inndiv.append(nest.element);
-                self.children[index] = nest;
-            }
-        }
-
-        make_positional_nojscroll(self.terminal, 'top', 1);
-        make_positional_nojscroll(self.terminal, 'middle');
-        make_positional_nojscroll(self.middle, 'left', 2);
-        make_positional(self.middle, 'center');
-        make_positional_nojscroll(self.middle, 'right', 4);
-        make_positional_nojscroll(self.terminal, 'bottom', 5);
-
-        // SIZE
-        
-        self.adjust_size();
-
-        // SCREENS
-
-        self.screens = [Screen(self),
-                        Screen(self)];
-        self.screends = [ScreenDisplay(self, self.screens[0], 1000),
-                         ScreenDisplay(self, self.screens[1], 0)];
-        self.use_screen(0);
-
-        // Major hack to allow pasting: we'll constantly put focus on an
-        // invisible text area, then when the user pastes, we'll clear the
-        // text area, check what appears in it, and we'll send the
-        // contents over to the pty. I don't yet know how to make middle
-        // click paste work, unfortunately, so we'll make do with Ctrl+V.
-        var textarea = document.createElement('textarea');
-        self.textarea = $(textarea);
-        self.textarea.css('height', 0).css('width', 0);
-        self.add_thing(textarea);
-
-        // ESCAPE
-
-        self.escape = false;
-
-        // WORKERS
-
-        setInterval(function () {
-                self.adjust_size();
-            }, 100)
-
-        setInterval(function () {
-                self.display();
-            },
-            100)
-
-        setInterval(function () {
-                $('.cursor').each (function () {
-                        var elem = $(this);
-                        var c = elem.css('color');
-                        var bgc = elem.css('background-color');
-                        elem.css('color', bgc);
-                        elem.css('background-color', c);
-                    })
-                    },
-            200)
-
-        self.get_data();
-
-        self.to_send = "";
-        setInterval(function () {
-                if (self.to_send != "") {
-                    var to_send = self.to_send;
-                    self.to_send = "";
-                    $.post(path+"/send", {data: to_send, magic: magic},
-                           function (data) {
-                               self.write_all(data.data);
-                               // self.scroll_to_top();
-                           });
-                }
-            },
-            10);
-
-        // BINDINGS
-
-        $(document).bind('paste', function(e) {
-                var target = self.textarea;
-                target.val("");
-                setTimeout(function() {
-                        var text = target.val();
-                        self.to_send += text;
-                    }, 0);
-            });
-
-        $(document).bind('keydown', function(e) {
-                self.textarea.focus();
-                var key = e.keyCode;
-                var keymap = {
-                    8: "\x7F",       // Backspace
-                    9: "\x09",       // Tab
-                    27: "\x1B",      // Esc
-                    33: "\x1B[5~",   // PgUp
-                    34: "\x1B[6~",   // PgDn
-                    35: "\x1B[4~",   // End
-                    36: "\x1B[1~",   // Home
-                    37: self.app_key ? "\x1BOD" : "\x1B[D",    // Left
-                    38: self.app_key ? "\x1BOA" : "\x1B[A",    // Up
-                    39: self.app_key ? "\x1BOC" : "\x1B[C",    // Right
-                    40: self.app_key ? "\x1BOB" : "\x1B[B",    // Down
-                    // 38: "\x1B[A",    // Up
-                    // 39: "\x1B[C",    // Right
-                    // 40: "\x1B[B",    // Down
-                    45: "\x1B[2~",   // Ins
-                    46: "\x1B[3~",   // Del
-                    112: "\x1B[[A",  // F1
-                    113: "\x1B[[B",  // F2
-                    114: "\x1B[[C",  // F3
-                    115: "\x1B[[D",  // F4
-                    // 116: "\x1B[[E",  // F5
-                    117: "\x1B[17~", // F6
-                    118: "\x1B[18~", // F7
-                    119: "\x1B[19~", // F8
-                    120: "\x1B[20~", // F9
-                    121: "\x1B[21~", // F10
-                    122: "\x1B[23~", // F11
-                    123: "\x1B[24~", // F12
-                }
-            
-                var s;
-                if (e.ctrlKey && !e.shiftKey) {
-                    if (key >= 97 && key <= 122)
-                        key -= 32;
-                    if (key != 86) {
-                        if (key >= 65 && key <= 90) {
-                            key -= 64;
-                            s = String.fromCharCode(key);
-                        }
-                    }
-                } else if (e.ctrlKey && e.shiftKey) {
-                    if (key >= 97 && key <= 122)
-                        key -= 32;
-                    if (key == 76) {
-                        self.screend.clear_scrollback();
-                    }
-                }
-                else {
-                    s = keymap[key];
-                }
-
-                if (s !== undefined) {
-                    self.to_send += s;
-                    e.stopPropagation();
-                    e.preventDefault();
-                }
-            });
-
-        $(document).bind('keypress', function(e) {
-                if (!e.ctrlKey) {
-                    var key = e.keyCode;
-                    var s;
-                    s = String.fromCharCode(key);
-                    self.to_send += s;
-                }
-            });
-    }
-
 
     // SIZE
 
-    self.adjust_size = function () {        
+    self.adjust_size = function () {
+
         self.char_width = $("#font_control").width();
         self.char_height = $("#font_control").height();
 
-        var h = self.terminal.height() - (self.top.height() + self.bottom.height()) - 0;
-        var w = self.terminal.width() - (self.left.width() + self.right.width()) - 0;
+        var h = self.terminal.height() - (self.top.height() + self.bottom.height());
+        var w = self.terminal.width() - (self.left.width() + self.right.width());
 
         self.left_outer.height(h);
         self.right_outer.height(h);
 
         self.center_outer.height(h);
         self.center_outer.width(w);
-        self.center_outer.data('jsp').reinitialise();
+        if (settings.scrolling.jscrollpane) {
+            self.center_outer.data('jsp').reinitialise();
+        }
 
-        var nlines = Math.floor(h / self.char_height);
-        var ncols = Math.floor(w / self.char_width);
+        var nlines = settings.nlines || (Math.floor(h / self.char_height) - settings.nlines_sub);
+        var ncols = settings.ncols || (Math.floor(w / self.char_width) - settings.ncols_sub);
+
+        if (settings.nlines_min) { nlines = Math.max(nlines, settings.nlines_min); }
+        if (settings.ncols_min) { ncols = Math.max(ncols, settings.ncols_min); }
 
         if (nlines == self.nlines && ncols == self.ncols) {
             return;
@@ -1059,7 +836,7 @@ function Terminus(div, path, magic) {
             }
         }
 
-        $.post(path+'/setsize', {h: self.nlines, w: self.ncols, magic: magic});
+        $.post(settings.path+'/setsize', {h: self.nlines, w: self.ncols, magic: settings.magic});
     }
 
 
@@ -1067,7 +844,13 @@ function Terminus(div, path, magic) {
         self.center.append(thing);
     }
     self.scroll_to_top = function() {
-        self.center_outer.data('jsp').reinitialise();
+        if (settings.scrolling.jscrollpane) {
+            self.center_outer.data('jsp').reinitialise();
+        }
+        else {
+            var x = self.center[0];
+            x.scrollTop = x.scrollHeight;
+        }
 
         // self.center_outer.data('jsp').scrollToPercentY(100);
 
@@ -1641,7 +1424,7 @@ function Terminus(div, path, magic) {
         // setTimeout avoids the annoying "waiting..." message
         // browsers display while the request hangs.
         setTimeout(function () {
-            $.post(path + "/get", {magic: magic},
+            $.post(settings.path + "/get", {magic: settings.magic},
                    function(data) {
                        if (data != "") {
                            self.write_all(data);
@@ -1659,7 +1442,255 @@ function Terminus(div, path, magic) {
         }, 0)
     }
 
-    self.init(div);
+
+    self.init = function (div, settings) {
+
+        // HANDY POINTERS
+
+        self.terminal = div;
+        self.d_terminal = div[0];
+        self.settings = settings;
+
+        // CHILDREN
+
+        self.children_wrappers = {};
+
+        // STRUCTURE
+        var inner = '';
+        // inner += '<div id="top" style="background-color: red">A</div>';
+        // inner += '<table height=100% width=100% id="middle"><tr>';
+        // inner += '<td><div id="left" style="background-color: blue">BUR</div></td>';
+        // inner += '<td><div id="center" style="height:100%; overflow:auto;></div></td>';
+        // inner += '<td><div id="right" style="background-color: green">CHARD</div></td>';
+        // inner += '</tr></table>';
+        // inner += '<div id="bottom" style="background-color: yellow">D</div>';
+
+        //////
+        // inner += '<div id="top" style="background-color: red">A</div><br/>';
+        // inner += '<div id="left" style="float: left; background-color: blue">BUR</div><br/>';
+        // // inner += '<div id="center" style="float: left; height:100%; overflow:auto;>O</div>';
+        // inner += '<div id="centerx" style="float: left; background-color: magenta>fuckoff</div><br/>';
+        // // inner += '<div id="right1" style="float: left; background-color: green">X</div><br/>';
+        // inner += '<div id="right" style="float: left; background-color: green">CHARD</div><br/>';
+        // // inner += '<div id="right" style="float: left; background-color: green">CHARD</div><br/>';
+        // inner += '<div id="bottom" style="background-color: yellow">D</div>';
+        // self.d_terminal.innerHTML = inner;
+
+        function make_positional_nojscroll(parent, name, index) {
+            var div = makediv();
+            var jdiv = $(div);
+            jdiv.attr('id', name);
+            parent.append(div);
+            self[name] = jdiv;
+            self[name + "_outer"] = jdiv;
+
+            if (index) {
+                self.children_wrappers[index] = div;
+                var nest = EmptyNest();
+                jdiv.append(nest.element);
+                self.children[index] = nest;
+            }
+        }
+
+        function make_positional(parent, name, index) {
+
+            var div = makediv();
+            var jdiv = $(div);
+            jdiv.attr('id', name);
+
+            jdiv.jScrollPane({
+                stickToBottom: true,
+                enableKeyboardNavigation: false,
+                isScrollableH: settings.scrolling.scrollh,
+                isScrollableV: settings.scrolling.scrollv
+            });
+            
+            var api = jdiv.data('jsp');
+            var pane = api.getContentPane();
+
+            var inndiv = pane;
+            parent.append(jdiv);
+            self[name] = inndiv;
+            self[name+'_outer'] = jdiv;
+
+            if (index) {
+                self.children_wrappers[index] = inndiv[0];
+                var nest = EmptyNest();
+                inndiv.append(nest.element);
+                self.children[index] = nest;
+            }
+        }
+
+        make_positional_nojscroll(self.terminal, 'top', 1);
+        make_positional_nojscroll(self.terminal, 'middle');
+        make_positional_nojscroll(self.middle, 'left', 2);
+        if (settings.scrolling.jscrollpane) {
+            make_positional(self.middle, 'center');
+        }
+        else {
+            make_positional_nojscroll(self.middle, 'center');
+        }
+        make_positional_nojscroll(self.middle, 'right', 4);
+        make_positional_nojscroll(self.terminal, 'bottom', 5);
+
+        // SIZE
+        
+        self.adjust_size();
+
+        // SCREENS
+
+        self.screens = [];
+        self.screends = [];
+        // alert(settings.screens.length);
+        for (var i = 0; i < settings.screens.length; i++) {
+            var screen = Screen(self);
+            self.screens.push(screen);
+            self.screends.push(ScreenDisplay(self, screen, settings.screens[i]));
+        }
+
+        // self.screens = [Screen(self),
+        //                 Screen(self)];
+        // self.screends = [ScreenDisplay(self, self.screens[0], 1000),
+        //                  ScreenDisplay(self, self.screens[1], 0)];
+
+        self.use_screen(0);
+
+        // Major hack to allow pasting: we'll constantly put focus on an
+        // invisible text area, then when the user pastes, we'll clear the
+        // text area, check what appears in it, and we'll send the
+        // contents over to the pty. I don't yet know how to make middle
+        // click paste work, unfortunately, so we'll make do with Ctrl+V.
+        var textarea = document.createElement('textarea');
+        self.textarea = $(textarea);
+        self.textarea.css('height', 0).css('width', 0);
+        self.add_thing(textarea);
+
+        // ESCAPE
+
+        self.escape = false;
+
+        // WORKERS
+
+        setInterval(function () {
+                self.adjust_size();
+            }, 100)
+
+        setInterval(function () {
+                self.display();
+            },
+            100)
+
+        setInterval(function () {
+                $('.cursor').each (function () {
+                        var elem = $(this);
+                        var c = elem.css('color');
+                        var bgc = elem.css('background-color');
+                        elem.css('color', bgc);
+                        elem.css('background-color', c);
+                    })
+                    },
+            200)
+
+        self.get_data();
+
+        self.to_send = "";
+        setInterval(function () {
+                if (self.to_send != "") {
+                    var to_send = self.to_send;
+                    self.to_send = "";
+                    $.post(settings.path+"/send", {data: to_send, magic: settings.magic},
+                           function (data) {
+                               self.write_all(data.data);
+                               // self.scroll_to_top();
+                           });
+                }
+            },
+            10);
+
+        // BINDINGS
+
+        $(document).bind('paste', function(e) {
+                var target = self.textarea;
+                target.val("");
+                setTimeout(function() {
+                        var text = target.val();
+                        self.to_send += text;
+                    }, 0);
+            });
+
+        $(document).bind('keydown', function(e) {
+                self.textarea.focus();
+                var key = e.keyCode;
+                var keymap = {
+                    8: "\x7F",       // Backspace
+                    9: "\x09",       // Tab
+                    27: "\x1B",      // Esc
+                    33: "\x1B[5~",   // PgUp
+                    34: "\x1B[6~",   // PgDn
+                    35: "\x1B[4~",   // End
+                    36: "\x1B[1~",   // Home
+                    37: self.app_key ? "\x1BOD" : "\x1B[D",    // Left
+                    38: self.app_key ? "\x1BOA" : "\x1B[A",    // Up
+                    39: self.app_key ? "\x1BOC" : "\x1B[C",    // Right
+                    40: self.app_key ? "\x1BOB" : "\x1B[B",    // Down
+                    // 38: "\x1B[A",    // Up
+                    // 39: "\x1B[C",    // Right
+                    // 40: "\x1B[B",    // Down
+                    45: "\x1B[2~",   // Ins
+                    46: "\x1B[3~",   // Del
+                    112: "\x1B[[A",  // F1
+                    113: "\x1B[[B",  // F2
+                    114: "\x1B[[C",  // F3
+                    115: "\x1B[[D",  // F4
+                    // 116: "\x1B[[E",  // F5
+                    117: "\x1B[17~", // F6
+                    118: "\x1B[18~", // F7
+                    119: "\x1B[19~", // F8
+                    120: "\x1B[20~", // F9
+                    121: "\x1B[21~", // F10
+                    122: "\x1B[23~", // F11
+                    123: "\x1B[24~", // F12
+                }
+            
+                var s;
+                if (e.ctrlKey && !e.shiftKey) {
+                    if (key >= 97 && key <= 122)
+                        key -= 32;
+                    if (key != 86) {
+                        if (key >= 65 && key <= 90) {
+                            key -= 64;
+                            s = String.fromCharCode(key);
+                        }
+                    }
+                } else if (e.ctrlKey && e.shiftKey) {
+                    if (key >= 97 && key <= 122)
+                        key -= 32;
+                    if (key == 76) {
+                        self.screend.clear_scrollback();
+                    }
+                }
+                else {
+                    s = keymap[key];
+                }
+
+                if (s !== undefined) {
+                    self.to_send += s;
+                    e.stopPropagation();
+                    e.preventDefault();
+                }
+            });
+
+        $(document).bind('keypress', function(e) {
+                if (!e.ctrlKey) {
+                    var key = e.keyCode;
+                    var s;
+                    s = String.fromCharCode(key);
+                    self.to_send += s;
+                }
+            });
+    }
+
+    self.init(div, settings);
     return self;
 }
 

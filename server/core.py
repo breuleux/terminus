@@ -93,8 +93,6 @@ class Terminus:
         self.settings = settings
         self.path = settings['path']
         self.logs = []
-        self.log('hi', 'there')
-        self.log('you', 'sexy')
         bottle.TEMPLATE_PATH.insert(0, self.path + '/page')
 
         self.handlers = {}
@@ -132,12 +130,17 @@ class Terminus:
             # /resources/page/terminus.tpl (search for TEMPLATE_PATH)
             proc = self.handlers[config].renew(page)
             magic = proc.magic
+            settings = self.handlers[config].settings
+            if isinstance(settings, (list, tuple)):
+                settings = ":".join("/resources/settings/" + s for s in settings)
+            else:
+                settings = "/resources/settings/" + settings
             return template('terminus',
                             termtype = config,
                             id = page,
                             magic = magic,
                             style = self.handlers[config].style,
-                            settings = self.handlers[config].settings)
+                            settings = settings)
 
         @self.app.post('/<config>/<page>/setsize')
         def set_size(config, page):
