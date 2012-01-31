@@ -125,7 +125,7 @@ function EmptyNest() {
 }
 
 
-function Screen(term) {
+function Screen(term, settings) {
     var self = obj();
 
     self.no_text_properties = function() {
@@ -152,11 +152,6 @@ function Screen(term) {
     }
 
     self.resize = function(nlines, ncols) {
-        // Scroll lost lines up
-        // Add new lines down
-        // Remove rightmost characters
-        // Add characters to the right
-
         if (ncols > self.ncols) {
             var old_ncol = self.ncols;
             self.ncols = ncols;
@@ -266,37 +261,6 @@ function Screen(term) {
         }
     }
 
-    self.sgr_styles = {
-        3: "font-style: italic;",
-        4: "text-decoration: underline;",
-        9: "text-decoration: line-through;",
-        23: "font-style: normal;",
-        24: "text-decoration: none;",
-        29: "text-decoration: none;",
-        53: "text-decoration: overline;",
-        55: "text-decoration: none;",
-    }
-
-    self.colors = {
-        0: '#000000',
-        1: '#800000',
-        2: '#800000',
-        3: '#aa8000',
-        4: '#000080',
-        5: '#800080',
-        6: '#008080',
-        7: '#aaaaaa', 
-        
-        10: 'black',
-        11: 'red',
-        12: 'green',
-        13: 'yellow',
-        14: 'blue',
-        15: 'magenta',
-        16: 'cyan',
-        17: 'white', 
-    }
-
     self.compute_style = function(properties) {
         var style = "";
         var bold = false;
@@ -320,7 +284,7 @@ function Screen(term) {
             else if (n >= 40 && n <= 47) bgcolor = (n - 40);
             else if (n == 49) bgcolor = 0;
             else {
-                var s = self.sgr_styles[n];
+                var s = settings.styles[n];
                 if (s !== undefined) {
                     style += s;
                 }
@@ -330,12 +294,12 @@ function Screen(term) {
             color += 10;
         }
         if (reverse || blink) {
-            style += "background-color:" + self.colors[color] + ";";
-            style += "color:" + self.colors[bgcolor] + ";";
+            style += "background-color:" + settings.colors[color] + ";";
+            style += "color:" + settings.colors[bgcolor] + ";";
         }
         else {
-            style += "background-color:" + self.colors[bgcolor] + ";";
-            style += "color:" + self.colors[color] + ";";
+            style += "background-color:" + settings.colors[bgcolor] + ";";
+            style += "color:" + settings.colors[color] + ";";
         }
         var cls;
         if (cursor && self.cursor_visible)
@@ -642,9 +606,6 @@ function Screen(term) {
         self.ncols = 0;
         self.resize(nlines, ncols);
 
-        // self.scroll0 = 0;
-        // self.scroll1 = self.nlines;
-
         self.line = 0;
         self.column = 0;
         self.cursor_blink = false;
@@ -851,43 +812,7 @@ function Terminus(div, settings) {
             var x = self.center[0];
             x.scrollTop = x.scrollHeight;
         }
-
-        // self.center_outer.data('jsp').scrollToPercentY(100);
-
-        // setTimeout(function () {
-        //         self.center_outer.data('jsp').scrollToPercentY(100);
-        //     }, 100);
-
-        // var x = $('#center')[0];
-        // x.scrollTop = x.scrollHeight;
-
-        // self.d_terminal.scrollTop = self.d_terminal.scrollHeight + 100;
     }
-
-    // SCROLLING
-
-    // self.rotate_scrollback = function () {
-    //     self.scrollbacks.children().first().remove();
-    //     var new_div = document.createElement('div');
-    //     self.scrollbacks.append(new_div);
-    // }
-
-    // self.clear_scrollback = function(x) {
-    //     self.scrollbacks.empty();
-    //     for (var i = 0; i < self.n_scrolls; i++) {
-    //         var new_div = document.createElement('div');
-    //         self.scrollbacks.append(new_div);
-    //     }
-    // }
-
-    // self.add_scroll = function(x) {
-    //     var add_to = self.scrollbacks.children().last();
-    //     add_to.append(x);
-    //     var len = add_to.children().length;
-    //     if (len == self.scroll_block_size) {
-    //         self.rotate_scrollback();
-    //     }
-    // }
 
     self.log = function(x) {
         $('#log').append(x + ' ');
@@ -991,36 +916,6 @@ function Terminus(div, settings) {
     // DISPLAY
 
     self.display = function(force) {
-        // if (self.invalid) {
-        //     force = true;
-        //     self.invalid = false;
-        // }
-        // var changes = false;
-        // var n_displayed = self.nlines - Math.min(self.screen.total_height() - self.nlines,
-        //                                          self.screen.bottom_virgins());
-
-        // for (var i = 0; i < n_displayed; i++) {
-        //     if (self.screen.modified[i] || force) {
-        //         var line = self.screen.get_line(i);
-        //         $(self.contents[i]).empty();
-        //         self.contents[i].appendChild(line);
-        //         self.screen.modified[i] = false;
-        //         changes = true;
-        //     }
-        // }
-        // for (var i = n_displayed; i < self.nlines; i++) {
-        //     $(self.contents[i]).empty();
-        // }
-
-        // if (!changes && !force) {
-        //     return;
-        // }
-        // var scrollback = self.screen.scrollback;
-        // self.screen.scrollback = [];
-        // for (var i = 0; i < scrollback.length; i++) {
-        //     self.add_scroll(scrollback[i]);
-        // }
-
         if (self.screend.display(force)) {
             self.scroll_to_top();
         }
@@ -1191,8 +1086,6 @@ function Terminus(div, settings) {
                                true]
             };
             var type = n[0];
-            // var count = n[1];
-            // if (isFinite(count)) {
             if (types[type] === undefined) {
                 return;
             }
@@ -1208,14 +1101,11 @@ function Terminus(div, settings) {
                     var propname = desc[i];
                     if (propname[0] == '*') {
                         var value = [];
-                        while (!edge()) { //(n[j] !== undefined && !isNaN(n[j])) {
+                        while (!edge()) {
                             value.push(n[j]);
                             j++;
                         }
                         data[propname.substring(1)] = value;
-                        // var value = n.slice(i + 1);
-                        // propname = propname.substring(1);
-                        // self.ext_data[propname] = value;
                     }
                     else if (propname == ';;') {
                         if (!edge()) {
@@ -1239,10 +1129,8 @@ function Terminus(div, settings) {
                     self.ext_type = desc[0];
                     self.ext_data = data;
                     self.ext_accum = "";
-                    // self.ext_count = count;
                     self.ext_check_termination = false;
                 }
-                // }
             }
         },
     }
@@ -1380,7 +1268,6 @@ function Terminus(div, settings) {
         else if (self.ext_type) {
             self.ext_accum += s;
             if (c == 0x1B) {
-                // self.ext_count = undefined;
                 self.ext_check_termination = true;
             }
         }
@@ -1429,8 +1316,6 @@ function Terminus(div, settings) {
                        if (data != "") {
                            self.write_all(data);
                            self.display();
-                           
-                           // self.scroll_to_top();
                        }
                        self.get_data();
                    })
@@ -1456,26 +1341,6 @@ function Terminus(div, settings) {
         self.children_wrappers = {};
 
         // STRUCTURE
-        var inner = '';
-        // inner += '<div id="top" style="background-color: red">A</div>';
-        // inner += '<table height=100% width=100% id="middle"><tr>';
-        // inner += '<td><div id="left" style="background-color: blue">BUR</div></td>';
-        // inner += '<td><div id="center" style="height:100%; overflow:auto;></div></td>';
-        // inner += '<td><div id="right" style="background-color: green">CHARD</div></td>';
-        // inner += '</tr></table>';
-        // inner += '<div id="bottom" style="background-color: yellow">D</div>';
-
-        //////
-        // inner += '<div id="top" style="background-color: red">A</div><br/>';
-        // inner += '<div id="left" style="float: left; background-color: blue">BUR</div><br/>';
-        // // inner += '<div id="center" style="float: left; height:100%; overflow:auto;>O</div>';
-        // inner += '<div id="centerx" style="float: left; background-color: magenta>fuckoff</div><br/>';
-        // // inner += '<div id="right1" style="float: left; background-color: green">X</div><br/>';
-        // inner += '<div id="right" style="float: left; background-color: green">CHARD</div><br/>';
-        // // inner += '<div id="right" style="float: left; background-color: green">CHARD</div><br/>';
-        // inner += '<div id="bottom" style="background-color: yellow">D</div>';
-        // self.d_terminal.innerHTML = inner;
-
         function make_positional_nojscroll(parent, name, index) {
             var div = makediv();
             var jdiv = $(div);
@@ -1541,18 +1406,12 @@ function Terminus(div, settings) {
 
         self.screens = [];
         self.screends = [];
-        // alert(settings.screens.length);
         for (var i = 0; i < settings.screens.length; i++) {
-            var screen = Screen(self);
+            var sgr = $.extend(true, {}, self.settings.sgr, settings.screens[i].sgr || {});
+            var screen = Screen(self, sgr);
             self.screens.push(screen);
             self.screends.push(ScreenDisplay(self, screen, settings.screens[i]));
         }
-
-        // self.screens = [Screen(self),
-        //                 Screen(self)];
-        // self.screends = [ScreenDisplay(self, self.screens[0], 1000),
-        //                  ScreenDisplay(self, self.screens[1], 0)];
-
         self.use_screen(0);
 
         // Major hack to allow pasting: we'll constantly put focus on an

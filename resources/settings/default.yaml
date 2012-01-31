@@ -30,6 +30,11 @@ screens:
   # Main screen (default)
   - scrollback: 1000
     scroll_chunk: 100
+    # You can customize colors for a particular screen by adding
+    # something like this (this makes black red):
+    # sgr:
+    #   colors:
+    #     0: red
 
   # 1
   # The alternate screen, used by most full-screen applications like
@@ -57,3 +62,72 @@ scrolling:
   # note: a false value is somewhat buggy with jscrollpane
   scrollv: true
 
+
+# Codes used to style text in the terminal. The defaults can be
+# overriden on a per-screen basis.
+sgr:
+
+  # Styles to give spans that are given certain modes
+  styles:
+    3: "font-style: italic;"
+    4: "text-decoration: underline;"
+    9: "text-decoration: line-through;"
+    23: "font-style: normal;"
+    24: "text-decoration: none;"
+    29: "text-decoration: none;"
+    53: "text-decoration: overline;"
+    55: "text-decoration: none;"
+
+  # Terminal colors
+  colors:
+
+    # Normal intensity
+    0: '#000'
+    1: '#800'
+    2: '#800'
+    3: '#a80'
+    4: '#008'
+    5: '#808'
+    6: '#088'
+    7: '#aaa'
+
+    # Bright (bold) intensity
+    10: black
+    11: red
+    12: green
+    13: yellow
+    14: blue
+    15: magenta
+    16: cyan
+    17: white
+
+
+
+# TODO: support this feature
+log:
+  # Whether logging happens from the start
+  start: on
+  
+  # Where to log
+  #   off/no/false = no logging
+  #   console = log to javascript console
+  #   "#elem" = log to the element with that id
+  where: console
+
+  # What to log
+  #   off: log nothing
+  #   all: log everything
+  #   bad: log everything that might be a problem
+  #   error: unexpected exceptions thrown during execution (bad)
+  #   escape: log escape codes
+  #   escape_unknown: log unknown escape codes (bad)
+  #   scroll_clear: log when things scroll away
+  #   create_nest: log nest creation
+  #   destroy_nest: log nest destruction
+  # Note: you can define a list of things to log.
+  what: off
+
+  # Prefix to all logged things (useful to determine source if there
+  # are nested terminals).
+  # Set to no/false/off if there is no prefix
+  prefix: no
