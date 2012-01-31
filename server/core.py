@@ -135,7 +135,7 @@ class Terminus:
                 settings = ":".join("/resources/settings/" + s for s in settings)
             else:
                 settings = "/resources/settings/" + settings
-            return template('terminus',
+            return template(self.handlers[config].template,
                             termtype = config,
                             id = page,
                             magic = magic,

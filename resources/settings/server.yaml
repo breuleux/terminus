@@ -29,7 +29,15 @@ configurations:
 
   bash:
     command: 'bash'
-    page: 'terminus.html'
+    template: 'terminus'
+    style: 'default.css'
+    settings: 'default.yaml'
+    timeout_period: no
+    grace_period: 60
+
+  debug:
+    command: 'bash'
+    template: 'debug'
     style: 'default.css'
     settings: 'default.yaml'
     timeout_period: no

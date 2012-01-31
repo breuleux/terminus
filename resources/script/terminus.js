@@ -38,6 +38,86 @@ function makediv() {
 }
 
 
+function Logger(settings) {
+    var self = obj();
+
+    self.log = function(type, data) {
+        if (!self.active || (!self.all && !self.what[type])) {
+            return;
+        }
+        var now = Date.now();
+        if (now - self.last > settings.group_delay) {
+            self.scroll();
+        }
+        var s = type + ": " + data + "<br/>";
+        if (settings.prefix) {
+            s = settings.prefix + " " + s;
+        }
+        self.target.append(s);
+        self.last = now;
+    }
+
+    self.switch_state = function(value) {
+        if (value === undefined) { value = !self.active; }
+        self.active = value;
+    }
+
+    self.scroll = function() {
+
+        if (self.target !== undefined) {
+            self.stale.prepend(self.target);
+            self.fresh.empty();
+        }
+
+        self.target = $(makediv());
+        self.target.attr('class', 'log_entry');
+        self.fresh.append(self.target);
+
+        if (settings.colorize) {
+            var r = String.fromCharCode(65 + Math.random() * 6);
+            var g = String.fromCharCode(65 + Math.random() * 6);
+            var b = String.fromCharCode(65 + Math.random() * 6);
+            self.target.css('background-color', '#'+r+g+b);
+        }
+
+        if (settings.animate) {
+            self.target.hide();
+            setInterval(function () {
+                self.target.slideDown('fast');
+            }, 10);
+        }
+    }
+
+    self.clear = function() {
+        self.fresh.empty();
+        self.stale.empty();
+        self.target = undefined;
+        self.last = -settings.group_delay - 1;
+    }
+
+    self.init = function(settings) {
+        self.settings = settings;
+        self.fresh = $(settings.where + " > .fresh");
+        self.stale = $(settings.where + " > .stale");
+        self.active = settings.start;
+        self.what = {}
+        self.all = false;
+        for (var i = 0; i < settings.what.length; i++) {
+            var type = settings.what[i];
+            if (type == 'all') {
+                self.all = true;
+                break;
+            }
+            self.what[type] = true;
+        }
+        self.clear();
+    }
+
+    self.init(settings);
+    return self
+}
+
+
 function Nest(element) {
     var self = obj();
 
@@ -133,6 +213,8 @@ function Screen(term, settings) {
     };
 
     self.total_height = function() {
+        // Height of the screen counting HTML elements that might be
+        // on one logical line, but are effectively taller than that.
         var total = 0;
         for (var i = 0; i < self.nlines; i++) {
             total += self.heights[i];
@@ -141,6 +223,8 @@ function Screen(term, settings) {
     }
 
     self.bottom_virgins = function() {
+        // Number of lines at the bottom of the screen that have not
+        // been modified yet (are completely blank).
         var total = 0;
         for (var i = self.nlines - 1; i >= 0; i--) {
             if (self.virgin[i])
@@ -153,35 +237,50 @@ function Screen(term, settings) {
 
     self.resize = function(nlines, ncols) {
         if (ncols > self.ncols) {
+            // Wider screen
             var old_ncol = self.ncols;
             self.ncols = ncols;
             for (var i = 0; i < self.nlines; i++){
+                // This adds blanks to row i starting at position
+                // old_ncol and marks as modified.
+                // BUG? might remove ext flag and "un-display" html
                 self.clear_line(i, old_ncol);
             }
         }
         else if (ncols < self.ncols) {
+            // Thinner screen
             self.ncols = ncols;
             for (var i = 0; i < self.nlines; i++){
+                // Discard the extra characters
                 self.matrix[i].splice(self.ncols);
                 self.modified[i] = true;
             }
             if (self.column >= ncols) {
-                self.column = ncols - 1;
+                // Push back the cursor right past the end of the
+                // line.
+                self.column = ncols;
             }
         }
 
         if (nlines > self.nlines) {
+            // Taller screen
             for (var i = self.nlines; i < nlines; i++){
+                // clear_line will populate the line with blanks and
+                // will set the appropriate flags, so we just need to
+                // initialize self.matrix[i] with an empty list.
                 self.matrix[i] = [];
                 self.clear_line(i);
             }
         }
         else if (nlines < self.nlines) {
+            // Shorter screen
             for (var i = nlines; i <= self.line; i++) {
+                // If the cursor is below the new height of the
+                // screen, we scroll up until it is the last line.
                 self.scroll()
             }
-            self.line = Math.min(self.line, nlines - 1);
-            for (var i = self.nlines; i > nlines; i--){
+            for (var i = self.nlines; i > nlines; i--) {
+                // Delete all lines below the threshold
                 self.matrix[i] = undefined;
                 self.lines[i] = undefined;
                 self.virgin[i] = undefined;
@@ -189,11 +288,14 @@ function Screen(term, settings) {
                 self.ext[i] = undefined;
             }
             if (self.line >= nlines) {
+                // If the cursor is below the screen, we bump it up
+                // (scroll() did not change it)
                 self.line = nlines - 1;
             }
         }
         self.nlines = nlines;
 
+        // Reset the scroll boundaries.
         self.scroll0 = 0;
         self.scroll1 = self.nlines;
     }
@@ -262,7 +364,7 @@ function Screen(term, settings) {
     }
 
     self.compute_style = function(properties) {
-        var style = "";
+        var style = settings.base_style;
         var bold = false;
         var color = 7;
         var bgcolor = 0;
@@ -292,6 +394,10 @@ function Screen(term, settings) {
         }
         if (bold) {
             color += 10;
+            style += settings.bold_style;
+        }
+        else {
+            style += settings.normal_style;
         }
         if (reverse || blink) {
             style += "background-color:" + settings.colors[color] + ";";
@@ -814,8 +920,9 @@ function Terminus(div, settings) {
         }
     }
 
-    self.log = function(x) {
-        $('#log').append(x + ' ');
+    self.log = function(event, data) {
+        self.logger.log(event, data);
+        // $('#log > .fresh').prepend(event + ": " + data + "<br/>");
         // self.add_scroll(x + "<br/>");
     }
 
@@ -955,7 +1062,7 @@ function Terminus(div, settings) {
                 policy();
             }
             else {
-                self.log('unknown '+nums+which)
+                self.log('esc_unknown', '->' + '[?' + n + which)
             }
         }
     }
@@ -1064,7 +1171,12 @@ function Terminus(div, settings) {
                 }
             }
         },
-        
+
+        r0: function(_) {
+            self.screen.scroll0 = 0;
+            self.screen.scroll1 = self.screen.nlines;
+            self.screen.move_to(0, 0);
+        }
         r2: function(nums) {
             self.screen.scroll0 = nums[0] - 1;
             self.screen.scroll1 = nums[1];
@@ -1162,6 +1274,7 @@ function Terminus(div, settings) {
                 fn(nums);
             }
             else {
+                self.log('esc_unknown', String.fromCharCode(esc.mode) + alt + esc.contents + esc.type);
                 // self.log(String.fromCharCode(esc.mode) + esc.contents + alt + esc.type + " " + nums.join("/") + " " + (alt + esc.type + nums.length));
             }
         }
@@ -1172,7 +1285,7 @@ function Terminus(div, settings) {
             // self.log(String.fromCharCode(esc.mode) + esc.contents + alt + esc.type + " " + nums.join("/") + " " + (alt + esc.type + nums.length));
         }
         // self.log(String.fromCharCode(esc.mode) + esc.contents + alt + esc.type + " " + nums.join("/") + " " + (alt + esc.type + nums.length));
-        self.log(String.fromCharCode(esc.mode) + esc.contents + alt + esc.type + "<br/>");
+        self.log('esc', String.fromCharCode(esc.mode) + esc.contents + alt + esc.type);
     }
 
     var deco = function (x) {
@@ -1423,6 +1536,9 @@ function Terminus(div, settings) {
         self.textarea = $(textarea);
         self.textarea.css('height', 0).css('width', 0);
         self.add_thing(textarea);
+
+        // LOG
+        self.logger = Logger(settings.log);
 
         // ESCAPE
 

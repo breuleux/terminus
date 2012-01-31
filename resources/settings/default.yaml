@@ -51,7 +51,7 @@ screens:
 scrolling:
   # If true, we use jscrollpane to display scrollbars. If
   # false, we use the standard OS-issue scrollbars.
-  jscrollpane: false
+  jscrollpane: true
   
   # true iff we want a horizontal scrollbar when appropriate
   # note: if jscrollpane is false, use css on .center (overflow-x = auto or hidden)
@@ -66,6 +66,15 @@ scrolling:
 # Codes used to style text in the terminal. The defaults can be
 # overriden on a per-screen basis.
 sgr:
+
+  # Base style for all characters
+  base_style: ""
+
+  # Style for normal weight
+  normal_style: ""
+
+  # Style for bold or bright characters
+  bold_style: "font-weight: bold;"
 
   # Styles to give spans that are given certain modes
   styles:
@@ -103,7 +112,6 @@ sgr:
 
 
 
-# TODO: support this feature
 log:
   # Whether logging happens from the start
   start: on
@@ -112,22 +120,36 @@ log:
   #   off/no/false = no logging
   #   console = log to javascript console
   #   "#elem" = log to the element with that id
-  where: console
+  where: "#log"
 
   # What to log
   #   off: log nothing
   #   all: log everything
-  #   bad: log everything that might be a problem
-  #   error: unexpected exceptions thrown during execution (bad)
-  #   escape: log escape codes
-  #   escape_unknown: log unknown escape codes (bad)
+  #   err: unexpected exceptions thrown during execution
+  #   esc: log escape codes
+  #   esc_unknown: log unknown escape codes
   #   scroll_clear: log when things scroll away
   #   create_nest: log nest creation
   #   destroy_nest: log nest destruction
   # Note: you can define a list of things to log.
-  what: off
+  what:
+    - error
+    - esc_unknown
 
   # Prefix to all logged things (useful to determine source if there
   # are nested terminals).
   # Set to no/false/off if there is no prefix
   prefix: no
+
+  # Grouping delay in milliseconds. If this time elapses with no
+  # additional logging, the next entry in the log will cause the
+  # current block to slide down and a new block to be created. In an
+  # interactive setting, this typically creates a distinct log block
+  # for each interaction that causes logging.
+  group_delay: 100
+
+  # If true there will be a nifty slidedown animation
+  animate: yes
+
+  # If true the divs will be colorized
+  colorize: yes

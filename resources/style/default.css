@@ -12,6 +12,20 @@
     white-space: nowrap;
 }
 
+.log_entry {
+    max-height: 200px;
+    overflow: auto;
+}
+
+#log {
+    height: 100%;
+    overflow: auto;
+}
+
+#log > .fresh {
+    background-color: #ddd;
+}
+
 #font_control {
     visibility: hidden;
 }
