@@ -166,9 +166,10 @@
 
 				percentInViewH = contentWidth / paneWidth;
 				percentInViewV = contentHeight / paneHeight;
-				isScrollableV = percentInViewV > 1;
 
-				isScrollableH = percentInViewH > 1;
+                                // XXXXX added settings
+				isScrollableV = settings.isScrollableV && (percentInViewV > 1);
+				isScrollableH = settings.isScrollableH && (percentInViewH > 1);
 
 				//console.log(paneWidth, paneHeight, contentWidth, contentHeight, percentInViewH, percentInViewV, isScrollableH, isScrollableV);
 

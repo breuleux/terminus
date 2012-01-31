@@ -2,9 +2,24 @@
 
 from terminus_server.core import *
 
+import os
 import sys
+import yaml
 
-path = sys.argv[1]
-app = Terminus(path, Proc())
-app.run(server = 'paste', host = 'localhost', port = 8080)
+if __name__ == '__main__':
+
+    if len(sys.argv) < 2:
+        print "Usage: %s <path>" % sys.argv[0]
+        sys.exit(1)
+
+    path = os.path.abspath(sys.argv[1])
+    filename = os.path.join(path, 'settings/server.yaml')
+    with open(filename) as f:
+        settings = yaml.load(f)
+    settings['path'] = path
+
+    app = Terminus(settings)
+    app.run(server = 'paste',
+            host = settings['host'],
+            port = settings['port'])
 

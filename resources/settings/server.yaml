@@ -1,0 +1,37 @@
+
+host: 'localhost'
+port: 8080
+
+# True iff we only accept connections from localhost
+only_localhost: true
+
+# Available configurations, run when the client goes to
+# /<conf_name>
+
+# command: command to run under the pseudo-terminal
+
+# style: stylesheet to serve to clients
+#        fetch from: /resources/style/<style>
+#        you can give a list, they will apply in order
+
+# settings: client settings
+#        fetch from: /resources/settings/<settings>
+#        you can give a list, the settings will be merged in order
+
+# timeout: time (in seconds) after which the session should be
+#        terminated if there is no activity.
+
+# grace_period: time (in seconds) to keep the session alive after the
+#        client disconnects (just in case it was an error on their
+#        part).
+
+configurations:
+
+  bash:
+    command: 'bash'
+    page: 'terminus.html'
+    style: 'default.css'
+    settings: 'default.yaml'
+    timeout_period: no
+    grace_period: 60
+

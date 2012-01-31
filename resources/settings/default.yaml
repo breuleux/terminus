@@ -1,0 +1,60 @@
+
+## SCREEN SIZE
+
+# Number of rows and columns.
+# The value is auto-calculated if no/false/null
+nlines: no
+ncols: no
+
+# Minimum number of lines and columns.
+nlines_min: 1
+ncols_min: 1
+
+# If nlines/ncols are auto-calculated, they will be reduced by
+# this number. You can use this e.g. to not overlap with the
+# vertical scrollbar if there is one.
+nlines_sub: 0
+ncols_sub: 0
+    
+# Whether to reduce the number of lines/columns
+# when elements are put at the top/bottom/left/right
+shrink: true
+
+
+## BUFFERS
+
+# The terminal normally comes with two buffers (two
+# screens). Each has its own scrollback. The number of lines can
+# be customized, and they will be grouped in blocks of size
+# scroll_chunk.
+
+screens:
+
+  # Main screen (default)
+  0:
+    scrollback: 1000
+    scroll_chunk: 100
+
+  # The alternate screen, used by most full-screen applications like
+  # emacs, vi, screen, etc. has no scrollback.
+  1:
+    scrollback: 0,
+    scroll_chunk: 100
+
+  # You can add screens if it suits your fancy, but right now
+  # there is no way to access them.
+
+
+## SCROLLING
+  
+scrolling:
+  # If true, we use jscrollpane to display scrollbars. If
+  # false, we use the standard OS-issue scrollbars.
+  jscrollpane: true
+  
+  # true iff we want a horizontal scrollbar when appropriate
+  scrollh: true
+  
+  # true iff we want a vertical scrollbar when appropriate
+  scrollv: true
+

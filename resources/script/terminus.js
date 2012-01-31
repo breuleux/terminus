@@ -779,7 +779,7 @@ function ScreenDisplay(terminal, screen, scrollback) {
 
 
 
-function Terminus(div) {
+function Terminus(div, path, magic) {
     var self = Nest(div);
 
     self.init = function (div) {
@@ -821,6 +821,7 @@ function Terminus(div) {
             // jdiv.append("A");
             parent.append(div);
             self[name] = jdiv;
+            self[name + "_outer"] = jdiv;
 
             if (index) {
                 // self.children_wrappers[index] = jdiv;
@@ -843,8 +844,13 @@ function Terminus(div) {
             // jdiv.jScrollPane();
             // jdiv.jScrollPane({autoReinitialise: true,
             //             stickToBottom: true});
-            jdiv.jScrollPane({stickToBottom: true});
-
+            jdiv.jScrollPane({
+                stickToBottom: true,
+                enableKeyboardNavigation: false,
+                isScrollableH: true,
+                isScrollableV: true
+            });
+            
             var api = jdiv.data('jsp');
             var pane = api.getContentPane();
             // jdiv.append("A");
@@ -866,57 +872,11 @@ function Terminus(div) {
         }
 
         make_positional_nojscroll(self.terminal, 'top', 1);
-        // make_positional(self.terminal, 'middle');
         make_positional_nojscroll(self.terminal, 'middle');
         make_positional_nojscroll(self.middle, 'left', 2);
         make_positional(self.middle, 'center');
         make_positional_nojscroll(self.middle, 'right', 4);
         make_positional_nojscroll(self.terminal, 'bottom', 5);
-
-
-        // var top = makediv();
-        // $(top).attr('id', 'top');
-        // $(top).append('TOP');
-        // self.d_terminal.appendChild(top);
-        // self.top = $(top);
-
-        // var middle = makediv();
-        // $(middle).attr('id', 'middle');
-        // self.middle = middle;
-        // self.d_terminal.appendChild(middle);
-
-        // var left = makediv();
-        // $(left).attr('id', 'left');
-        // $(left).append('LEFT');
-        // self.middle.appendChild(left);
-        // self.left = $(left);
-
-        // var center = makediv();
-        // $(center).attr('id', 'center');
-        // self.middle.appendChild(center);
-        // self.center = $(center);
-
-        // var right = makediv();
-        // $(right).attr('id', 'right');
-        // $(right).append('RIGHT');
-        // self.middle.appendChild(right);
-        // self.right = $(right);
-
-        // var bottom = makediv();
-        // $(bottom).attr('id', 'bottom');
-        // // $(bottom).append('BOTTOM');
-        // self.d_terminal.appendChild(bottom);
-        // self.bottom = $(bottom);
-
-        // self.children_wrappers[2] = right;
-        // var right_elem = EmptyNest();
-        // right.appendChild(right_elem.element);
-        // self.children[2] = right_elem;
-
-        // allaa
-        // self.center = $("#center");
-        // self.center.css('width', '100%');
-        // self.center.css('height', '100%');
 
         // SIZE
         
@@ -973,10 +933,10 @@ function Terminus(div) {
                 if (self.to_send != "") {
                     var to_send = self.to_send;
                     self.to_send = "";
-                    $.post("/send", {data: to_send},
+                    $.post(path+"/send", {data: to_send, magic: magic},
                            function (data) {
                                self.write_all(data.data);
-                               self.scroll_to_top();
+                               // self.scroll_to_top();
                            });
                 }
             },
@@ -1072,45 +1032,18 @@ function Terminus(div) {
         self.char_width = $("#font_control").width();
         self.char_height = $("#font_control").height();
 
-        // self.left_outer.data('jsp').reinitialise();
-        // self.right_outer.data('jsp').reinitialise();
-        // self.top_outer.data('jsp').reinitialise();
-        // self.bottom_outer.data('jsp').reinitialise();
-
-        // var h = self.terminal.height() - (self.top_outer.height() + self.bottom_outer.height()) - 0;
-        // var w = self.terminal.width() - (self.left_outer.width() + self.right_outer.width()) - 0;
-
         var h = self.terminal.height() - (self.top.height() + self.bottom.height()) - 0;
         var w = self.terminal.width() - (self.left.width() + self.right.width()) - 0;
 
-        // alert(h + " " + w);
-
-        // self.center.height(h);
-        // self.center.width(w);
-        self.left.height(h);
-        self.right.height(h);
+        self.left_outer.height(h);
+        self.right_outer.height(h);
 
         self.center_outer.height(h);
         self.center_outer.width(w);
-
-        // self.center.css('height', h);
-        // self.center.css('width', w);
-        
-        // self.center.jScrollPane();
         self.center_outer.data('jsp').reinitialise();
 
-        // var nlines = Math.floor(self.center.height() / self.char_height);
-
-        // // We subtract one column because of the scrollbar
-        // var ncols = Math.floor(self.center.width() / self.char_width) - 1;
-
         var nlines = Math.floor(h / self.char_height);
-
-        // We subtract one column because of the scrollbar
         var ncols = Math.floor(w / self.char_width);
-
-        // var nlines = Math.floor(self.terminal.height() / self.char_height) - 0;
-        // var ncols = Math.floor(self.terminal.width() / self.char_width) - 2;
 
         if (nlines == self.nlines && ncols == self.ncols) {
             return;
@@ -1119,25 +1052,6 @@ function Terminus(div) {
         self.nlines = nlines;
         self.ncols = ncols;
 
-        // var contents = [];
-        // var container = self.container;
-        // $(container).empty();
-        // for (var i = 0; i < self.nlines; i++) {
-        //     var new_div = document.createElement('div');
-        //     contents.push(new_div);
-        //     container.appendChild(new_div);
-        // }
-
-        // // Pad the bottom so that the first line is flush with the top of
-        // // the screen when we're scrolled down completely.
-        // var diff = self.terminal.height() - (self.nlines * self.char_height);
-        // // diff - 4 is a bit arbitrary, but it works well for me in
-        // // Chrome. I don't know about others.
-        // $(container).css('margin-bottom', (diff - 4) + 'px');
-
-        // self.contents = contents;
-        // self.invalid = true;
-
         if (self.screens) {
             for (var i = 0; i < self.screens.length; i++) {
                 self.screens[i].resize(self.nlines, self.ncols);
@@ -1145,16 +1059,17 @@ function Terminus(div) {
             }
         }
 
-        $.post('/setsize', {h: self.nlines, w: self.ncols});
+        $.post(path+'/setsize', {h: self.nlines, w: self.ncols, magic: magic});
     }
 
 
     self.add_thing = function(thing) {
-        // self.d_terminal.appendChild(thing);
         self.center.append(thing);
     }
     self.scroll_to_top = function() {
         self.center_outer.data('jsp').reinitialise();
+
+        // self.center_outer.data('jsp').scrollToPercentY(100);
 
         // setTimeout(function () {
         //         self.center_outer.data('jsp').scrollToPercentY(100);
@@ -1322,6 +1237,7 @@ function Terminus(div) {
         // for (var i = 0; i < scrollback.length; i++) {
         //     self.add_scroll(scrollback[i]);
         // }
+
         if (self.screend.display(force)) {
             self.scroll_to_top();
         }
@@ -1725,17 +1641,22 @@ function Terminus(div) {
         // setTimeout avoids the annoying "waiting..." message
         // browsers display while the request hangs.
         setTimeout(function () {
-                $.get("/get",
-                      function(data) {
-                          if (data != "") {
-                              self.write_all(data);
-                              self.display();
-
-                              // self.scroll_to_top();
-                          }
-                          self.get_data();
-                      })
-            }, 0)
+            $.post(path + "/get", {magic: magic},
+                   function(data) {
+                       if (data != "") {
+                           self.write_all(data);
+                           self.display();
+                           
+                           // self.scroll_to_top();
+                       }
+                       self.get_data();
+                   })
+                .error(function () {
+                    self.write_all('\n\x1B[1;31mConnection to server terminated')
+                    self.write_all(' because this session was opened elsewhere.')
+                    self.write_all('\nRefresh to reclaim session.\x1B[0m')
+                })
+        }, 0)
     }
 
     self.init(div);
