@@ -1074,169 +1074,7 @@ function Terminus(div, settings) {
         }
     }
 
-    // self.write_escape = function(esc) {
-    //     var nums = [];
-    //     var alt = "";
-    //     if (esc.mode == 91) {
-    //         var contents = esc.contents;
-    //         if (contents != "") {
-    //             nums = contents.split(";").map(function (x) {
-    //                     return parseInt(x);
-    //                 });
-    //         }
-    //         var name = esc.prefix + esc.type + esc.suffix;
-    //         var fn = self.csi[name + nums.length] || self.csi[name];
-    //         if (typeof(fn) == "string") {
-    //             fn = self.csi[fn];
-    //         }
-    //         if (fn !== undefined) {
-    //             fn.call(self, nums);
-    //         }
-    //         else {
-    //             self.log('esc_unknown', String.fromCharCode(esc.mode) + esc.prefix + esc.contents + esc.suffix + esc.type);
-    //         }
-    //     }
-    //     else if (esc.mode == 40 && esc.contents == "") {
-    //         // Some kind of character set switching. Who cares.
-    //     }
-    //     else {
-    //         // self.log(String.fromCharCode(esc.mode) + esc.contents + alt + esc.type + " " + nums.join("/") + " " + (alt + esc.type + nums.length));
-    //     }
-    //     self.log('error', String.fromCharCode(esc.mode) + esc.prefix + esc.contents + esc.suffix + esc.type);
-    //     return 'init';
-    // }
-
-    // var deco = function (x) {
-    //     return function () {
-    //         return '<span style="text-decoration:overline;">' + x + '</span>';
-    //     }
-    // }
-
-    // var noop = function () {
-    //     return false;
-    // }
-
-    // self.char_convert = {
-    //     0: deco('0'),
-    //     1: deco('1'),
-    //     2: deco('2'),
-    //     3: deco('3'),
-    //     4: deco('4'),
-    //     5: deco('5'),
-    //     6: deco('6'),
-    //     7: noop,
-    //     8: function () {
-    //         self.screen.move_to(self.screen.line, self.screen.column - 1);
-    //         return false;
-    //     },
-    //     9: function() {
-    //         // Tab length = 8
-    //         self.screen.move_to(self.screen.line, (self.screen.column & (~7)) + 8);
-    //         return false;
-    //     },
-
-    //     10: function () {
-    //         self.screen.next_line();
-    //         return false;
-    //     },
-    //     11: deco('b'),
-    //     12: deco('c'),
-    //     13: function () {
-    //         self.screen.move_to(self.screen.line, 0);
-    //         return false;
-    //     },
-    //     14: deco('d'),
-    //     15: deco('e'),
-    //     16: deco('f'),
-    //     17: deco('g'),
-    //     18: deco('h'),
-    //     19: deco('i'),
-
-    //     20: deco('j'),
-    //     21: deco('k'),
-    //     22: deco('l'),
-    //     23: deco('m'),
-    //     24: deco('n'),
-    //     25: deco('o'),
-    //     26: deco('p'),
-    //     27: function () {
-    //         self.escape = {mode: false,
-    //                        type: false,
-    //                        contents: ""};
-    //         return false;
-    //     },
-    //     28: deco('q'),
-    //     29: deco('r'),
-
-    //     30: deco('s'),
-    //     31: deco('t'),
-    //     32: '&nbsp;',
-    //     38: '&amp;',
-    //     60: '&lt;',
-    //     62: '&gt;',
-    // }
-
     self.write = function(c) {
-        // var s = String.fromCharCode(c);
-
-        // if (self.ext_check_termination) {
-        //     self.ext_check_termination = false;
-        //     var accum = self.ext_accum;
-        //     var ext_type = self.ext_type;
-        //     self.ext_accum = "";
-        //     self.ext_type = undefined;
-        //     if (c == 0x5C) {
-        //         self.handle_ext(ext_type, accum, self.ext_data);
-        //     }
-        //     else {
-        //         self.handle_ext(ext_type, accum, self.ext_data);
-        //         self.escape = {mode: false,
-        //                        type: false,
-        //                        contents: ""};
-        //         return self.write(c);
-        //     }            
-        // }
-        // else if (self.ext_type) {
-        //     self.ext_accum += s;
-        //     if (c == 0x1B) {
-        //         self.ext_check_termination = true;
-        //     }
-        // }
-
-        // else if (self.escape !== false) {
-        //     if (self.escape.mode === false) {
-        //         self.escape.mode = c;
-        //         if (c == 61 || c == 62) {
-        //             self.write_escape(self.escape);
-        //             self.escape = false;
-        //         }
-        //     }
-        //     else if (c >= 0x20 && c <= 0x3f) {
-        //         self.escape.contents += s;
-        //     }
-        //     else if (c >= 0x40 && c <= 0x7e) {
-        //         self.escape.type = s;
-        //         self.write_escape(self.escape);
-        //         self.escape = false;
-        //     }
-        // }
-        // else {
-        //     var entry = self.char_convert[c];
-        //     if (entry !== undefined) {
-        //         if (typeof(entry) == "string") {
-        //             s = entry;
-        //         }
-        //         else {
-        //             s = entry();
-        //             if (s === false) {
-        //                 return;
-        //             }
-        //         }
-        //     }
-        //     self.screen.write_at_cursor([s, self.screen.text_properties.slice(0)]);
-        //     self.screen.advance();
-        // }
-
         var s = self.sm.run(c);
         if (s != '') {
             self.screen.write_at_cursor([s, self.screen.text_properties.slice(0)]);
@@ -1908,7 +1746,6 @@ Terminus.state_machine = function(machine, initial_state, target) {
             next = {next_state: next[1],
                     value: next[0]}
         }
-        // self.state = next.next_state;
         if (machine[next.next_state] === undefined) {
             if (next.fallback !== undefined) {
                 return self.process_next_state(next.fallback);
@@ -1934,26 +1771,6 @@ Terminus.state_machine = function(machine, initial_state, target) {
         }
         var next = fn.call(self.target, data);
         return self.process_next_state(next);
-
-        // if (typeof next == "string") {
-        //     next = {next_state: next};
-        // }
-        // else if (!next.next_state) {
-        //     next = {next_state: next[1],
-        //             value: next[0]}
-        // }
-        // self.state = next.next_state;
-
-        // if (typeof next == "string") {
-        //     self.state = next;
-        //     return null;
-        // }
-        // else if () {
-        // }
-        // else {
-        //     self.state = next[1];
-        //     return next[0];
-        // }
     }
 
     self.run = function (data) {
@@ -2160,11 +1977,6 @@ Terminus.csi = {
                                  accum: ""});
             }
             else {
-                // alert([desc[0], data.height, data.width, data.nest.join('/')].join(" "));
-                // this.ext_type = desc[0];
-                // this.ext_data = data;
-                // this.ext_accum = "";
-                // this.ext_check_termination = false;
                 this.ext = {
                     type: desc[0],
                     args: data,
