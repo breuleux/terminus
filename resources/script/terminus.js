@@ -1522,16 +1522,43 @@ Terminus.noop = function () {
 
 
 Terminus.input_state_machine = {
+    // This is the state machine used to read the input stream going
+    // to the terminal, character by character.
+
+    // Each state is associated to a function. The argument of the
+    // function will be set to the next character received by Terminus
+    // from the server. "this" in the function is set to the Terminus
+    // instance. The function for a given state can return either of
+    // three things:
+
+    // - A string representing the next state to skip to
+    //   *immediately*. The function associated to the next state will
+    //   be run with the same character. Careful about infinite loops.
+
+    // - [return_value, next_state]: the state machine returns a
+    //   string to print out on the terminal verbatim. The state
+    //   machine goes into the next state and waits for the next
+    //   character. return_value can be an empty string if you want to
+    //   print nothing, but wait for the next character.
+
+    // - {value: return_value, next_state: state, fallback: other_state}
+    //   If there is a value it is returned to print on the terminal,
+    //   and if the next state does not exist, the state machine will
+    //   go to the state given by fallback instead. The state given in
+    //   fallback can be any of the three formats mentioned.
+
 
     //// init state ////
 
     init: function (c) {
         var s = String.fromCharCode(c);
+        // if chr_<c> exists we will use that
+        // else we will just print out the character
         return {next_state: "chr_" + c,
                 fallback: [s, 'init']};
     },
 
-    //// C0 ////
+    //// C0 - control codes 0 <= c <= 31 ////
 
     chr_0: Terminus.deco('0'),
     chr_1: Terminus.deco('1'),
@@ -1542,6 +1569,7 @@ Terminus.input_state_machine = {
     chr_6: Terminus.deco('6'),
     chr_7: Terminus.noop,
     chr_8: function () {
+        // Backspace - not destructive
         this.screen.move_to(this.screen.line, this.screen.column - 1);
         return ['', 'init'];
     },
@@ -1552,12 +1580,14 @@ Terminus.input_state_machine = {
     },
 
     chr_10: function () {
+        // Newline
         this.screen.next_line();
         return ['', 'init'];
     },
     chr_11: Terminus.deco('b'),
     chr_12: Terminus.deco('c'),
     chr_13: function () {
+        // Carriage return
         this.screen.move_to(this.screen.line, 0);
         return ['', 'init'];
     },
@@ -1576,6 +1606,8 @@ Terminus.input_state_machine = {
     chr_25: Terminus.deco('p'),
     chr_26: Terminus.deco('q'),
     chr_27: function () {
+        // ESC - starts off an escape code by initializing the escape
+        // data structure and hopping to state esc.
         this.escape = {mode: false,
                        type: "",
                        prefix: "",
@@ -1588,6 +1620,8 @@ Terminus.input_state_machine = {
 
     chr_30: Terminus.deco('u'),
     chr_31: Terminus.deco('v'),
+
+    // Characters that need to be escaped in HTML
     chr_32: Terminus.raw_text('&nbsp;'),
     chr_38: Terminus.raw_text('&amp;'),
     chr_60: Terminus.raw_text('&lt;'),
@@ -1596,24 +1630,28 @@ Terminus.input_state_machine = {
     //// ESCAPE ////
     
     esc: function (c) {
+        // This will receive the character right after
+        // ESC (e.g. '['). Immediately hop to esc_<c>.
         this.escape.mode = c;
         return 'esc_' + c;
     },
 
     esc_40: function () {
-        // ESC (
+        // ESC ( - switch to stdcode0 and wait for next charactre
         return ['', 'stdcode0'];
     },
 
-    esc_61: function () { return 'esc_go'; },
-    esc_62: function () { return 'esc_go'; },
+    esc_61: function () { return 'esc_go'; }, // ESC =
+    esc_62: function () { return 'esc_go'; }, // ESC >
 
     esc_91: function () {
-        // CSI = ESC [
+        // CSI = ESC [ - switch to stdcode0 and wait for next character
         return ['', 'stdcode0'];
     },
 
     esc_go: function () {
+        // Switch immediately to exec_<mode>, where mode is the
+        // character code found right after ESC.
         return 'exec_' + this.escape.mode;
     },
 
@@ -1621,30 +1659,41 @@ Terminus.input_state_machine = {
     // ESC <x> <prefix> <n0;n1;n2...> <suffix> <letter>
 
     stdcode0: function (c) {
+        // Accumulate the prefix modifier (e.g. "?" in CSI ? 12 h)
         if ((c >= 32 && c <= 47) || (c >= 60 && c <= 63)) {
             this.escape.prefix += String.fromCharCode(c);
             return ['', 'stdcode0'];
         }
+        // We immediately switch to stdcode1 if we see a character we
+        // don't understand.
         return 'stdcode1';
     },
 
     stdcode1: function (c) {
+        // Accumulate the semicolon-separated list of numbers usually
+        // found as part of an escape code.
         if (c >= 48 && c <= 59) {
             this.escape.contents += String.fromCharCode(c);
             return ['', 'stdcode1'];
         }
+        // We immediately switch to stdcode2 if we see a character we
+        // don't understand.
         return 'stdcode2';
     },
 
     stdcode2: function (c) {
+        // Accumulate the suffix modifier (rarely used)
         if ((c >= 32 && c <= 47) || (c >= 60 && c <= 63)) {
             this.escape.suffix += String.fromCharCode(c);
             return ['', 'stdcode2'];
         }
+        // We immediately switch to stdcode3 if we see a character we
+        // don't understand.
         return 'stdcode3';
     },
 
     stdcode3: function (c) {
+        // End the code (usually with a letter)
         this.escape.type = String.fromCharCode(c);
         return {next_state: 'exec_' + this.escape.mode,
                 fallback: 'esc_unknown'};
@@ -1652,9 +1701,13 @@ Terminus.input_state_machine = {
 
     //// SEEK ST ////
     // ST = ESC \
+    // Accumulate everything in ext.accum until ESC is found. Ideally,
+    // the sequence ends with ESC \, because otherwise we switch to
+    // the esc state in order to perform a command if appropriate.
 
     seek_st0: function (c) {
         if (c == 27) {
+            // ESC
             return ['', 'seek_st1'];
         }
         this.ext.accum += String.fromCharCode(c);
@@ -1665,6 +1718,7 @@ Terminus.input_state_machine = {
         this.handle_ext(this.ext);
         this.ext = undefined;
         if (c != 92) {
+            // did not find a backslash
             return 'esc';
         }
         return ['', 'init']
@@ -1673,13 +1727,15 @@ Terminus.input_state_machine = {
     //// EXEC ////
 
     exec_40: function () {
+        // ESC (
         return ['', 'init']
     },
 
-    esc_61: function () { return 'esc_log'; },
-    esc_62: function () { return 'esc_log'; },
+    esc_61: function () { return 'esc_log'; }, // ESC =
+    esc_62: function () { return 'esc_log'; }, // ESC >
 
     exec_91: function () {
+        // CSI = ESC [
         var nums = [];
         var esc = this.escape;
         var contents = esc.contents;
@@ -1710,7 +1766,7 @@ Terminus.input_state_machine = {
 
     esc_log: function () {
         var esc = this.escape;
-        this.log('error', 
+        this.log('esc',
                  (String.fromCharCode(esc.mode)
                   + esc.prefix
                   + esc.contents
