@@ -133,6 +133,7 @@ log:
   #   destroy_nest: log nest destruction
   # Note: you can define a list of things to log.
   what:
+    - test
     - error
     - esc_unknown
 
@@ -153,3 +154,115 @@ log:
 
   # If true the divs will be colorized
   colorize: yes
+
+
+# Key bindings
+# Syntax:
+# key: C- for Ctrl, A- for Alt, S- for Shift, in that order, lowercase for letter
+# value:
+#   ~command: execute the command
+#   ~~X: with a capital letter X, print the character code charcode(X)-64
+#   word: print the word
+# You can give more than one command to execute with a given key
+# binding, just make a list separated by spaces (see the Alt-<X> section)
+
+bindings:
+
+  # switch logging on or off
+  C-S-p: ~log_mode
+
+  # clear scrollback
+  C-S-l: ~clear_scrollback
+
+  # navigation
+  C-Left: ~word_left
+  C-Right: ~word_right
+  Home: ~home
+  End: ~end
+
+  # macro
+  C-S-d: ~word_left ~~K bonjour
+
+  # DEFAULTS
+  Backspace: ~backspace
+  Tab: ~tab
+  Esc: ~esc
+  PgUp: ~pgup
+  PgDn: ~pgdn
+  End: ~end
+  Home: ~home
+  Left: ~left
+  Up: ~up
+  Right: ~right
+  Down: ~down
+  Ins: ~ins
+  Del: ~del
+  F1: ~f1
+  F2: ~f2
+  F3: ~f3
+  F4: ~f4
+  # F5: ~f5 # disables refresh with F5 if uncommented
+  F6: ~f6
+  F7: ~f7
+  F8: ~f8
+  F9: ~f9
+  F10: ~f10
+  F11: ~f11
+  F12: ~f12
+
+  # CTRL+<KEY>
+  C-a: ~~A
+  C-b: ~~B
+  C-c: ~~C
+  C-d: ~~D
+  C-e: ~~E
+  C-f: ~~F
+  C-g: ~~G
+  C-h: ~~H
+  C-i: ~~I
+  C-j: ~~J
+  C-k: ~~K
+  C-l: ~~L
+  C-m: ~~M
+  C-n: ~~N
+  C-o: ~~O
+  C-p: ~~P
+  C-q: ~~Q
+  C-r: ~~R
+  C-s: ~~S
+  C-t: ~~T
+  C-u: ~~U
+  # C-v: ~~V # disables paste if uncommented
+  C-w: ~~W
+  C-x: ~~X
+  C-y: ~~Y
+  C-z: ~~Z
+
+  # ALT+<KEY>
+  A-a: ~esc A
+  A-b: ~esc B
+  A-c: ~esc C
+  A-d: ~esc D
+  A-e: ~esc E
+  A-f: ~esc F
+  A-g: ~esc G
+  A-h: ~esc H
+  A-i: ~esc I
+  A-j: ~esc J
+  A-k: ~esc K
+  A-l: ~esc L
+  A-m: ~esc M
+  A-n: ~esc N
+  A-o: ~esc O
+  A-p: ~esc P
+  A-q: ~esc Q
+  A-r: ~esc R
+  A-s: ~esc S
+  A-t: ~esc T
+  A-u: ~esc U
+  A-v: ~esc V
+  A-w: ~esc W
+  A-x: ~esc X
+  A-y: ~esc Y
+  A-z: ~esc Z
+

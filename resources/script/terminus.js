@@ -772,7 +772,7 @@ function ScreenDisplay(terminal, screen, settings) {
         }
 
         return true;
-        // self.scroll_to_top();
+        // self.scroll_to_bottom();
     }
 
     self.rotate_scrollback = function () {
@@ -910,9 +910,11 @@ function Terminus(div, settings) {
     self.add_thing = function(thing) {
         self.center.append(thing);
     }
-    self.scroll_to_top = function() {
+    self.scroll_to_bottom = function() {
         if (settings.scrolling.jscrollpane) {
-            self.center_outer.data('jsp').reinitialise();
+            // self.center_outer.data('jsp').reinitialise();
+            var api = self.center_outer.data('jsp');
+            api.scrollToPercentY(1);
         }
         else {
             var x = self.center[0];
@@ -1024,7 +1026,7 @@ function Terminus(div, settings) {
 
     self.display = function(force) {
         if (self.screend.display(force)) {
-            self.scroll_to_top();
+            self.scroll_to_bottom();
         }
     }
 
@@ -1176,7 +1178,7 @@ function Terminus(div, settings) {
             self.screen.scroll0 = 0;
             self.screen.scroll1 = self.screen.nlines;
             self.screen.move_to(0, 0);
-        }
+        },
         r2: function(nums) {
             self.screen.scroll0 = nums[0] - 1;
             self.screen.scroll1 = nums[1];
@@ -1576,7 +1578,7 @@ function Terminus(div, settings) {
                     $.post(settings.path+"/send", {data: to_send, magic: settings.magic},
                            function (data) {
                                self.write_all(data.data);
-                               // self.scroll_to_top();
+                               // self.scroll_to_bottom();
                            });
                 }
             },
@@ -1593,76 +1595,211 @@ function Terminus(div, settings) {
                     }, 0);
             });
 
-        $(document).bind('keydown', function(e) {
-                self.textarea.focus();
-                var key = e.keyCode;
-                var keymap = {
-                    8: "\x7F",       // Backspace
-                    9: "\x09",       // Tab
-                    27: "\x1B",      // Esc
-                    33: "\x1B[5~",   // PgUp
-                    34: "\x1B[6~",   // PgDn
-                    35: "\x1B[4~",   // End
-                    36: "\x1B[1~",   // Home
-                    37: self.app_key ? "\x1BOD" : "\x1B[D",    // Left
-                    38: self.app_key ? "\x1BOA" : "\x1B[A",    // Up
-                    39: self.app_key ? "\x1BOC" : "\x1B[C",    // Right
-                    40: self.app_key ? "\x1BOB" : "\x1B[B",    // Down
-                    // 38: "\x1B[A",    // Up
-                    // 39: "\x1B[C",    // Right
-                    // 40: "\x1B[B",    // Down
-                    45: "\x1B[2~",   // Ins
-                    46: "\x1B[3~",   // Del
-                    112: "\x1B[[A",  // F1
-                    113: "\x1B[[B",  // F2
-                    114: "\x1B[[C",  // F3
-                    115: "\x1B[[D",  // F4
-                    // 116: "\x1B[[E",  // F5
-                    117: "\x1B[17~", // F6
-                    118: "\x1B[18~", // F7
-                    119: "\x1B[19~", // F8
-                    120: "\x1B[20~", // F9
-                    121: "\x1B[21~", // F10
-                    122: "\x1B[23~", // F11
-                    123: "\x1B[24~", // F12
+        function printer(s) {
+            return function () {
+                self.to_send += s;
+            }
+        }
+
+        self.keynames = {
+            8: "Backspace",
+            9: "Tab",
+            13: "Enter",
+            16: "S-",
+            17: "C-",
+            18: "A-",
+            27: "Esc",
+            33: "PgUp",
+            34: "PgDn",
+            35: "End",
+            36: "Home",
+            37: "Left",
+            38: "Up",
+            39: "Right",
+            40: "Down",
+            45: "Ins",
+            46: "Del",
+            48: "0",
+            49: "1",
+            50: "2",
+            51: "3",
+            52: "4",
+            53: "5",
+            54: "6",
+            55: "7",
+            56: "8",
+            57: "9",
+            65: "a",
+            66: "b",
+            67: "c",
+            68: "d",
+            69: "e",
+            70: "f",
+            71: "g",
+            72: "h",
+            73: "i",
+            74: "j",
+            75: "k",
+            76: "l",
+            77: "m",
+            78: "n",
+            79: "o",
+            80: "p",
+            81: "q",
+            82: "r",
+            83: "s",
+            84: "t",
+            85: "u",
+            86: "v",
+            87: "w",
+            88: "x",
+            89: "y",
+            90: "z",
+            112: "F1",
+            113: "F2",
+            114: "F3",
+            115: "F4",
+            116: "F5",
+            117: "F6",
+            118: "F7",
+            119: "F8",
+            120: "F9",
+            121: "F10",
+            122: "F11",
+            123: "F12",
+        }
+
+        self.commands = {
+            backspace: "\x7F",
+            tab: "\x09",
+            esc: "\x1B",
+
+            up: "\x1B[A",
+            down: "\x1B[B",
+            right:"\x1B[C",
+            left: "\x1B[D",
+
+            home: "\x1B[1~",
+            ins: "\x1B[2~",
+            del: "\x1B[3~",
+            end: "\x1B[4~",
+            pgup: "\x1B[5~",
+            pgdn: "\x1B[6~",
+
+            f1: "\x1B[[A",
+            f2: "\x1B[[B",
+            f3: "\x1B[[C",
+            f4: "\x1B[[D",
+            f5: "\x1B[[E",
+            f6: "\x1B[17~",
+            f7: "\x1B[18~",
+            f8: "\x1B[19~",
+            f9: "\x1B[20~",
+            f10: "\x1B[21~",
+            f11: "\x1B[23~",
+            f12: "\x1B[24~",
+
+            clear_scrollback: function () {
+                self.screend.clear_scrollback();
+            },
+
+            log_mode: function () {
+                self.logger.switch_state();
+            },
+
+            word_left: function () {
+                var mat = self.screen.matrix[self.screen.line];
+                var skipover = ("! @ # $ % ^ & * ( ) [ ] { }"
+                                + " / ? \\ | &nbsp; &gt; &lt;"
+                                + " = + - _ ` ~ ; : \" ' . ,").split(" ")
+                var j = self.screen.column - 1;
+                for (; j >= 0; j--) {
+                    if (skipover.indexOf(mat[j][0]) == -1) { break; }
+                    self.to_send += "\x1B[D";
                 }
-            
-                var s;
-                if (e.ctrlKey && !e.shiftKey) {
-                    if (key >= 97 && key <= 122)
-                        key -= 32;
-                    if (key != 86) {
-                        if (key >= 65 && key <= 90) {
-                            key -= 64;
-                            s = String.fromCharCode(key);
-                        }
+                for (; j >= 0; j--) {
+                    if (skipover.indexOf(mat[j][0]) != -1) { break; }
+                    self.to_send += "\x1B[D";
+                }
+            },
+
+            word_right: function () {
+                var mat = self.screen.matrix[self.screen.line];
+                var skipover = ("! @ # $ % ^ & * ( ) [ ] { }"
+                                + " / ? \\ | &nbsp; &gt; &lt;"
+                                + " = + - _ ` ~ ; : \" ' . ,").split(" ")
+                var j = self.screen.column;
+                for (; j < self.ncols; j++) {
+                    if (skipover.indexOf(mat[j][0]) == -1) { break; }
+                    self.to_send += "\x1B[C";
+                }
+                for (; j < self.ncols; j++) {
+                    if (skipover.indexOf(mat[j][0]) != -1) { break; }
+                    self.to_send += "\x1B[C";
+                }
+            }
+        }
+
+        $(document).bind('keydown', function(e) {
+            var bindings = settings.bindings;
+            code = ((e.ctrlKey ? "C-" : "")
+                    + (e.altKey ? "A-" : "")
+                    + (e.shiftKey ? "S-" : "")
+                    + (self.keynames[e.keyCode] || "<"+e.keyCode+">"));
+            // self.log('test', code);
+            var commands = bindings[code];
+            var cancel = false;
+
+            if (commands === undefined) {
+                return;
+            }
+
+            commands = commands.split(" ");
+            for (var i = 0; i < commands.length; i++) {
+                var command = commands[i];
+                self.log('test', command);
+                if (command[0] == "~") {
+                    if (command[1] == "~") {
+                        var s = command.slice(2).charCodeAt() - 64;
+                        self.to_send += String.fromCharCode(s);
+                        self.log('test', "code" + s);
+                        cancel = true;
                     }
-                } else if (e.ctrlKey && e.shiftKey) {
-                    if (key >= 97 && key <= 122)
-                        key -= 32;
-                    if (key == 76) {
-                        self.screend.clear_scrollback();
+                    else {
+                        var fn = self.commands[command.slice(1)];
+                        if (typeof fn == "string") {
+                            self.to_send += fn;
+                            self.log('test', "append " + fn);
+                            cancel = true;
+                        }
+                        else if (typeof fn != "undefined") {
+                            self.log('test', "call " + command.slice(1));
+                            cancel = !fn();
+                        }
                     }
                 }
                 else {
-                    s = keymap[key];
+                    self.to_send += command;
+                    cancel = true;
                 }
-
-                if (s !== undefined) {
-                    self.to_send += s;
-                    e.stopPropagation();
-                    e.preventDefault();
-                }
-            });
+            }
+            
+            if (cancel) {
+                self.scroll_to_bottom();
+                e.stopPropagation();
+                e.preventDefault();
+            }
+        });
 
         $(document).bind('keypress', function(e) {
-                if (!e.ctrlKey) {
-                    var key = e.keyCode;
-                    var s;
-                    s = String.fromCharCode(key);
-                    self.to_send += s;
-                }
-            });
+            // self.log('key', e.ctrlKey + " " + e.shiftKey + " " + e.altKey + " " + e.keyCode);
+            if (!e.ctrlKey) {
+                var key = e.keyCode;
+                var s;
+                s = String.fromCharCode(key);
+                self.to_send += s;
+            }
+        });
     }
 
     self.init(div, settings);
