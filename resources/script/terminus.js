@@ -1034,8 +1034,9 @@ function Terminus(div, settings) {
         }
     }
 
-    self.handle_ext = function(type, data, parameters) {
-        self.handlers[type](data, parameters);
+    self.handle_ext = function(ext) {
+        // self.log('test', ext.type + ext.accum + ext.args);
+        self.handlers[ext.type](ext.accum, ext.args);
     }
 
 
@@ -1073,367 +1074,171 @@ function Terminus(div, settings) {
         }
     }
 
-    self.apply_all = function(nums, policies, which) {
-        for (var i = 0; i < nums.length; i++) {
-            var n = nums[i];
-            var policy = policies[n];
-            if (policy !== undefined) {
-                policy();
-            }
-            else {
-                self.log('esc_unknown', '->' + '[?' + n + which)
-            }
-        }
-    }
+    // self.write_escape = function(esc) {
+    //     var nums = [];
+    //     var alt = "";
+    //     if (esc.mode == 91) {
+    //         var contents = esc.contents;
+    //         if (contents != "") {
+    //             nums = contents.split(";").map(function (x) {
+    //                     return parseInt(x);
+    //                 });
+    //         }
+    //         var name = esc.prefix + esc.type + esc.suffix;
+    //         var fn = self.csi[name + nums.length] || self.csi[name];
+    //         if (typeof(fn) == "string") {
+    //             fn = self.csi[fn];
+    //         }
+    //         if (fn !== undefined) {
+    //             fn.call(self, nums);
+    //         }
+    //         else {
+    //             self.log('esc_unknown', String.fromCharCode(esc.mode) + esc.prefix + esc.contents + esc.suffix + esc.type);
+    //         }
+    //     }
+    //     else if (esc.mode == 40 && esc.contents == "") {
+    //         // Some kind of character set switching. Who cares.
+    //     }
+    //     else {
+    //         // self.log(String.fromCharCode(esc.mode) + esc.contents + alt + esc.type + " " + nums.join("/") + " " + (alt + esc.type + nums.length));
+    //     }
+    //     self.log('error', String.fromCharCode(esc.mode) + esc.prefix + esc.contents + esc.suffix + esc.type);
+    //     return 'init';
+    // }
 
-    self.csi = {
-        "@0": function (_) { self.screen.insert_blanks(self.screen.line, self.screen.column, 1) },
-        "@1": function (n) { self.screen.insert_blanks(self.screen.line, self.screen.column, n[0]) },
+    // var deco = function (x) {
+    //     return function () {
+    //         return '<span style="text-decoration:overline;">' + x + '</span>';
+    //     }
+    // }
 
-        A0: function(_) { self.screen.move_rel(-1, 0); },
-        A1: function(n) { self.screen.move_rel(-n[0], 0); },
+    // var noop = function () {
+    //     return false;
+    // }
 
-        B0: function(_) { self.screen.move_rel(1, 0); },
-        B1: function(n) { self.screen.move_rel(n[0], 0); },
+    // self.char_convert = {
+    //     0: deco('0'),
+    //     1: deco('1'),
+    //     2: deco('2'),
+    //     3: deco('3'),
+    //     4: deco('4'),
+    //     5: deco('5'),
+    //     6: deco('6'),
+    //     7: noop,
+    //     8: function () {
+    //         self.screen.move_to(self.screen.line, self.screen.column - 1);
+    //         return false;
+    //     },
+    //     9: function() {
+    //         // Tab length = 8
+    //         self.screen.move_to(self.screen.line, (self.screen.column & (~7)) + 8);
+    //         return false;
+    //     },
 
-        C0: function(_) { self.screen.move_rel(0, 1); },
-        C1: function(n) { self.screen.move_rel(0, n[0]); },
+    //     10: function () {
+    //         self.screen.next_line();
+    //         return false;
+    //     },
+    //     11: deco('b'),
+    //     12: deco('c'),
+    //     13: function () {
+    //         self.screen.move_to(self.screen.line, 0);
+    //         return false;
+    //     },
+    //     14: deco('d'),
+    //     15: deco('e'),
+    //     16: deco('f'),
+    //     17: deco('g'),
+    //     18: deco('h'),
+    //     19: deco('i'),
 
-        D0: function(_) { self.screen.move_rel(0, -1); },
-        D1: function(n) { self.screen.move_rel(0, -n[0]); },
+    //     20: deco('j'),
+    //     21: deco('k'),
+    //     22: deco('l'),
+    //     23: deco('m'),
+    //     24: deco('n'),
+    //     25: deco('o'),
+    //     26: deco('p'),
+    //     27: function () {
+    //         self.escape = {mode: false,
+    //                        type: false,
+    //                        contents: ""};
+    //         return false;
+    //     },
+    //     28: deco('q'),
+    //     29: deco('r'),
 
-        E0: function(_) { self.screen.move_to(self.screen.line + 1, 0); },
-        E1: function(n) { self.screen.move_to(self.screen.line + n[0], 0); },
-
-        F0: function(_) { self.screen.move_to(self.screen.line - 1, 0); },
-        F1: function(n) { self.screen.move_to(self.screen.line - n[0], 0); },
-
-        G1: function(n) { self.screen.move_to(self.screen.line, n[0] - 1); },
-
-        H0: function(n) { self.screen.move_to(0, 0); },
-        H1: function(n) { self.screen.move_to(n[0] - 1, 0); },
-        H2: function(n) {
-            var l = n[0] - 1;
-            var c = n[1] - 1;
-            if (isNaN(l)) l = 0;
-            if (isNaN(c)) c = 0;
-            self.screen.move_to(l, c);
-        },
-
-        J0: function(_) { self.screen.kill_screen(0); },
-        J1: function(n) { self.screen.kill_screen(n[0]); },
-
-        K0: function(_) { self.screen.kill_line(0); },
-        K1: function(n) { self.screen.kill_line(n[0]); },
-
-        L0: function(_) { self.screen.insert_lines(self.screen.line, 1); },
-        L1: function(n) { self.screen.insert_lines(self.screen.line, n[0]); },
-
-        M0: function(_) { self.screen.delete_lines(self.screen.line, 1); },
-        M1: function(n) { self.screen.delete_lines(self.screen.line, n[0]); },
-
-        P0: function(_) {
-            self.screen.delete_characters(self.screen.line, self.screen.column, 1);
-        },
-        P1: function(n) {
-            self.screen.delete_characters(self.screen.line, self.screen.column, n[0]);
-        },
-
-        $c0: function (_) { self.to_send += "\x1B[>0;0;0c"; },
-        $c1: '$c0',
-
-        d0: function (_) { self.screen.move_to(1, self.screen.column); },
-        d1: function (n) { self.screen.move_to(n[0] - 1, self.screen.column); },
-
-        f0: 'H0',
-        f1: 'H1',
-        f2: 'H2',
-
-        _h: function (nums) {
-            var policies = {
-                1: function () { self.app_key = true; },
-                12: function () { self.screen.cursor_blink = true; },
-                25: self.screen.show_cursor,
-                1047: function () { self.use_screen(1); },
-                1048: function () { self.screen.save_cursor(); },
-                1049: function () { self.screen.save_cursor();
-                                    self.use_screen(1); },
-            };
-            self.apply_all(nums, policies, 'h');
-        },
-
-        _l: function (nums) {
-            var policies = {
-                1: function () { self.app_key = false; },
-                12: function () { self.cursor_blink = false; },
-                25: self.screen.hide_cursor,
-                1047: function () { self.use_screen(0); },
-                1048: function () { self.screen.restore_cursor(); },
-                1049: function () { self.use_screen(0);
-                                    self.screen.restore_cursor(); },
-            };
-            self.apply_all(nums, policies, 'l');
-        },
-
-        m0: function(_) {
-            self.screen.text_properties = self.screen.no_text_properties();
-        },
-
-        m: function(nums) {
-            for (var i = 0; i < nums.length; i++) {
-                var n = nums[i];
-                if (n == 0) {
-                    self.screen.text_properties = self.screen.no_text_properties();
-                }
-                else {
-                    self.screen.text_properties.push(n);
-                }
-            }
-        },
-
-        r0: function(_) {
-            self.screen.scroll0 = 0;
-            self.screen.scroll1 = self.screen.nlines;
-            self.screen.move_to(0, 0);
-        },
-        r2: function(nums) {
-            self.screen.scroll0 = nums[0] - 1;
-            self.screen.scroll1 = nums[1];
-            self.screen.move_to(0, 0);
-        },
-
-        s0: function (_) { self.screen.save_cursor(); },
-        u0: function (_) { self.screen.restore_cursor(); },
-
-        _z0: function (_) { }, // invalid (no-op)
-        _z: function (n) {
-            var types = {0: [['html_set', 'height', 'width', ';;', '*nest'],
-                             false],
-                         10: [['html_append', 'height', 'width', ';;', '*nest'],
-                              false],
-                         100: [['js', ';;', '*nest'],
-                               false],
-                         200: [['create', '*nest'],
-                               true]
-            };
-            var type = n[0];
-            if (types[type] === undefined) {
-                return;
-            }
-            var desc = types[type][0];
-            var now = types[type][1];
-            if (desc !== undefined) {
-                var data = {};
-                var j = 1;
-                var edge = function() {
-                    return n[j] === undefined || isNaN(n[j]);
-                }
-                for (var i = 1; i < desc.length; i++) {
-                    var propname = desc[i];
-                    if (propname[0] == '*') {
-                        var value = [];
-                        while (!edge()) {
-                            value.push(n[j]);
-                            j++;
-                        }
-                        data[propname.substring(1)] = value;
-                    }
-                    else if (propname == ';;') {
-                        if (!edge()) {
-                            return;
-                        }
-                        j++;
-                    }
-                    else {
-                        if (!edge()) {
-                            var value = n[j]; // undefined if absent
-                            data[propname] = value;
-                            j++;
-                        }
-                    }
-                }
-                if (now) {
-                    self.handle_ext(desc[0], "", data);
-                }
-                else {
-                    // alert([desc[0], data.height, data.width, data.nest.join('/')].join(" "));
-                    self.ext_type = desc[0];
-                    self.ext_data = data;
-                    self.ext_accum = "";
-                    self.ext_check_termination = false;
-                }
-            }
-        },
-    }
-
-    self.write_escape = function(esc) {
-        var nums = [];
-        var alt = "";
-        if (esc.mode == 91) {
-            var contents = esc.contents;
-            if (contents[0] == "?") {
-                alt = "_";
-                contents = contents.substring(1);
-            }
-            else if (contents[0] == ">") {
-                alt = "$";
-                contents = contents.substring(1);
-            }
-            if (contents != "") {
-                nums = contents.split(";").map(function (x) {
-                        return parseInt(x);
-                    });
-            }
-            var name = alt + esc.type;
-            var fn = self.csi[name + nums.length] || self.csi[name];
-            if (typeof(fn) == "string") {
-                fn = self.csi[fn];
-            }
-            if (fn !== undefined) {
-                fn(nums);
-            }
-            else {
-                self.log('esc_unknown', String.fromCharCode(esc.mode) + alt + esc.contents + esc.type);
-                // self.log(String.fromCharCode(esc.mode) + esc.contents + alt + esc.type + " " + nums.join("/") + " " + (alt + esc.type + nums.length));
-            }
-        }
-        else if (esc.mode == 40 && esc.contents == "") {
-            // Some kind of character set switching. Who cares.
-        }
-        else {
-            // self.log(String.fromCharCode(esc.mode) + esc.contents + alt + esc.type + " " + nums.join("/") + " " + (alt + esc.type + nums.length));
-        }
-        // self.log(String.fromCharCode(esc.mode) + esc.contents + alt + esc.type + " " + nums.join("/") + " " + (alt + esc.type + nums.length));
-        self.log('esc', String.fromCharCode(esc.mode) + esc.contents + alt + esc.type);
-    }
-
-    var deco = function (x) {
-        return function () {
-            return '<span style="text-decoration:overline;">' + x + '</span>';
-        }
-    }
-
-    var noop = function () {
-        return false;
-    }
-
-    self.char_convert = {
-        0: deco('0'),
-        1: deco('1'),
-        2: deco('2'),
-        3: deco('3'),
-        4: deco('4'),
-        5: deco('5'),
-        6: deco('6'),
-        7: noop,
-        8: function () {
-            self.screen.move_to(self.screen.line, self.screen.column - 1);
-            return false;
-        },
-        9: function() {
-            // Tab length = 8
-            self.screen.move_to(self.screen.line, (self.screen.column & (~7)) + 8);
-            return false;
-        },
-
-        10: function () {
-            self.screen.next_line();
-            return false;
-        },
-        11: deco('b'),
-        12: deco('c'),
-        13: function () {
-            self.screen.move_to(self.screen.line, 0);
-            return false;
-        },
-        14: deco('d'),
-        15: deco('e'),
-        16: deco('f'),
-        17: deco('g'),
-        18: deco('h'),
-        19: deco('i'),
-
-        20: deco('j'),
-        21: deco('k'),
-        22: deco('l'),
-        23: deco('m'),
-        24: deco('n'),
-        25: deco('o'),
-        26: deco('p'),
-        27: function () {
-            self.escape = {mode: false,
-                           type: false,
-                           contents: ""};
-            return false;
-        },
-        28: deco('q'),
-        29: deco('r'),
-
-        30: deco('s'),
-        31: deco('t'),
-        32: '&nbsp;',
-        38: '&amp;',
-        60: '&lt;',
-        62: '&gt;',
-    }
+    //     30: deco('s'),
+    //     31: deco('t'),
+    //     32: '&nbsp;',
+    //     38: '&amp;',
+    //     60: '&lt;',
+    //     62: '&gt;',
+    // }
 
     self.write = function(c) {
-        var s = String.fromCharCode(c);
+        // var s = String.fromCharCode(c);
 
-        if (self.ext_check_termination) {
-            self.ext_check_termination = false;
-            var accum = self.ext_accum;
-            var ext_type = self.ext_type;
-            self.ext_accum = "";
-            self.ext_type = undefined;
-            if (c == 0x5C) {
-                self.handle_ext(ext_type, accum, self.ext_data);
-            }
-            else {
-                self.handle_ext(ext_type, accum, self.ext_data);
-                self.escape = {mode: false,
-                               type: false,
-                               contents: ""};
-                return self.write(c);
-            }            
-        }
-        else if (self.ext_type) {
-            self.ext_accum += s;
-            if (c == 0x1B) {
-                self.ext_check_termination = true;
-            }
-        }
+        // if (self.ext_check_termination) {
+        //     self.ext_check_termination = false;
+        //     var accum = self.ext_accum;
+        //     var ext_type = self.ext_type;
+        //     self.ext_accum = "";
+        //     self.ext_type = undefined;
+        //     if (c == 0x5C) {
+        //         self.handle_ext(ext_type, accum, self.ext_data);
+        //     }
+        //     else {
+        //         self.handle_ext(ext_type, accum, self.ext_data);
+        //         self.escape = {mode: false,
+        //                        type: false,
+        //                        contents: ""};
+        //         return self.write(c);
+        //     }            
+        // }
+        // else if (self.ext_type) {
+        //     self.ext_accum += s;
+        //     if (c == 0x1B) {
+        //         self.ext_check_termination = true;
+        //     }
+        // }
 
-        else if (self.escape !== false) {
-            if (self.escape.mode === false) {
-                self.escape.mode = c;
-                if (c == 61 || c == 62) {
-                    self.write_escape(self.escape);
-                    self.escape = false;
-                }
-            }
-            else if (c >= 0x20 && c <= 0x3f) {
-                self.escape.contents += s;
-            }
-            else if (c >= 0x40 && c <= 0x7e) {
-                self.escape.type = s;
-                self.write_escape(self.escape);
-                self.escape = false;
-            }
-        }
-        else {
-            var entry = self.char_convert[c];
-            if (entry !== undefined) {
-                if (typeof(entry) == "string") {
-                    s = entry;
-                }
-                else {
-                    s = entry();
-                    if (s === false) {
-                        return;
-                    }
-                }
-            }
+        // else if (self.escape !== false) {
+        //     if (self.escape.mode === false) {
+        //         self.escape.mode = c;
+        //         if (c == 61 || c == 62) {
+        //             self.write_escape(self.escape);
+        //             self.escape = false;
+        //         }
+        //     }
+        //     else if (c >= 0x20 && c <= 0x3f) {
+        //         self.escape.contents += s;
+        //     }
+        //     else if (c >= 0x40 && c <= 0x7e) {
+        //         self.escape.type = s;
+        //         self.write_escape(self.escape);
+        //         self.escape = false;
+        //     }
+        // }
+        // else {
+        //     var entry = self.char_convert[c];
+        //     if (entry !== undefined) {
+        //         if (typeof(entry) == "string") {
+        //             s = entry;
+        //         }
+        //         else {
+        //             s = entry();
+        //             if (s === false) {
+        //                 return;
+        //             }
+        //         }
+        //     }
+        //     self.screen.write_at_cursor([s, self.screen.text_properties.slice(0)]);
+        //     self.screen.advance();
+        // }
+
+        var s = self.sm.run(c);
+        if (s != '') {
             self.screen.write_at_cursor([s, self.screen.text_properties.slice(0)]);
             self.screen.advance();
         }
@@ -1467,6 +1272,8 @@ function Terminus(div, settings) {
         self.terminal = div;
         self.d_terminal = div[0];
         self.settings = settings;
+
+        self.csi = Terminus.csi;
 
         // CHILDREN
 
@@ -1562,6 +1369,11 @@ function Terminus(div, settings) {
         // ESCAPE
 
         self.escape = false;
+        self.ext = false;
+
+        // STATE
+
+        self.sm = Terminus.state_machine(Terminus.input_state_machine, 'init', self);
 
         // WORKERS
 
@@ -1854,4 +1666,512 @@ function Terminus(div, settings) {
 
 
 
+Terminus.deco = function (x) {
+    return function () {
+        return ['<span style="text-decoration:overline;">' + x + '</span>', 'init'];
+    }
+}
 
+Terminus.raw_text = function (x) {
+    return function () {
+        return [x, 'init'];
+    }
+}
+
+Terminus.noop = function () {
+    return ['', 'init'];
+}
+
+
+Terminus.input_state_machine = {
+
+    //// init state ////
+
+    init: function (c) {
+        var s = String.fromCharCode(c);
+        return {next_state: "chr_" + c,
+                fallback: [s, 'init']};
+    },
+
+    //// C0 ////
+
+    chr_0: Terminus.deco('0'),
+    chr_1: Terminus.deco('1'),
+    chr_2: Terminus.deco('2'),
+    chr_3: Terminus.deco('3'),
+    chr_4: Terminus.deco('4'),
+    chr_5: Terminus.deco('5'),
+    chr_6: Terminus.deco('6'),
+    chr_7: Terminus.noop,
+    chr_8: function () {
+        this.screen.move_to(this.screen.line, this.screen.column - 1);
+        return ['', 'init'];
+    },
+    chr_9: function() {
+        // Tab length = 8
+        this.screen.move_to(this.screen.line, (this.screen.column & (~7)) + 8);
+        return ['', 'init'];
+    },
+
+    chr_10: function () {
+        this.screen.next_line();
+        return ['', 'init'];
+    },
+    chr_11: Terminus.deco('b'),
+    chr_12: Terminus.deco('c'),
+    chr_13: function () {
+        this.screen.move_to(this.screen.line, 0);
+        return ['', 'init'];
+    },
+    chr_14: Terminus.deco('e'),
+    chr_15: Terminus.deco('f'),
+    chr_16: Terminus.deco('g'),
+    chr_17: Terminus.deco('h'),
+    chr_18: Terminus.deco('i'),
+    chr_19: Terminus.deco('j'),
+
+    chr_20: Terminus.deco('k'),
+    chr_21: Terminus.deco('l'),
+    chr_22: Terminus.deco('m'),
+    chr_23: Terminus.deco('n'),
+    chr_24: Terminus.deco('o'),
+    chr_25: Terminus.deco('p'),
+    chr_26: Terminus.deco('q'),
+    chr_27: function () {
+        this.escape = {mode: false,
+                       type: "",
+                       prefix: "",
+                       contents: "",
+                       suffix: ""};
+        return ['', 'esc'];
+    },
+    chr_28: Terminus.deco('s'),
+    chr_29: Terminus.deco('t'),
+
+    chr_30: Terminus.deco('u'),
+    chr_31: Terminus.deco('v'),
+    chr_32: Terminus.raw_text('&nbsp;'),
+    chr_38: Terminus.raw_text('&amp;'),
+    chr_60: Terminus.raw_text('&lt;'),
+    chr_62: Terminus.raw_text('&gt;'),
+
+    //// ESCAPE ////
+    
+    esc: function (c) {
+        this.escape.mode = c;
+        return 'esc_' + c;
+    },
+
+    esc_40: function () {
+        // ESC (
+        return ['', 'stdcode0'];
+    },
+
+    esc_61: function () { return 'esc_go'; },
+    esc_62: function () { return 'esc_go'; },
+
+    esc_91: function () {
+        // CSI = ESC [
+        return ['', 'stdcode0'];
+    },
+
+    esc_go: function () {
+        return 'exec_' + this.escape.mode;
+    },
+
+    //// STANDARD ESCAPE CODE ////
+    // ESC <x> <prefix> <n0;n1;n2...> <suffix> <letter>
+
+    stdcode0: function (c) {
+        if ((c >= 32 && c <= 47) || (c >= 60 && c <= 63)) {
+            this.escape.prefix += String.fromCharCode(c);
+            return ['', 'stdcode0'];
+        }
+        return 'stdcode1';
+    },
+
+    stdcode1: function (c) {
+        if (c >= 48 && c <= 59) {
+            this.escape.contents += String.fromCharCode(c);
+            return ['', 'stdcode1'];
+        }
+        return 'stdcode2';
+    },
+
+    stdcode2: function (c) {
+        if ((c >= 32 && c <= 47) || (c >= 60 && c <= 63)) {
+            this.escape.suffix += String.fromCharCode(c);
+            return ['', 'stdcode2'];
+        }
+        return 'stdcode3';
+    },
+
+    stdcode3: function (c) {
+        this.escape.type = String.fromCharCode(c);
+        return {next_state: 'exec_' + this.escape.mode,
+                fallback: 'esc_unknown'};
+    },
+
+    //// SEEK ST ////
+    // ST = ESC \
+
+    seek_st0: function (c) {
+        if (c == 27) {
+            return ['', 'seek_st1'];
+        }
+        this.ext.accum += String.fromCharCode(c);
+        return ['', 'seek_st0'];
+    },
+
+    seek_st1: function (c) {
+        this.handle_ext(this.ext);
+        this.ext = undefined;
+        if (c != 92) {
+            return 'esc';
+        }
+        return ['', 'init']
+    },
+
+    //// EXEC ////
+
+    exec_40: function () {
+        return ['', 'init']
+    },
+
+    esc_61: function () { return 'esc_log'; },
+    esc_62: function () { return 'esc_log'; },
+
+    exec_91: function () {
+        var nums = [];
+        var esc = this.escape;
+        var contents = esc.contents;
+        if (contents != "") {
+            nums = contents.split(";").map(function (x) {
+                return parseInt(x);
+            });
+        }
+        var name = esc.prefix + esc.type + esc.suffix;
+        var fn = this.csi[name + nums.length] || this.csi[name];
+        if (typeof(fn) == "string") {
+            fn = this.csi[fn];
+        }
+        if (fn !== undefined) {
+            var next_state = fn.call(this, nums);
+            if (next_state === undefined) {
+                return 'esc_log';
+            }
+            else {
+                // return 'esc_log';
+                return ['', next_state];
+            }
+        }
+        else {
+            return 'esc_unknown';
+        }
+    },
+
+    esc_log: function () {
+        var esc = this.escape;
+        this.log('error', 
+                 (String.fromCharCode(esc.mode)
+                  + esc.prefix
+                  + esc.contents
+                  + esc.suffix
+                  + esc.type));
+        return ['', 'init'];
+    },
+
+    esc_unknown: function () {
+        var esc = this.escape;
+        this.log('esc_unknown',
+                 (String.fromCharCode(esc.mode)
+                  + esc.prefix
+                  + esc.contents
+                  + esc.suffix
+                  + esc.type));
+        return ['', 'init'];
+    },
+}
+
+
+Terminus.state_machine = function(machine, initial_state, target) {
+    var self = obj();
+    self.machine = machine;
+    self.state = initial_state;
+    self.target = target;
+
+    self.process_next_state = function(next) {
+        if (typeof next == "string") {
+            next = {next_state: next};
+        }
+        else if (!next.next_state) {
+            next = {next_state: next[1],
+                    value: next[0]}
+        }
+        // self.state = next.next_state;
+        if (machine[next.next_state] === undefined) {
+            if (next.fallback !== undefined) {
+                return self.process_next_state(next.fallback);
+            }
+            else {
+                target.log('error', ('switch to nonexistent state '
+                                     + next.next_state
+                                     + ' from: ' + self.state));
+                self.state = initial_state;
+            }
+        }
+        else {
+            self.state = next.next_state;
+        }
+        return next.value;
+    }
+
+    self.next = function(data) {
+        var fn = machine[self.state];
+        if (fn === undefined) {
+            target.log('error', '?switch to nonexistent state ' + self.state);
+            self.state = initial_state;
+        }
+        var next = fn.call(self.target, data);
+        return self.process_next_state(next);
+
+        // if (typeof next == "string") {
+        //     next = {next_state: next};
+        // }
+        // else if (!next.next_state) {
+        //     next = {next_state: next[1],
+        //             value: next[0]}
+        // }
+        // self.state = next.next_state;
+
+        // if (typeof next == "string") {
+        //     self.state = next;
+        //     return null;
+        // }
+        // else if () {
+        // }
+        // else {
+        //     self.state = next[1];
+        //     return next[0];
+        // }
+    }
+
+    self.run = function (data) {
+        var count = 100;
+        while (true) {
+            var result = self.next(data);
+            if (result !== undefined && result !== null) {
+                return result;
+            }
+            if (!count) {
+                self.log("error", "potentially infinite loop (state = " + self.state + ")");
+            }
+            count--;
+        }
+    }
+
+    return self;
+}
+
+
+Terminus.apply_all = function(nums, policies, which) {
+    for (var i = 0; i < nums.length; i++) {
+        var n = nums[i];
+        var policy = policies[n];
+        if (policy !== undefined) {
+            policy.call(this);
+        }
+        else {
+            this.log('esc_unknown', '->' + '[?' + n + which)
+        }
+    }
+}
+
+Terminus.csi = {
+
+    "@0": function (_) { this.screen.insert_blanks(this.screen.line, this.screen.column, 1) },
+    "@1": function (n) { this.screen.insert_blanks(this.screen.line, this.screen.column, n[0]) },
+
+    A0: function(_) { this.screen.move_rel(-1, 0); },
+    A1: function(n) { this.screen.move_rel(-n[0], 0); },
+
+    B0: function(_) { this.screen.move_rel(1, 0); },
+    B1: function(n) { this.screen.move_rel(n[0], 0); },
+
+    C0: function(_) { this.screen.move_rel(0, 1); },
+    C1: function(n) { this.screen.move_rel(0, n[0]); },
+
+    D0: function(_) { this.screen.move_rel(0, -1); },
+    D1: function(n) { this.screen.move_rel(0, -n[0]); },
+
+    E0: function(_) { this.screen.move_to(this.screen.line + 1, 0); },
+    E1: function(n) { this.screen.move_to(this.screen.line + n[0], 0); },
+
+    F0: function(_) { this.screen.move_to(this.screen.line - 1, 0); },
+    F1: function(n) { this.screen.move_to(this.screen.line - n[0], 0); },
+
+    G1: function(n) { this.screen.move_to(this.screen.line, n[0] - 1); },
+
+    H0: function(n) { this.screen.move_to(0, 0); },
+    H1: function(n) { this.screen.move_to(n[0] - 1, 0); },
+    H2: function(n) {
+        var l = n[0] - 1;
+        var c = n[1] - 1;
+        if (isNaN(l)) l = 0;
+        if (isNaN(c)) c = 0;
+        this.screen.move_to(l, c);
+    },
+
+    J0: function(_) { this.screen.kill_screen(0); },
+    J1: function(n) { this.screen.kill_screen(n[0]); },
+
+    K0: function(_) { this.screen.kill_line(0); },
+    K1: function(n) { this.screen.kill_line(n[0]); },
+
+    L0: function(_) { this.screen.insert_lines(this.screen.line, 1); },
+    L1: function(n) { this.screen.insert_lines(this.screen.line, n[0]); },
+
+    M0: function(_) { this.screen.delete_lines(this.screen.line, 1); },
+    M1: function(n) { this.screen.delete_lines(this.screen.line, n[0]); },
+
+    P0: function(_) {
+        this.screen.delete_characters(this.screen.line, this.screen.column, 1);
+    },
+    P1: function(n) {
+        this.screen.delete_characters(this.screen.line, this.screen.column, n[0]);
+    },
+
+    ">c0": function (_) { this.to_send += "\x1B[>0;0;0c"; },
+    ">c1": '>c0',
+
+    d0: function (_) { this.screen.move_to(1, this.screen.column); },
+    d1: function (n) { this.screen.move_to(n[0] - 1, this.screen.column); },
+
+    f0: 'H0',
+    f1: 'H1',
+    f2: 'H2',
+
+    "?h": function (nums) {
+        var policies = {
+            1: function () { this.app_key = true; },
+            12: function () { this.screen.cursor_blink = true; },
+            25: this.screen.show_cursor,
+            1047: function () { this.use_screen(1); },
+            1048: function () { this.screen.save_cursor(); },
+            1049: function () { this.screen.save_cursor();
+                                this.use_screen(1); },
+        };
+        Terminus.apply_all.call(this, nums, policies, 'h');
+    },
+
+    "?l": function (nums) {
+        var policies = {
+            1: function () { this.app_key = false; },
+            12: function () { this.cursor_blink = false; },
+            25: this.screen.hide_cursor,
+            1047: function () { this.use_screen(0); },
+            1048: function () { this.screen.restore_cursor(); },
+            1049: function () { this.use_screen(0);
+                                this.screen.restore_cursor(); },
+        };
+        Terminus.apply_all.call(this, nums, policies, 'l');
+    },
+
+    m0: function(_) {
+        this.screen.text_properties = this.screen.no_text_properties();
+    },
+
+    m: function(nums) {
+        for (var i = 0; i < nums.length; i++) {
+            var n = nums[i];
+            if (n == 0) {
+                this.screen.text_properties = this.screen.no_text_properties();
+            }
+            else {
+                this.screen.text_properties.push(n);
+            }
+        }
+    },
+
+    r0: function(_) {
+        this.screen.scroll0 = 0;
+        this.screen.scroll1 = this.screen.nlines;
+        this.screen.move_to(0, 0);
+    },
+    r2: function(nums) {
+        this.screen.scroll0 = nums[0] - 1;
+        this.screen.scroll1 = nums[1];
+        this.screen.move_to(0, 0);
+    },
+
+    s0: function (_) { this.screen.save_cursor(); },
+    u0: function (_) { this.screen.restore_cursor(); },
+
+    "?z0": function (_) { }, // invalid (no-op)
+    "?z": function (n) {
+        var types = {0: [['html_set', 'height', 'width', ';;', '*nest'],
+                         false],
+                     10: [['html_append', 'height', 'width', ';;', '*nest'],
+                          false],
+                     100: [['js', ';;', '*nest'],
+                           false],
+                     200: [['create', '*nest'],
+                           true]
+                    };
+        var type = n[0];
+        if (types[type] === undefined) {
+            return;
+        }
+        var desc = types[type][0];
+        var now = types[type][1];
+        if (desc !== undefined) {
+            var data = {};
+            var j = 1;
+            var edge = function() {
+                return n[j] === undefined || isNaN(n[j]);
+            }
+            for (var i = 1; i < desc.length; i++) {
+                var propname = desc[i];
+                if (propname[0] == '*') {
+                    var value = [];
+                    while (!edge()) {
+                        value.push(n[j]);
+                        j++;
+                    }
+                    data[propname.substring(1)] = value;
+                }
+                else if (propname == ';;') {
+                    if (!edge()) {
+                        return;
+                    }
+                    j++;
+                }
+                else {
+                    if (!edge()) {
+                        var value = n[j]; // undefined if absent
+                        data[propname] = value;
+                        j++;
+                    }
+                }
+            }
+            if (now) {
+                this.handle_ext({type: desc[0],
+                                 args: data,
+                                 accum: ""});
+            }
+            else {
+                // alert([desc[0], data.height, data.width, data.nest.join('/')].join(" "));
+                // this.ext_type = desc[0];
+                // this.ext_data = data;
+                // this.ext_accum = "";
+                // this.ext_check_termination = false;
+                this.ext = {
+                    type: desc[0],
+                    args: data,
+                    accum: ""
+                }
+                return 'seek_st0';
+            }
+        }
+    }
+}
