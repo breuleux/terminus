@@ -128,14 +128,16 @@ log:
   #   err: unexpected exceptions thrown during execution
   #   esc: log escape codes
   #   esc_unknown: log unknown escape codes
-  #   scroll_clear: log when things scroll away
-  #   create_nest: log nest creation
-  #   destroy_nest: log nest destruction
+  #   test: messages sent to logging during development, should be
+  #         none in the production version
+  #   info: informative stuff like logging: on/off
   # Note: you can define a list of things to log.
   what:
-    - test
     - error
     - esc_unknown
+    - test
+    - info
+    - exec
 
   # Prefix to all logged things (useful to determine source if there
   # are nested terminals).
@@ -170,6 +172,7 @@ bindings:
 
   # switch logging on or off
   C-S-p: ~log_mode
+  C-S-c: ~clear_log
 
   # clear scrollback
   C-S-l: ~clear_scrollback
@@ -177,11 +180,20 @@ bindings:
   # navigation
   C-Left: ~word_left
   C-Right: ~word_right
+  A-Left: ~word_left
+  A-Right: ~word_right
   Home: ~home
   End: ~end
 
-  # macro
-  C-S-d: ~word_left ~~K bonjour
+  # deletion
+  C-Backspace: ~word_delete_left
+  C-Delete: ~word_delete_right
+
+  # scrolling
+  S-Up: ~scroll_up_line
+  S-Down: ~scroll_down_line
+  S-PgUp: ~scroll_up_page
+  S-PgDn: ~scroll_down_page
 
   # DEFAULTS
   Backspace: ~backspace
@@ -195,8 +207,8 @@ bindings:
   Up: ~up
   Right: ~right
   Down: ~down
-  Ins: ~ins
-  Del: ~del
+  Insert: ~insert
+  Delete: ~delete
   F1: ~f1
   F2: ~f2
   F3: ~f3

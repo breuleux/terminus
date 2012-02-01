@@ -59,7 +59,14 @@ function Logger(settings) {
 
     self.switch_state = function(value) {
         if (value === undefined) { value = !self.active; }
-        self.active = value;
+        if (value) {
+            self.active = value;
+            self.log('info', 'logging ON')
+        }
+        else {
+            self.log('info', 'logging OFF')
+            self.active = value;
+        }
     }
 
     self.scroll = function() {
@@ -921,6 +928,16 @@ function Terminus(div, settings) {
             x.scrollTop = x.scrollHeight;
         }
     }
+    self.scroll_by = function(dy) {
+        if (settings.scrolling.jscrollpane) {
+            self.center_outer.data('jsp').scrollByY(dy);
+        }
+        else {
+            var x = self.center[0];
+            x.scrollTop += dy;
+        }
+    }
+
 
     self.log = function(event, data) {
         self.logger.log(event, data);
@@ -1587,19 +1604,13 @@ function Terminus(div, settings) {
         // BINDINGS
 
         $(document).bind('paste', function(e) {
-                var target = self.textarea;
-                target.val("");
-                setTimeout(function() {
-                        var text = target.val();
-                        self.to_send += text;
-                    }, 0);
-            });
-
-        function printer(s) {
-            return function () {
-                self.to_send += s;
-            }
-        }
+            var target = self.textarea;
+            target.val("");
+            setTimeout(function() {
+                var text = target.val();
+                self.to_send += text;
+            }, 0);
+        });
 
         self.keynames = {
             8: "Backspace",
@@ -1617,8 +1628,8 @@ function Terminus(div, settings) {
             38: "Up",
             39: "Right",
             40: "Down",
-            45: "Ins",
-            46: "Del",
+            45: "Insert",
+            46: "Delete",
             48: "0",
             49: "1",
             50: "2",
@@ -1669,6 +1680,39 @@ function Terminus(div, settings) {
             123: "F12",
         }
 
+        function word_operation(direction, operation) {
+            return function () {
+
+                var mat = self.screen.matrix[self.screen.line];
+                var skipover = ("! @ # $ % ^ & * ( ) [ ] { }"
+                                + " / ? \\ | &nbsp; &gt; &lt;"
+                                + " = + - _ ` ~ ; : \" ' . ,").split(" ")
+                if (direction == "left") {
+                    var j = self.screen.column - 1;
+                    for (; j >= 0; j--) {
+                        if (skipover.indexOf(mat[j][0]) == -1) { break; }
+                        self.to_send += operation;
+                    }
+                    for (; j >= 0; j--) {
+                        if (skipover.indexOf(mat[j][0]) != -1) { break; }
+                        self.to_send += operation;
+                    }
+                }
+                else {
+                    var j = self.screen.column;
+                    for (; j < self.ncols; j++) {
+                        if (skipover.indexOf(mat[j][0]) == -1) { break; }
+                        self.to_send += operation;
+                    }
+                    for (; j < self.ncols; j++) {
+                        if (skipover.indexOf(mat[j][0]) != -1) { break; }
+                        self.to_send += operation;
+                    }
+                }
+                return true;
+            }
+        }
+
         self.commands = {
             backspace: "\x7F",
             tab: "\x09",
@@ -1680,8 +1724,8 @@ function Terminus(div, settings) {
             left: "\x1B[D",
 
             home: "\x1B[1~",
-            ins: "\x1B[2~",
-            del: "\x1B[3~",
+            insert: "\x1B[2~",
+            "delete": "\x1B[3~",
             end: "\x1B[4~",
             pgup: "\x1B[5~",
             pgdn: "\x1B[6~",
@@ -1701,80 +1745,84 @@ function Terminus(div, settings) {
 
             clear_scrollback: function () {
                 self.screend.clear_scrollback();
+                return true;
             },
 
             log_mode: function () {
                 self.logger.switch_state();
+                return "noscroll";
             },
 
-            word_left: function () {
-                var mat = self.screen.matrix[self.screen.line];
-                var skipover = ("! @ # $ % ^ & * ( ) [ ] { }"
-                                + " / ? \\ | &nbsp; &gt; &lt;"
-                                + " = + - _ ` ~ ; : \" ' . ,").split(" ")
-                var j = self.screen.column - 1;
-                for (; j >= 0; j--) {
-                    if (skipover.indexOf(mat[j][0]) == -1) { break; }
-                    self.to_send += "\x1B[D";
-                }
-                for (; j >= 0; j--) {
-                    if (skipover.indexOf(mat[j][0]) != -1) { break; }
-                    self.to_send += "\x1B[D";
-                }
+            clear_log: function () {
+                self.logger.clear();
+                return "noscroll";
+            },
+            
+            scroll_up_line: function () {
+                self.scroll_by(-self.char_height);
+                return "noscroll";
             },
 
-            word_right: function () {
-                var mat = self.screen.matrix[self.screen.line];
-                var skipover = ("! @ # $ % ^ & * ( ) [ ] { }"
-                                + " / ? \\ | &nbsp; &gt; &lt;"
-                                + " = + - _ ` ~ ; : \" ' . ,").split(" ")
-                var j = self.screen.column;
-                for (; j < self.ncols; j++) {
-                    if (skipover.indexOf(mat[j][0]) == -1) { break; }
-                    self.to_send += "\x1B[C";
-                }
-                for (; j < self.ncols; j++) {
-                    if (skipover.indexOf(mat[j][0]) != -1) { break; }
-                    self.to_send += "\x1B[C";
-                }
-            }
+            scroll_down_line: function () {
+                self.scroll_by(self.char_height);
+                return "noscroll";
+            },
+
+            scroll_up_page: function () {
+                self.scroll_by(-self.char_height * self.nlines);
+                return "noscroll";
+            },
+
+            scroll_down_page: function () {
+                self.scroll_by(self.char_height * self.nlines);
+                return "noscroll";
+            },
+
+            word_left: word_operation("left", "\x1B[D"),
+            word_right: word_operation("right", "\x1B[C"),
+
+            word_delete_left: word_operation("left", "\x7f"),
+            word_delete_right: word_operation("right", "\x1B[3~"),
         }
 
         $(document).bind('keydown', function(e) {
+
             var bindings = settings.bindings;
             code = ((e.ctrlKey ? "C-" : "")
                     + (e.altKey ? "A-" : "")
                     + (e.shiftKey ? "S-" : "")
                     + (self.keynames[e.keyCode] || "<"+e.keyCode+">"));
-            // self.log('test', code);
+
+            // this is needed for paste to work
+            if (code == "C-") {
+                self.textarea.focus();
+            }
+
             var commands = bindings[code];
-            var cancel = false;
 
             if (commands === undefined) {
                 return;
             }
+            self.log('exec', commands)
 
+            var cancel = false;
             commands = commands.split(" ");
             for (var i = 0; i < commands.length; i++) {
                 var command = commands[i];
-                self.log('test', command);
                 if (command[0] == "~") {
                     if (command[1] == "~") {
                         var s = command.slice(2).charCodeAt() - 64;
                         self.to_send += String.fromCharCode(s);
-                        self.log('test', "code" + s);
                         cancel = true;
                     }
                     else {
                         var fn = self.commands[command.slice(1)];
                         if (typeof fn == "string") {
                             self.to_send += fn;
-                            self.log('test', "append " + fn);
                             cancel = true;
                         }
                         else if (typeof fn != "undefined") {
-                            self.log('test', "call " + command.slice(1));
-                            cancel = !fn();
+                            cancel = fn();
                         }
                     }
                 }
@@ -1785,7 +1833,9 @@ function Terminus(div, settings) {
             }
             
             if (cancel) {
-                self.scroll_to_bottom();
+                if (cancel != "noscroll") {
+                    self.scroll_to_bottom();
+                }
                 e.stopPropagation();
                 e.preventDefault();
             }
