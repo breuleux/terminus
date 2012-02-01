@@ -1126,11 +1126,11 @@ function Terminus(div, settings) {
         K0: function(_) { self.screen.kill_line(0); },
         K1: function(n) { self.screen.kill_line(n[0]); },
 
-        L0: function(_) { self.screen.insert_lines(self.screen.line + 1, 1); },
-        L1: function(n) { self.screen.insert_lines(self.screen.line + 1, n[0]); },
+        L0: function(_) { self.screen.insert_lines(self.screen.line, 1); },
+        L1: function(n) { self.screen.insert_lines(self.screen.line, n[0]); },
 
-        M0: function(_) { self.screen.delete_lines(self.screen.line + 1, 1); },
-        M1: function(n) { self.screen.delete_lines(self.screen.line + 1, n[0]); },
+        M0: function(_) { self.screen.delete_lines(self.screen.line, 1); },
+        M1: function(n) { self.screen.delete_lines(self.screen.line, n[0]); },
 
         P0: function(_) {
             self.screen.delete_characters(self.screen.line, self.screen.column, 1);
@@ -1566,40 +1566,36 @@ function Terminus(div, settings) {
         // WORKERS
 
         setInterval(function () {
-                self.adjust_size();
-            }, 100)
+            self.adjust_size();
+        }, 100)
 
         setInterval(function () {
-                self.display();
-            },
-            100)
+            self.display();
+        }, 100)
 
         setInterval(function () {
-                $('.cursor').each (function () {
-                        var elem = $(this);
-                        var c = elem.css('color');
-                        var bgc = elem.css('background-color');
-                        elem.css('color', bgc);
-                        elem.css('background-color', c);
-                    })
-                    },
-            200)
+            $('.cursor').each (function () {
+                var elem = $(this);
+                var c = elem.css('color');
+                var bgc = elem.css('background-color');
+                elem.css('color', bgc);
+                elem.css('background-color', c);
+            })}, 200)
 
         self.get_data();
 
         self.to_send = "";
         setInterval(function () {
-                if (self.to_send != "") {
-                    var to_send = self.to_send;
-                    self.to_send = "";
-                    $.post(settings.path+"/send", {data: to_send, magic: settings.magic},
-                           function (data) {
-                               self.write_all(data.data);
-                               // self.scroll_to_bottom();
-                           });
-                }
-            },
-            10);
+            if (self.to_send != "") {
+                var to_send = self.to_send;
+                self.to_send = "";
+                $.post(settings.path+"/send", {data: to_send, magic: settings.magic},
+                       function (data) {
+                           self.write_all(data.data);
+                           // self.scroll_to_bottom();
+                       });
+            }
+        }, 10);
 
         // BINDINGS
 

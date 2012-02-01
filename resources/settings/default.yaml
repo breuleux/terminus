@@ -133,11 +133,12 @@ log:
   #   info: informative stuff like logging: on/off
   # Note: you can define a list of things to log.
   what:
+    # - esc
     - error
     - esc_unknown
     - test
     - info
-    - exec
+    # - exec
 
   # Prefix to all logged things (useful to determine source if there
   # are nested terminals).
