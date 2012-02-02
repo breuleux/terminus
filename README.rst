@@ -44,7 +44,7 @@ the terminal ::
 
 Note that this is the standard echo, *not* a hacked up version. Have
 some fun using an <img> tag instead, or make a table (you might have
-to style it, else it'll be black on black). Now try this:
+to style it, else it'll be black on black). Now try this ::
 
   echo -e '\x1B[?11;;19z<b>Hello</b>\x1B\\'
   sleep 1
