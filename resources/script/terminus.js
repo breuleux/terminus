@@ -180,9 +180,6 @@ function DivNest(div) {
     var self = Nest(div);
 
     self.set_child = function(id, child) {
-        // if (id == 0) {
-        //     id = self.n++;
-        // }
         var existing = self.children[id]
         if (existing !== undefined) {
             self.element.replaceChild(child.element,
@@ -200,7 +197,13 @@ function DivNest(div) {
     }
 
     self.append = function(sub_element) {
-        self.element.appendChild(sub_element)
+        if (typeof sub_element == "string") {
+            var div = $(makediv()).html(Terminus.sanitize(sub_element));
+            $(self.element).append(div);
+        }
+        else {
+            $(self.element).append(sub_element);
+        }
     }
 
     return self;
@@ -250,8 +253,7 @@ function Screen(term, settings) {
             for (var i = 0; i < self.nlines; i++){
                 // This adds blanks to row i starting at position
                 // old_ncol and marks as modified.
-                // BUG? might remove ext flag and "un-display" html
-                self.clear_line(i, old_ncol);
+                self.clear_line(i, old_ncol, true);
             }
         }
         else if (ncols < self.ncols) {
@@ -288,11 +290,15 @@ function Screen(term, settings) {
             }
             for (var i = self.nlines; i > nlines; i--) {
                 // Delete all lines below the threshold
-                self.matrix[i] = undefined;
-                self.lines[i] = undefined;
-                self.virgin[i] = undefined;
-                self.modified[i] = undefined;
-                self.ext[i] = undefined;
+                delete self.matrix[i];
+                delete self.lines[i];
+                delete self.virgin[i];
+                delete self.modified[i];
+                delete self.ext[i];
+                if (self.nest[i] != null) {
+                    self.lost_nests.push(self.nest[i]);
+                }
+                delete self.nest[i];
             }
             if (self.line >= nlines) {
                 // If the cursor is below the screen, we bump it up
@@ -362,11 +368,13 @@ function Screen(term, settings) {
     // STYLE
 
     self.push_prop = function(i, j, n) {
-        if (j != self.ncols) {
-            var all = self.matrix[i][j];
-            all[1].push(n);
-            all[2] = undefined;
-            all[3] = undefined;
+        // Push a text property (value n) on the character at coordinates
+        // {line: i, column: j}
+        if (j < self.ncols) { // note: j can be equal to self.ncols
+            var data = self.matrix[i][j];
+            data[1].push(n);
+            data[2] = undefined;
+            data[3] = undefined;
         }
     }
 
@@ -421,26 +429,40 @@ function Screen(term, settings) {
     }
 
     self.extract_character = function(i, j) {
-        var all = self.matrix[i][j];
-        var character = all[0];
-        var properties = all[1];
-        var style = all[2];
-        var cls = all[3];
+        var data = self.matrix[i][j];
+        var character = data[0];
+        var properties = data[1];
+        var style = data[2];
+        var cls = data[3];
         if (style === undefined || cls === undefined) {
             var things = self.compute_style(properties);
             style = things[0];
             cls = things[1];
-            all[2] = style;
-            all[3] = cls;
+            data[2] = style;
+            data[3] = cls;
         }
         return [character, properties, style, cls];
     };
 
     // WRITE
 
-    self.touch_line = function(line) {
+    self.fresh_line = function(line) {
         self.modified[line] = true;
         self.ext[line] = false;
+        self.nest[line] = null;
+        self.virgin[line] = false;
+        self.heights[line] = 1;
+    }
+
+    self.touch_line = function(line, keep_ext) {
+        self.modified[line] = true;
+        if (!keep_ext) {
+            self.ext[line] = false;
+            if (self.nest[line] != null) {
+                self.lost_nests.push(self.nest[line]);
+                self.nest[line] = null;
+            }
+        }
         self.virgin[line] = false;
         self.heights[line] = 1;
     }
@@ -457,7 +479,7 @@ function Screen(term, settings) {
         self.write_at(self.line, self.column, things);
     }
 
-    self.write_html_line = function(node) {
+    self.write_html_line = function(node, nest) {
         if (self.column == self.ncols) {
             self.next_line();
         }
@@ -465,6 +487,7 @@ function Screen(term, settings) {
         self.lines[line] = node;
         self.modified[line] = true;
         self.ext[line] = true;
+        self.nest[line] = nest;
         self.virgin[line] = false;
         var h = $(node).height();
         if (h != 0) {
@@ -499,7 +522,7 @@ function Screen(term, settings) {
         var div = makediv();
         var line = self.get_line(i);
         div.appendChild(self.lines[i]);
-        self.scrollback.push(div);
+        self.scrollback.push([self.nest[i], div]);
     }
 
     // KILL
@@ -555,14 +578,14 @@ function Screen(term, settings) {
         return rval;
     }
 
-    self.clear_line = function(i, start_col) {
+    self.clear_line = function(i, start_col, keep_ext) {
         if (!start_col)
             start_col = 0;
         for (var j = start_col; j < self.ncols; j++) {
             self.matrix[i][j] = [self.default_character,
                                  self.no_text_properties()];
         }
-        self.touch_line(i);
+        self.touch_line(i, keep_ext);
         if (!start_col)
             self.virgin[i] = true;
     }
@@ -618,6 +641,7 @@ function Screen(term, settings) {
         self.matrix = self.push_to_end(self.matrix, start, end);
         self.lines = self.push_to_end(self.lines, start, end);
         self.ext = self.push_to_end(self.ext, start, end);
+        self.nest = self.push_to_end(self.nest, start, end);
         self.virgin = self.push_to_end(self.virgin, start, end);
         self.heights = self.push_to_end(self.heights, start, end);
         self.all_modified(start, self.nlines);
@@ -639,6 +663,7 @@ function Screen(term, settings) {
         self.matrix = self.push_to_end(self.matrix, start, end);
         self.lines = self.push_to_end(self.lines, start, end);
         self.ext = self.push_to_end(self.ext, start, end);
+        self.nest = self.push_to_end(self.nest, start, end);
         self.virgin = self.push_to_end(self.virgin, start, end);
         self.heights = self.push_to_end(self.heights, start, end);
         self.all_modified(start, self.nlines);
@@ -659,6 +684,7 @@ function Screen(term, settings) {
         self.lines = self.rotate(self.lines);
         self.matrix = self.rotate(self.matrix);
         self.ext = self.rotate(self.ext);
+        self.nest = self.rotate(self.nest);
         self.all_modified(0, self.nlines);
     }
 
@@ -676,10 +702,10 @@ function Screen(term, settings) {
         var current_style = "";
         var current_cls = "";
         for (var j = 0; j < self.ncols; j++) {
-            var all = self.extract_character(i, j);
-            var c = all[0];
-            var style = all[2];
-            var cls = all[3];
+            var data = self.extract_character(i, j);
+            var c = data[0];
+            var style = data[2];
+            var cls = data[3];
             if (style != current_style || cls != current_cls) {
                 if (cls)
                     s += '</span><span class="' + cls + '" style="' + style + '">';
@@ -708,8 +734,11 @@ function Screen(term, settings) {
         self.lines = [];
         self.modified = [];
         self.ext = []
+        self.nest = [];
         self.virgin = [];
         self.heights = [];
+
+        self.lost_nests = [];
 
         self.text_properties = self.no_text_properties();
         self.default_character = "&nbsp;";
@@ -773,10 +802,18 @@ function ScreenDisplay(terminal, screen, settings) {
             return false;
         }
         var scrollback = scr.scrollback;
+        var lost = scr.lost_nests;
+        scr.lost_nests = [];
         scr.scrollback = [];
         for (var i = 0; i < scrollback.length; i++) {
-            self.add_scroll(scrollback[i]);
+            var nest = scrollback[i][0];
+            var idx = lost.indexOf(nest);
+            if (idx != -1) {
+                lost.splice(idx, 1);
+            }
+            self.add_scroll(scrollback[i][1], nest);
         }
+        self.lost_nests = self.lost_nests.concat(lost);
 
         return true;
         // self.scroll_to_bottom();
@@ -784,19 +821,28 @@ function ScreenDisplay(terminal, screen, settings) {
 
     self.rotate_scrollback = function () {
         self.scrollbacks.children().first().remove();
+        self.lost_nests = self.lost_nests.concat(self.nests.shift());
         var new_div = document.createElement('div');
         self.scrollbacks.append(new_div);
+        self.nests.push([]);
     }
 
-    self.clear_scrollback = function(x) {
+    self.clear_scrollback = function() {
         self.scrollbacks.empty();
         for (var i = 0; i < self.n_scrolls; i++) {
             var new_div = document.createElement('div');
             self.scrollbacks.append(new_div);
+            if (self.nests[i]) {
+                self.lost_nests = self.lost_nests.concat(self.nests[i]);
+            }
+            self.nests[i] = [];
         }
     }
 
-    self.add_scroll = function(x) {
+    self.add_scroll = function(x, nest) {
+        if (nest != null) {
+            self.nests[self.n_scrolls - 1].push(nest);
+        }
         var add_to = self.scrollbacks.children().last();
         add_to.append(x);
         var len = add_to.children().length;
@@ -849,6 +895,9 @@ function ScreenDisplay(terminal, screen, settings) {
         scrollbacks.setAttribute('id', 'scrollbacks');
         self.scrollbacks = $(scrollbacks);
         self.add_thing(scrollbacks);
+
+        self.nests = [];
+        self.lost_nests = [];
 
         self.clear_scrollback();
 
@@ -958,9 +1007,10 @@ function Terminus(div, settings) {
             existing.set = undefined;
         }
         else {
+            self.log('nest', 'creating nest #' + id);
             wrap = makediv();
             wrap.appendChild(child.element);
-            self.screen.write_html_line(wrap);
+            self.screen.write_html_line(wrap, id);
             self.screen.move_to(self.screen.line, self.ncols);
         }
         self.children_wrappers[id] = wrap;
@@ -971,9 +1021,20 @@ function Terminus(div, settings) {
         return id;
     }
 
+    self.remove_child = function(nest) {
+        self.log('nest', 'removing nest #' + nest);
+        delete self.children[nest];
+        delete self.children_wrappers[nest];
+    }
+
     self.append = function(sub_element) {
-        self.screen.write_html_line(sub_element);
-        self.screen.move_to(self.screen.line, self.ncols);
+        if (typeof sub_element == "string") {
+            self.to_write += sub_element;
+        }
+        else {
+            self.screen.write_html_line(sub_element);
+            self.screen.move_to(self.screen.line, self.ncols);
+        }
     }
 
     self.create_div_for_html = function(html, parameters) {
@@ -989,6 +1050,22 @@ function Terminus(div, settings) {
     }
 
     self.handlers = {
+
+        text_set: function (data, parameters) {
+            if (!parameters.nest.length) {
+                return;
+            }
+            data = Terminus.sanitize(data);
+            var div = $(makediv()).html("<span>"+data+"</span>")[0];
+            var nest = parameters.nest;
+            var target = self.find(nest.slice(0, nest.length - 1), true);
+            var id = target.set_child(nest[nest.length-1], DivNest(div));
+            var wrap = self.children_wrappers[id];
+            if(parameters.height)
+                $(wrap.element).height($(div).height());
+            if(parameters.width)
+                $(wrap.element).width($(div).width());
+        },
 
         html_set: function (data, parameters) {
             if (!parameters.nest.length) {
@@ -1012,6 +1089,12 @@ function Terminus(div, settings) {
             target.append(div);
         },
 
+        text_append: function (data, parameters) {
+            var nest = parameters.nest;
+            var target = self.find(nest, true);
+            target.append(data);
+        },
+
         js: function (data, parameters) {
             try {
                 var target = self.find(parameters.nest, true);
@@ -1021,7 +1104,8 @@ function Terminus(div, settings) {
                 f.call(target.element);
             }
             catch(whatever) {
-                self.write_all("JS ERROR -> " + whatever);
+                // self.write_all("JS ERROR -> " + whatever);
+                self.to_write += "JS ERROR -> " + whatever;
             }
         },
 
@@ -1036,7 +1120,7 @@ function Terminus(div, settings) {
 
     self.handle_ext = function(ext) {
         // self.log('test', ext.type + ext.accum + ext.args);
-        self.handlers[ext.type](ext.accum, ext.args);
+        return self.handlers[ext.type](ext.accum, ext.args);
     }
 
 
@@ -1045,6 +1129,11 @@ function Terminus(div, settings) {
     self.display = function(force) {
         if (self.screend.display(force)) {
             self.scroll_to_bottom();
+        }
+        var lost = self.screend.lost_nests;
+        self.screend.lost_nests = [];
+        for (var i = 0; i < lost.length; i++) {
+            self.remove_child(lost[i]);
         }
     }
 
@@ -1065,7 +1154,15 @@ function Terminus(div, settings) {
 
     // WRITING
 
-    self.write_all = function(data) {
+    self.write_all = function() {
+        while (self.to_write) {
+            var tow = self.to_write;
+            self.to_write = "";
+            self.write_string(tow);
+        }
+    }
+
+    self.write_string = function(data) {
         for (var i in data) {
             var s = data[i];
             var c = s.charCodeAt();
@@ -1089,15 +1186,17 @@ function Terminus(div, settings) {
             $.post(settings.path + "/get", {magic: settings.magic},
                    function(data) {
                        if (data != "") {
-                           self.write_all(data);
+                           self.to_write += data;
+                           self.write_all();
                            self.display();
                        }
                        self.get_data();
                    })
                 .error(function () {
-                    self.write_all('\n\x1B[1;31mConnection to server terminated')
-                    self.write_all(' because this session was opened elsewhere.')
-                    self.write_all('\nRefresh to reclaim session.\x1B[0m')
+                    self.to_write += '\n\x1B[1;31mConnection to server terminated';
+                    self.to_write += ' because this session was opened elsewhere.';
+                    self.to_write += '\nRefresh to reclaim session.\x1B[0m';
+                    self.write_all();
                 })
         }, 0)
     }
@@ -1234,16 +1333,13 @@ function Terminus(div, settings) {
 
         self.get_data();
 
+        self.to_write = "";
         self.to_send = "";
         setInterval(function () {
             if (self.to_send != "") {
                 var to_send = self.to_send;
                 self.to_send = "";
-                $.post(settings.path+"/send", {data: to_send, magic: settings.magic},
-                       function (data) {
-                           self.write_all(data.data);
-                           // self.scroll_to_bottom();
-                       });
+                $.post(settings.path+"/send", {data: to_send, magic: settings.magic});
             }
         }, 10);
 
@@ -1982,15 +2078,23 @@ Terminus.csi = {
 
     "?z0": function (_) { }, // invalid (no-op)
     "?z": function (n) {
-        var types = {0: [['html_set', 'height', 'width', ';;', '*nest'],
-                         false],
-                     10: [['html_append', 'height', 'width', ';;', '*nest'],
-                          false],
-                     100: [['js', ';;', '*nest'],
-                           false],
-                     200: [['create', '*nest'],
-                           true]
-                    };
+        var types = {
+            0: [['text_set', ';;', '*nest'],
+                false],
+            1: [['html_set', 'height', 'width', ';;', '*nest'],
+                false],
+
+            10: [['text_append', ';;', '*nest'],
+                 false],
+            11: [['html_append', 'height', 'width', ';;', '*nest'],
+                 false],
+
+            100: [['js', ';;', '*nest'],
+                  false],
+
+            200: [['create', '*nest'],
+                  true]
+        };
         var type = n[0];
         if (types[type] === undefined) {
             return;
@@ -2043,3 +2147,13 @@ Terminus.csi = {
         }
     }
 }
+
+Terminus.sanitize = function (data) {
+    return data
+        .replace('  ', ' &nbsp')
+        .replace('>', '&gt;')
+        .replace('<', '&lt;')
+        .replace('\n', '<br/>');
+}
+
+

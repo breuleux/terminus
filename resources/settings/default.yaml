@@ -138,6 +138,7 @@ log:
     - esc_unknown
     - test
     - info
+    - nest
     # - exec
 
   # Prefix to all logged things (useful to determine source if there

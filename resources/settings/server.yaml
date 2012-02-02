@@ -35,6 +35,14 @@ configurations:
     timeout_period: no
     grace_period: 60
 
+  python:
+    command: 'python'
+    template: 'terminus'
+    style: 'default.css'
+    settings: 'default.yaml'
+    timeout_period: no
+    grace_period: 60
+
   debug:
     command: 'bash'
     template: 'debug'

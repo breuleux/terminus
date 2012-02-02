@@ -22,8 +22,8 @@
     </div>
 
     <div id="log" class="log" style="width:20%; float:left">
-      <div id="fresh" id="fresh_log"></div>
-      <div id="stale" id="stale_log"></div>
+      <div id="fresh_log" class="fresh"></div>
+      <div id="stale_log" class="stale"></div>
     </div>
 
     <script>
