@@ -1555,6 +1555,8 @@ function Terminus(div, settings) {
 
             word_delete_left: word_operation("left", "\x7f"),
             word_delete_right: word_operation("right", "\x1B[3~"),
+
+            space: " ",
         }
 
         $(document).bind('keydown', function(e) {
@@ -1563,7 +1565,7 @@ function Terminus(div, settings) {
             code = ((e.ctrlKey ? "C-" : "")
                     + (e.altKey ? "A-" : "")
                     + (e.shiftKey ? "S-" : "")
-                    + (self.keynames[e.keyCode] || "<"+e.keyCode+">"));
+                    + (self.keynames[e.which] || "<"+e.which+">"));
 
             // this is needed for paste to work
             if (code == "C-") {
@@ -1614,12 +1616,18 @@ function Terminus(div, settings) {
         });
 
         $(document).bind('keypress', function(e) {
-            // self.log('key', e.ctrlKey + " " + e.shiftKey + " " + e.altKey + " " + e.keyCode);
             if (!e.ctrlKey) {
-                var key = e.keyCode;
+                var key = e.which;
+                if (key == 8) {
+                    return;
+                }
                 var s;
                 s = String.fromCharCode(key);
                 self.to_send += s;
+                if (e.charCode) {
+                    e.stopPropagation();
+                    e.preventDefault();
+                }
             }
         });
     }
