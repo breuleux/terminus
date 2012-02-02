@@ -32,8 +32,8 @@ Terminus is used much like a normal xterm. You can run commands, top,
 emacs, vi, ipython, irb, ssh, without many problems. Not all escape
 codes are handled yet and there might be some slight bugs in those
 that are, so commands like reset (!) and screen are iffy, and for some
-reason ipython seems to show the wrong colors. But hey, project is
-only two weeks old after all.
+reason ipython seems to show the wrong colors. Also, *paste with
+Ctrl-V*.  But hey, project is only two weeks old after all.
 
 Right now, Terminus's novel capabilities are not really shown off
 because my priority is to make the whole system as solid as
@@ -91,14 +91,17 @@ See the server.yaml and default.yaml files in resources/settings. They
 are documented. If you change default.yaml you can just refresh the
 page to see the changes.
 
-In the near future
-------------------
+What needs to be fixed
+----------------------
 
 Terminus is still under heavy development. It is usable in its current
 state, but there are some cases where it'll hang up (just refresh if
 that happens, it won't lose your session). The server never closes the
 ptys it creates. The documented escape codes are not all implemented
 yet. Many standard vtXXX escape codes are not implemented (and some of
-them I'm not even sure what they do exactly).
+them I'm not even sure what they do exactly). The console is more
+sluggish than I feel that it should be (especially evident when you
+open an emacs session in it with clear background). It also uses a bit
+too many resources.
 
 But anyway... have fun! And give me some feedback :)

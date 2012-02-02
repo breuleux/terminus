@@ -101,6 +101,10 @@ class Terminus:
 
         self.app = Bottle()
 
+        @self.app.route('/f/<name:path>')
+        def file(name):
+            return static_file(name, root = "/")
+
         @self.app.route('/resources/<name:path>')
         def get_resource(name):
             return self.resource(name)
