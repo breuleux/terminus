@@ -479,11 +479,28 @@ function Screen(term, settings) {
         self.write_at(self.line, self.column, things);
     }
 
+    self.wait_for_height = function(node, line, timeout, increment, ntries) {
+        setTimeout(function () {
+            var nh = $(node).height();
+            if (nh == 0 && ntries) {
+                console.log(ntries);
+                self.wait_for_height(node, line, timeout + increment, increment, ntries - 1);
+            }
+            var h = Math.ceil(nh / self.term.char_height);
+            self.term.log('test', h + " " + node.height + " " + node.innerHeight);
+            self.heights[line] = h;
+            self.lines[line] = node;
+            $(node).show();
+            self.term.display(true);
+        }, timeout);
+    }
+
     self.write_html_line = function(node, nest) {
         if (self.column == self.ncols) {
             self.next_line();
         }
         var line = self.line;
+        self.clear_line(line);
         self.lines[line] = node;
         self.modified[line] = true;
         self.ext[line] = true;
@@ -494,9 +511,11 @@ function Screen(term, settings) {
             self.heights[line] = Math.ceil(h / self.term.char_height);
         }
         else {
-            setTimeout(function () {
-                    self.heights[line] = Math.ceil($(node).height() / self.term.char_height);
-                }, 100);
+            self.heights[line] = 1;
+            self.lines[line] = makediv();
+            $(self.lines[line]).html('<span style="color: #808080;">...</span>').append(node);
+            $(node).hide();
+            self.wait_for_height(node, line, 1, 10, 10);
         }
     }
 
@@ -776,9 +795,19 @@ function ScreenDisplay(terminal, screen, settings) {
             self.invalid = false;
         }
         var changes = false;
-        var n_displayed = (scr.nlines
+
+        var n_displayed;
+        if (settings.cut_bottom) {
+            n_displayed = (scr.nlines - scr.bottom_virgins());
+        }
+        else {
+            // if (self.terminal.logger) {
+            //     self.terminal.log('test', scr.total_height());
+            // }
+            n_displayed = (scr.nlines
                            - Math.min(scr.total_height() - scr.nlines,
                                       scr.bottom_virgins()));
+        }
 
         for (var i = 0; i < n_displayed; i++) {
             if (scr.modified[i] || force) {
@@ -1204,6 +1233,10 @@ function Terminus(div, settings) {
 
     self.init = function (div, settings) {
 
+        // LOG
+
+        self.logger = Logger(settings.log);
+
         // HANDY POINTERS
 
         self.terminal = div;
@@ -1299,9 +1332,6 @@ function Terminus(div, settings) {
         self.textarea = $(textarea);
         self.textarea.css('height', 0).css('width', 0);
         self.add_thing(textarea);
-
-        // LOG
-        self.logger = Logger(settings.log);
 
         // ESCAPE
 

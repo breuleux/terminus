@@ -30,6 +30,7 @@ screens:
   # Main screen (default)
   - scrollback: 1000
     scroll_chunk: 100
+    cut_bottom: false
     # You can customize colors for a particular screen by adding
     # something like this (this makes black red):
     # sgr:
@@ -41,6 +42,7 @@ screens:
   # emacs, vi, screen, etc. has no scrollback.
   - scrollback: 0
     scroll_chunk: 100
+    cut_bottom: false
 
   # You can add more screens if it suits your fancy, but right now
   # there is no way to access them.
@@ -51,7 +53,7 @@ screens:
 scrolling:
   # If true, we use jscrollpane to display scrollbars. If
   # false, we use the standard OS-issue scrollbars.
-  jscrollpane: true
+  jscrollpane: false
   
   # true iff we want a horizontal scrollbar when appropriate
   # note: if jscrollpane is false, use css on .center (overflow-x = auto or hidden)
