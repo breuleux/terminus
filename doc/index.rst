@@ -152,6 +152,7 @@ Contents
    :maxdepth: 3
 
    protocol
+   future
 
 
 Indices and tables

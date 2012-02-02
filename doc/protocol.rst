@@ -76,11 +76,21 @@ new. If not, it is created.
   element. Terminus may be instantiated with an option preventing
   this.
 
-
-0: set_html
+0: set_text
 -----------
 
-**Syntax**: ``CSI`` ``?`` ``0`` ``[;<h>[;<w>]]`` ``[;;<nest>]`` ``z`` ``<html>`` ``ST``
+**Syntax**: ``CSI`` ``?`` ``1`` ``[;;<nest>]`` ``z`` ``<text>`` ``ST``
+
+Tells Terminus to set the specified nest to some DIV containing the
+given plain text (printed verbatim).
+
+When giving the nest, it is important to use *two* semicolons.
+
+
+1: set_html
+-----------
+
+**Syntax**: ``CSI`` ``?`` ``1`` ``[;<h>[;<w>]]`` ``[;;<nest>]`` ``z`` ``<html>`` ``ST``
 
 Tells Terminus to set the specified nest to an instantiated DOM
 element corresponding to the HTML code given.
@@ -92,17 +102,17 @@ default to 0).
 When giving the nest, it is important to use *two* semicolons.
 
 
-1: set_bitmap
+2: set_bitmap
 -------------
 
 TBD
 
-2: set_mime
+3: set_mime
 -----------
 
 TBD
 
-3: set_json
+4: set_json
 -----------
 
 TBD
@@ -133,38 +143,50 @@ e.g. through JavaScript (not recommended).
 If no nest is given, the element will be appended to the root.
 
 
-10: append_html
+10: append_text
 ---------------
 
-**Syntax**: ``CSI`` ``?`` ``10`` ``[;<h>[;<w>]]`` ``[;;<nest>]`` ``z`` ``<html>`` ``ST``
+**Syntax**: ``CSI`` ``?`` ``10`` ``[;;<nest>]`` ``z`` ``<text>`` ``ST``
+
+Tells Terminus to add the given plain text to the nest. If the nest is
+a Terminus terminal, it will be as if the text was received by the
+terminal through stdout of the current process.
+
+When giving the nest, it is important to use *two* semicolons.
+
+
+11: append_html
+---------------
+
+**Syntax**: ``CSI`` ``?`` ``11`` ``[;<h>[;<w>]]`` ``[;;<nest>]`` ``z`` ``<html>`` ``ST``
 
 Tells Terminus to *append* an instantiated DOM element corresponding
 to the HTML code given to the specified nest.
 
-If ``h`` is nonzero, the element will span ``h`` rows. If ``w`` is
-nonzero, the element will span ``w`` columns (both ``h`` and ``w``
+If ``h`` is nonzero, the element will add ``h`` rows. If ``w`` is
+nonzero, the element will add ``w`` columns (both ``h`` and ``w``
 default to 0).
 
 When giving the nest, it is important to use *two* semicolons. If no
 nest is given, the new element will be appended to the root.
 
 
-11: append_bitmap
+12: append_bitmap
 -----------------
 
 TBD
 
-12: append_mime
+13: append_mime
 ---------------
 
 TBD
 
-13: append_json
+14: append_json
 ---------------
 
 TBD
 
-14: append_tagged
+15: append_tagged
 -----------------
 
 TBD

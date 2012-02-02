@@ -1130,7 +1130,7 @@ function Terminus(div, settings) {
                 var f = function() {
                     eval(data);
                 }
-                f.call(target.element);
+                f.call(target);
             }
             catch(whatever) {
                 // self.write_all("JS ERROR -> " + whatever);
