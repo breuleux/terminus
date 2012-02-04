@@ -11,7 +11,7 @@ Install
 -------
 
 You will need Python >=2.6 with the packages ``bottle``, ``paste``,
-``pexpect`` and ``yaml``.
+``pexpect`` and ``pyyaml``.
 
 Then, position yourself in the root project directory and execute ::
 
