@@ -15,10 +15,12 @@ You will need Python >=2.6 with the packages ``bottle``, ``paste``,
 
 Then, position yourself in the root project directory and execute ::
 
+  export PYTHONPATH=/path/to/terminus:$PYTHONPATH
   bin/terminus resources/
 
-Then open your browser at ``http://localhost:8080/bash``. It should
-work fine with Chrome. I have not tried with any other browser, but it
+(You can put the export in your .bashrc to make it permanent). Then
+open your browser at ``http://localhost:8080/bash``. It should work
+fine with Chrome. I have not tried with any other browser, but it
 shouldn't be difficult to make Terminus work everywhere. Instead of
 ``bash``, you can also go to ``debug`` or ``python``.
 
