@@ -9,8 +9,8 @@ There are several huge features planned for Terminus. Here's an
 overview:
 
 
-Security
-========
+Security (1)
+============
 
 Right now, Terminus's security model is similar to Superman, in the
 sense that it's a damn shame it doesn't exist.
@@ -26,6 +26,36 @@ Since I am the only user on my computer, I didn't really bother much
 with making Terminus more secure, but certainly that's a requirement
 for many users. My secret hope is that somebody else likes Terminus
 enough to do it for me :D
+
+
+Security (2)
+============
+
+There is another security problem (harder to solve, therefore
+potentially much more serious): using escape codes, programs can do
+arbitrary javascript injection, and this includes simulating keyboard
+strokes and typing commands on your shell. Because of this, it is
+technically possible for serious wreckage to occur with a mere *cat*
+of a malicious file.
+
+Several measures could be taken to solve this issue:
+
+1. Prevent any code contributed through escape codes from seeing or
+   manipulating the routines that feed input directly to the
+   underlying terminal. Instead, they might get the option to send
+   "wrapped" input, encoded so to be harmless. Also block them from
+   doing any kind of screen scraping. I don't know how to do that yet,
+   pray tell if you have any ideas (ideas that *provably* work).
+
+2. Drop HTML and JavaScript support and use a properly controlled
+   interchange format (perhaps s-expressions? they are easy to
+   parse!), and/or the *line tag* idea presented further.
+
+In my opinion, this is a major issue, because not all programs pay
+attention to what they send on stdout. I reserve myself the right to
+deprecate the current specification and block dangerous escape codes
+by default if I judge that it is the best way to sanitize and secure
+Terminus.
 
 
 Line tags

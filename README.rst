@@ -25,6 +25,13 @@ shouldn't be difficult to make Terminus work everywhere. Instead of
 **IMPORTANT**: client/server communication is not encrypted at
 all. Only run Terminus locally, and don't run it on a shared machine!
 
+**IMPORTANT**: using escape codes, programs can do arbitrary
+javascript injection, and this includes simulating keyboard strokes
+and typing commands on your shell. Because of this, it is technically
+possible for serious wreckage to occur with a mere *cat* of a
+malicious file. Anybody who can tell me how to properly sandbox
+JavaScript within JavaScript to avoid this gets a cookie.
+
 Using
 -----
 
