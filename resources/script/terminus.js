@@ -185,6 +185,8 @@ function DivNest(div) {
             self.element.replaceChild(child.element,
                                       existing.element);
             existing.set = undefined;
+            existing.remove = undefined;
+            existing.demote = undefined;
         }
         else {
             self.element.appendChild(child.element)
@@ -193,7 +195,19 @@ function DivNest(div) {
         child.set = function (new_child) {
             self.set_child(id, new_child);
         }
+        child.remove = function () {
+            self.remove_child(id);
+        }
+        child.demote = function () {
+            delete self.children[id];
+        }
         return id;
+    }
+
+    self.remove_child = function(id) {
+        var existing = self.children[id];
+        self.element.removeChild(existing.element);
+        delete self.children[id];
     }
 
     self.append = function(sub_element) {
@@ -1034,11 +1048,18 @@ function Terminus(div, settings) {
             wrap.replaceChild(child.element,
                               existing.element);
             existing.set = undefined;
+            existing.demote = undefined;
+            existing.remove = undefined;
+        }
+        else if (self.children_wrappers[id]) {
+            wrap = self.children_wrappers[id];
+            $(wrap).empty();
+            $(wrap).append(child.element);
         }
         else {
             self.log('nest', 'creating nest #' + id);
             wrap = makediv();
-            wrap.appendChild(child.element);
+            $(wrap).append(child.element);
             self.screen.write_html_line(wrap, id);
             self.screen.move_to(self.screen.line, self.ncols);
         }
@@ -1047,13 +1068,24 @@ function Terminus(div, settings) {
         child.set = function (new_child) {
             self.set_child(id, new_child);
         }
+        child.remove = function () {
+            self.remove_child(id);
+        }
+        child.demote = function () {
+            delete self.children[id];
+        }
         return id;
     }
 
-    self.remove_child = function(nest) {
-        self.log('nest', 'removing nest #' + nest);
-        delete self.children[nest];
-        delete self.children_wrappers[nest];
+    self.remove_child = function(id) {
+        self.log('nest', 'removing nest #' + id);
+        delete self.children[id];
+        if (!self.child_protected[id]) {
+            delete self.children_wrappers[id];
+        }
+        else {
+            $(self.children_wrappers[id]).empty();
+        }
     }
 
     self.append = function(sub_element) {
@@ -1140,11 +1172,28 @@ function Terminus(div, settings) {
 
         create: function (data, parameters) {
             var target = self.find(parameters.nest, true);
-            var id = self.create();
+            var id = target.create();
             var new_nest = parameters.nest.slice(0);
             new_nest.push(id);
             self.to_send += ('\x1B[?200;' + new_nest.join(';') + 'z');
-        }
+        },
+
+        demote: function (data, parameters) {
+            var target = self.find(parameters.nest, true);
+            target.demote();
+        },
+
+        remove: function (data, parameters) {
+            var target = self.find(parameters.nest, true);
+            target.remove();
+        },
+
+        move: function (data, parameters) {
+            var source = self.find(parameters.source, true);
+            var dest = self.find(parameters.dest, true);
+            source.remove();
+            dest.set(source);
+        },
     }
 
     self.handle_ext = function(ext) {
@@ -1248,6 +1297,7 @@ function Terminus(div, settings) {
         // CHILDREN
 
         self.children_wrappers = {};
+        self.child_protected = {};
 
         // STRUCTURE
         function make_positional_nojscroll(parent, name, index) {
@@ -1260,9 +1310,10 @@ function Terminus(div, settings) {
 
             if (index) {
                 self.children_wrappers[index] = div;
-                var nest = EmptyNest();
-                jdiv.append(nest.element);
-                self.children[index] = nest;
+                self.child_protected[index] = true;
+                // var nest = EmptyNest();
+                // jdiv.append(nest.element);
+                // self.children[index] = nest;
             }
         }
 
@@ -1289,9 +1340,10 @@ function Terminus(div, settings) {
 
             if (index) {
                 self.children_wrappers[index] = inndiv[0];
-                var nest = EmptyNest();
-                inndiv.append(nest.element);
-                self.children[index] = nest;
+                self.child_protected[index] = true;
+                // var nest = EmptyNest();
+                // inndiv.append(nest.element);
+                // self.children[index] = nest;
             }
         }
 
@@ -2131,8 +2183,14 @@ Terminus.csi = {
                   false],
 
             200: [['create', '*nest'],
-                  true]
-        };
+                  true],
+            201: [['demote', '*nest'],
+                  true],
+            202: [['remove', '*nest'],
+                  true],
+            203: [['move', '*source', ';;', '*dest'],
+                  true],
+       };
         var type = n[0];
         if (types[type] === undefined) {
             return;

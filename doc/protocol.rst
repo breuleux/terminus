@@ -278,48 +278,20 @@ corresponding to this nest, it will cease corresponding to that
 nest. It will not disappear from the stream, but merely become
 unaddressable.
 
-202: recreate
--------------
-
-**Syntax**: ``CSI`` ``?`` ``202`` ``[<nest>]`` ``z``
-
-This is equivalent to ``demote`` followed by ``set-html`` of an empty
-div, but atomic.
-
-203: remove
+202: remove
 -----------
 
-**Syntax**: ``CSI`` ``?`` ``203`` ``[<nest>]`` ``z``
+**Syntax**: ``CSI`` ``?`` ``202`` ``[<nest>]`` ``z``
 
 This is a stronger version of ``demote`` which also happens to remove
 the element from the stream.
 
-204: copy
----------
-
-**Syntax**: ``CSI`` ``?`` ``204`` ``[<source_nest>]`` ``[;;<target_nest>]`` ``z``
-
-This copies the element in ``source_nest`` to ``target_nest``.
-
-205: move
+203: move
 ---------
 
 **Syntax**: ``CSI`` ``?`` ``205`` ``[<source_nest>]`` ``[;;<target_nest>]`` ``z``
 
-This is equivalent to ``copy`` followed by ``remove`` on the source
-nest.
-
-206: redirect
--------------
-
-**Syntax**: ``CSI`` ``?`` ``206`` ``[<source_nest>]`` ``[;;<target_nest>]`` ``z``
-
-This puts the element in ``source_nest`` in ``target_nest``, and sets
-things up so that both references ``source_nest`` and ``target_nest``
-point to ``target_nest``. This creates an alias, so to speak.
-
-.. note::
-
-  After the execution of this command, the element is not displayed in
-  the original ``source_nest`` location anymore.
+This moves the source nest to the target nest. The original element
+disappears from the source and cannot be addressed at that path
+anymore.
 
