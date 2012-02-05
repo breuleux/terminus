@@ -14,11 +14,11 @@
   </head>
 
   <body>
-    <div id="font_control_div">
-      <span id="font_control" class="term_area">X</div>
-    </div>
 
     <div id="terminal" class="term_area">
+      <!-- <div class="font_control_div"> -->
+      <!--   <span class="font_control">X</span> -->
+      <!-- </div> -->
     </div>
 
     <!-- <div id="log"> -->

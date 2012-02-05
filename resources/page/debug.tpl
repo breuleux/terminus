@@ -14,9 +14,6 @@
   </head>
 
   <body>
-    <div id="font_control_div">
-      <span id="font_control" class="term_area">X</div>
-    </div>
 
     <div id="terminal" class="term_area" style="width:80%; float:left">
     </div>

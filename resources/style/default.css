@@ -26,31 +26,31 @@
     background-color: #ddd;
 }
 
-#font_control {
+.font_control {
     visibility: hidden;
 }
 
-#font_control_div {
+.font_control_div {
     height: 0px;
 }
 
-#top {
+.top {
     background-color: red;
     overflow: hidden;
     /* max-height: 20%; */
 }
 
-#left {
+.left {
     background-color: orange;
     float: left;
     overflow: auto;
 }
 
-#middle {
+.middle {
     overflow: hidden;
 }
 
-#center {
+.center {
     /* background-color: yellow; */
     float: left;
     /* height: 100%; */
@@ -60,13 +60,13 @@
     overflow-y: auto;
 }
 
-#right {
+.right {
     background-color: green;
     float: left;
     overflow: hidden;
 }
 
-#bottom {
+.bottom {
     background-color: blue;
     overflow: hidden;
     /* max-height: 20%; */

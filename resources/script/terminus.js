@@ -967,8 +967,8 @@ function Terminus(div, settings) {
 
     self.adjust_size = function () {
 
-        self.char_width = $("#font_control").width();
-        self.char_height = $("#font_control").height();
+        self.char_width = Math.max(self.font_control.width(), 1);
+        self.char_height = Math.max(self.font_control.height(), 1);
 
         var h = self.terminal.height() - (self.top.height() + self.bottom.height());
         var w = self.terminal.width() - (self.left.width() + self.right.width());
@@ -987,6 +987,9 @@ function Terminus(div, settings) {
 
         if (settings.nlines_min) { nlines = Math.max(nlines, settings.nlines_min); }
         if (settings.ncols_min) { ncols = Math.max(ncols, settings.ncols_min); }
+
+        if (settings.nlines_max) { nlines = Math.min(nlines, settings.nlines_max); }
+        if (settings.ncols_max) { ncols = Math.min(ncols, settings.ncols_max); }
 
         if (nlines == self.nlines && ncols == self.ncols) {
             return;
@@ -1279,7 +1282,6 @@ function Terminus(div, settings) {
         }, 0)
     }
 
-
     self.init = function (div, settings) {
 
         // LOG
@@ -1293,6 +1295,23 @@ function Terminus(div, settings) {
         self.settings = settings;
 
         self.csi = Terminus.csi;
+        
+        // FONT CONTROL
+
+        var font_control_div = $(makediv());
+        font_control_div.attr('class', 'font_control_div');
+        var font_control = $(makenode('span'));
+        font_control.attr('class', 'font_control');
+        font_control.append('X');
+        font_control_div.append(font_control);
+        self.terminal.append(font_control_div);
+        self.font_control = font_control;
+
+        self.init1(div, settings);
+    }
+
+
+    self.init1 = function (div, settings) {
 
         // CHILDREN
 
@@ -1304,6 +1323,8 @@ function Terminus(div, settings) {
             var div = makediv();
             var jdiv = $(div);
             jdiv.attr('id', name);
+            jdiv.attr('class', name);
+
             parent.append(div);
             self[name] = jdiv;
             self[name + "_outer"] = jdiv;
@@ -1322,6 +1343,7 @@ function Terminus(div, settings) {
             var div = makediv();
             var jdiv = $(div);
             jdiv.attr('id', name);
+            jdiv.attr('class', name);
 
             jdiv.jScrollPane({
                 stickToBottom: true,
@@ -1360,7 +1382,7 @@ function Terminus(div, settings) {
         make_positional_nojscroll(self.terminal, 'bottom', 5);
 
         // SIZE
-        
+
         self.adjust_size();
 
         // SCREENS
@@ -1382,7 +1404,7 @@ function Terminus(div, settings) {
         // click paste work, unfortunately, so we'll make do with Ctrl+V.
         var textarea = document.createElement('textarea');
         self.textarea = $(textarea);
-        self.textarea.css('height', 0).css('width', 0);
+        self.textarea.css('height', 1).css('width', 1);
         self.add_thing(textarea);
 
         // ESCAPE
@@ -2251,5 +2273,3 @@ Terminus.sanitize = function (data) {
         .replace('<', '&lt;')
         .replace('\n', '<br/>');
 }
-
-

@@ -10,6 +10,10 @@ ncols: no
 nlines_min: 1
 ncols_min: 1
 
+# Maximum number of lines and columns.
+nlines_max: 200
+ncols_max: 1000
+
 # If nlines/ncols are auto-calculated, they will be reduced by
 # this number. You can use this e.g. to not overlap with the
 # vertical scrollbar if there is one.
