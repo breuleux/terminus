@@ -1642,7 +1642,7 @@ function Terminus(div, settings) {
                     + (self.keynames[e.which] || "<"+e.which+">"));
 
             // this is needed for paste to work
-            if (code == "C-") {
+            if (code.slice(0, 2) == "C-") {
                 self.textarea.focus();
             }
 
