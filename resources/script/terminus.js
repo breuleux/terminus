@@ -763,13 +763,13 @@ function Screen(term, settings) {
         var ubound;
         if (i == self.line) {
             ubound = Math.max(self.dirty[i], 
-                              Math.min(self.column + 1,
-                                       self.ncols));
+                              self.column + 1);
         }
         else {
             ubound = self.dirty[i];
         }
         if (!ubound) { ubound = 1; }
+        if (ubound > self.ncols) { ubound = self.ncols; }
         for (var j = 0; j < ubound; j++) {
             var data = self.extract_character(i, j);
             var c = data[0];
@@ -1546,6 +1546,7 @@ function Terminus(div, settings) {
             17: "C-",
             18: "A-",
             27: "Esc",
+            32: "Space",
             33: "PgUp",
             34: "PgDn",
             35: "End",
@@ -1644,6 +1645,7 @@ function Terminus(div, settings) {
             enter: "\x0D",
             tab: "\x09",
             esc: "\x1B",
+            csi: "\x1B[",
 
             up: "\x1B[A",
             down: "\x1B[B",
@@ -1705,8 +1707,13 @@ function Terminus(div, settings) {
                 return "noscroll";
             },
 
-            word_left: word_operation("left", "\x1B[D"),
-            word_right: word_operation("right", "\x1B[C"),
+            word_left: "\x1B[1;5D",
+            word_right: "\x1B[1;5C",
+            word_up: "\x1B[1;5A",
+            word_down: "\x1B[1;5B",
+
+            // word_left: word_operation("left", "\x1B[D"),
+            // word_right: word_operation("right", "\x1B[C"),
 
             word_delete_left: word_operation("left", "\x7f"),
             word_delete_right: word_operation("right", "\x1B[3~"),

@@ -145,8 +145,9 @@ log:
     - esc_unknown
     - test
     - info
-    - nest
+    # - nest
     # - exec
+    # - keydown
 
   # Prefix to all logged things (useful to determine source if there
   # are nested terminals).
@@ -189,10 +190,22 @@ bindings:
   # navigation
   C-Left: ~word_left
   C-Right: ~word_right
-  A-Left: ~word_left
-  A-Right: ~word_right
+  C-Up: ~word_up
+  C-Down: ~word_down
+  A-Left: ~csi 1;3D
+  A-Right: ~csi 1;3C
+  A-Up: ~csi 1;3A
+  A-Down: ~csi 1;3B
   Home: ~home
   End: ~end
+  C-Home: ~csi 1;5H
+  C-End: ~csi 1;5F
+  C-PgUp: ~csi 5;5~
+  C-PgDn: ~csi 6;5~
+  A-Home: ~csi 1;3H
+  A-End: ~csi 1;3F
+  A-PgUp: ~csi 5;3~
+  A-PgDn: ~csi 6;3~
 
   # deletion
   C-Backspace: ~word_delete_left
@@ -232,6 +245,7 @@ bindings:
   F12: ~f12
 
   # CTRL+<KEY>
+  C-Space: "~~@"
   C-a: ~~A
   C-b: ~~B
   C-c: ~~C
@@ -251,10 +265,11 @@ bindings:
   C-q: ~~Q
   C-r: ~~R
   C-s: ~~S
-  C-t: ~~T
+  C-t: ~~T   # might not work in all browsers
   C-u: ~~U
   # C-v: ~~V # disables paste if uncommented
-  C-w: ~~W
+  C-w: ~~W   # might not work in all browsers
+  C-S-w: ~~W # but this should!
   C-x: ~~X
   C-y: ~~Y
   C-z: ~~Z
