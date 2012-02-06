@@ -219,22 +219,25 @@ bindings:
           # 2) Kill the line (~~K)
           # 3) Type cd .. (to input a space we need to use ~space)
           # 4) Hit the return key
-        Up: "~~A ~~K cd ~space .. ~enter"
+        p: "~~A ~~K cd ~space .. ~enter"
 
         # Same principle, but to list the directory
         l: "~~A ~~K ls ~space -l ~enter"
 
+        # Better yet! Go up and down the hierarchy with pushd/popd ;)
+        Up: "~~A ~~K pushd ~space .;cd ~space .. ~enter"
+        Down: "~~A ~~K popd ~enter"
+
         # _stick: true means that we only revert to the top level
         # bindings when the user hits a key that is not listed in
-        # here. So for instance, you can hit Up three times in a row
-        # to go up three levels in the hierarchy. If you hit a key
-        # other than Up or l, then it'll have its normal effect and
-        # will cancel the special bindings for Up and l until you type
-        # C-S-a c again. If _stick is false (it is false by default),
-        # then hitting l twice in a row will list the files and then
-        # produce the letter l.
-        # Note: _eat is false here: it's not inherited (and _stick is
-        # not inherited either)
+        # here. So for instance, you can hit p three times in a row to
+        # go up three levels in the hierarchy. If you hit a key other
+        # than p, l, Up or Down then it'll have its normal effect and
+        # will cancel the special bindings until you type C-S-a c
+        # again. If _stick is false (it is false by default), then
+        # hitting l twice in a row will list the files and then
+        # produce the letter l.  Note: _eat is false here: it's not
+        # inherited (and _stick is not inherited either)
         _stick: true
 
 
@@ -304,36 +307,6 @@ bindings:
   F11: ~f11
   F12: ~f12
 
-  S-Space:
-    # Doing Shift-Space and then a letter will send an escape
-    # character, much like hitting Control and that character.
-    Space: "~~@"
-    a: ~~A
-    b: ~~B
-    c: ~~C
-    d: ~~D
-    e: ~~E
-    f: ~~F
-    g: ~~G
-    h: ~~H
-    i: ~~I
-    j: ~~J
-    k: ~~K
-    l: ~~L
-    m: ~~M
-    n: ~~N
-    o: ~~O
-    p: ~~P
-    q: ~~Q
-    r: ~~R
-    s: ~~S
-    t: ~~T
-    u: ~~U
-    w: ~~W
-    x: ~~X
-    y: ~~Y
-    z: ~~Z
-
   # CTRL+<KEY>
   C-Space: "~~@"
   C-a: ~~A
@@ -363,6 +336,36 @@ bindings:
   C-x: ~~X
   C-y: ~~Y
   C-z: ~~Z
+
+  S-Space:
+    # Doing Shift-Space and then a letter will send an escape
+    # character, much like hitting Control and that character.
+    Space: "~~@"
+    a: ~~A
+    b: ~~B
+    c: ~~C
+    d: ~~D
+    e: ~~E
+    f: ~~F
+    g: ~~G
+    h: ~~H
+    i: ~~I
+    j: ~~J
+    k: ~~K
+    l: ~~L
+    m: ~~M
+    n: ~~N
+    o: ~~O
+    p: ~~P
+    q: ~~Q
+    r: ~~R
+    s: ~~S
+    t: ~~T
+    u: ~~U
+    w: ~~W
+    x: ~~X
+    y: ~~Y
+    z: ~~Z
 
   # ALT+<KEY>
   A-a: ~esc a
