@@ -1646,6 +1646,7 @@ function Terminus(div, settings) {
             tab: "\x09",
             esc: "\x1B",
             csi: "\x1B[",
+            noop: "",
 
             up: "\x1B[A",
             down: "\x1B[B",
@@ -1723,20 +1724,28 @@ function Terminus(div, settings) {
 
         self.focus();
 
-        self.terminal.bind('keydown', function(e) {
+        self.keydown_fn = function(e) {
 
-            var bindings = settings.bindings;
-            code = (((e.ctrlKey || e.metaKey) ? "C-" : "")
-                    + (e.altKey ? "A-" : "")
-                    + (e.shiftKey ? "S-" : "")
-                    + (self.keynames[e.which] || "<"+e.which+">"));
+            var bindings = (self.bindings
+                            || settings.bindings);
+
+            // var bindings = settings.bindings;
+
+            var orig_code = (self.keynames[e.which] || "<"+e.which+">");
+            var code = orig_code;
+            if (e.shiftKey && orig_code != "S-")
+                code = "S-" + code;
+            if (e.altKey && orig_code != "A-")
+                code = "A-" + code;
+            if ((e.ctrlKey || e.metaKey) && orig_code != "C-")
+                code = "C-" + code;
+            var just_modifiers = (code[code.length - 1] == '-');
 
             // this is needed for paste to work
-            if (code.slice(0, 2) == "C-") {
+            if (code == "C-") {
                 // We only do this when the Control key is pressed, to
                 // avoid scrolling to the bottom in too many
-                // situations. When Control is pressed alone, it
-                // should yield C- or C-C- (TODO: normalize that).
+                // situations.
                 self.textarea.focus();
             }
 
@@ -1745,8 +1754,36 @@ function Terminus(div, settings) {
             var commands = bindings[code];
 
             if (commands === undefined) {
+                if (self.bindings && self.bindings._eat) {
+                    // We delete the sub-bindings, except for when we
+                    // hit modifiers without any other key.
+                    if (!just_modifiers) {
+                        delete self.bindings;
+                    }
+                    e.stopPropagation();
+                    e.preventDefault();
+                    return;
+                }
+                else if (self.bindings && !just_modifiers) {
+                    delete self.bindings;
+                    return self.keydown_fn(e);
+                }
+                else {
+                    return;
+                }
+            }
+
+            if (typeof commands != "string") {
+                self.bindings = commands;
+                e.stopPropagation();
+                e.preventDefault();
                 return;
             }
+
+            if (self.bindings && !self.bindings._stick) {
+                delete self.bindings;
+            }
+
             self.log('exec', commands)
 
             var cancel = false;
@@ -1783,7 +1820,9 @@ function Terminus(div, settings) {
                 e.stopPropagation();
                 e.preventDefault();
             }
-        });
+        };
+
+        self.terminal.bind('keydown', self.keydown_fn);
 
         self.terminal.bind('keypress', function(e) {
             if (!e.ctrlKey) {

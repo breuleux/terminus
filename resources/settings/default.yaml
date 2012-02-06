@@ -138,6 +138,9 @@ log:
   #   test: messages sent to logging during development, should be
   #         none in the production version
   #   info: informative stuff like logging: on/off
+  #   exec: show when key bindings from the bindings list are executed
+  #   keydown: show the keycodes produced as you type (useful if you want
+  #         to know how to bind some key combination).
   # Note: you can define a list of things to log.
   what:
     # - esc
@@ -175,10 +178,66 @@ log:
 #   ~command: execute the command
 #   ~~X: with a capital letter X, print the character code charcode(X)-64
 #   word: print the word
+#   sub-bindings: you can specify further commands to execute when
+#       other keys are pressed right after the main key.
 # You can give more than one command to execute with a given key
-# binding, just make a list separated by spaces (see the Alt-<X> section)
+# binding, just make a list separated by spaces.
+# See the C-S-a example at the top of the bindings.
 
 bindings:
+
+  # EXAMPLE (edit it to your heart's content, it's really completely
+  # arbitrary stuff to show you how to customize bindings)
+  # When Control, Shift and A are pressed together ->
+  C-S-a:
+    # if the next keypress is Z, then write out the word "zebra"
+    z: zebra
+
+    # if it is Shift and Z, then write it out in caps
+    S-z: ZEBRA
+
+    # if it is the Left or Right arrow, we will go one word left or
+    # right
+    Left: ~word_left
+    Right: ~word_right
+
+    # If it is k we will kill the line
+    k: ~~K
+
+    # _eat: true means that if a key is not recognized, its effect
+    # will not happen, but we will revert to the top level bindings
+    # (it defaults to false). So for instance if we type C-S-a Home,
+    # Home won't do anything, but it will if we hit it again. If _eat
+    # is false, then Home will do what it does normally, right away.
+    # Sub-bindings do NOT inherit _eat: true.
+    _eat: true
+
+    # if we hit c then we will perform commands
+    c:
+        # if it is the up arrow:
+          # 1) Go to the beginning of the line (~~A)
+          # 2) Kill the line (~~K)
+          # 3) Type cd .. (to input a space we need to use ~space)
+          # 4) Hit the return key
+        Up: "~~A ~~K cd ~space .. ~enter"
+
+        # Same principle, but to list the directory
+        l: "~~A ~~K ls ~space -l ~enter"
+
+        # _stick: true means that we only revert to the top level
+        # bindings when the user hits a key that is not listed in
+        # here. So for instance, you can hit Up three times in a row
+        # to go up three levels in the hierarchy. If you hit a key
+        # other than Up or l, then it'll have its normal effect and
+        # will cancel the special bindings for Up and l until you type
+        # C-S-a c again. If _stick is false (it is false by default),
+        # then hitting l twice in a row will list the files and then
+        # produce the letter l.
+        # Note: _eat is false here: it's not inherited (and _stick is
+        # not inherited either)
+        _stick: true
+
+
 
   # switch logging on or off
   C-S-p: ~log_mode
@@ -220,6 +279,7 @@ bindings:
   # DEFAULTS
   Backspace: ~backspace
   Tab: ~tab
+  S-Tab: ~csi Z
   Esc: ~esc
   PgUp: ~pgup
   PgDn: ~pgdn
@@ -244,6 +304,36 @@ bindings:
   F11: ~f11
   F12: ~f12
 
+  S-Space:
+    # Doing Shift-Space and then a letter will send an escape
+    # character, much like hitting Control and that character.
+    Space: "~~@"
+    a: ~~A
+    b: ~~B
+    c: ~~C
+    d: ~~D
+    e: ~~E
+    f: ~~F
+    g: ~~G
+    h: ~~H
+    i: ~~I
+    j: ~~J
+    k: ~~K
+    l: ~~L
+    m: ~~M
+    n: ~~N
+    o: ~~O
+    p: ~~P
+    q: ~~Q
+    r: ~~R
+    s: ~~S
+    t: ~~T
+    u: ~~U
+    w: ~~W
+    x: ~~X
+    y: ~~Y
+    z: ~~Z
+
   # CTRL+<KEY>
   C-Space: "~~@"
   C-a: ~~A
@@ -259,7 +349,7 @@ bindings:
   C-k: ~~K
   C-l: ~~L
   C-m: ~~M
-  C-n: ~~N
+  C-n: ~~N   # might not work in all browsers
   C-o: ~~O
   C-p: ~~P
   C-q: ~~Q
@@ -269,36 +359,36 @@ bindings:
   C-u: ~~U
   # C-v: ~~V # disables paste if uncommented
   C-w: ~~W   # might not work in all browsers
-  C-S-w: ~~W # but this should!
+  C-S-w: ~~W
   C-x: ~~X
   C-y: ~~Y
   C-z: ~~Z
 
   # ALT+<KEY>
-  A-a: ~esc A
-  A-b: ~esc B
-  A-c: ~esc C
-  A-d: ~esc D
-  A-e: ~esc E
-  A-f: ~esc F
-  A-g: ~esc G
-  A-h: ~esc H
-  A-i: ~esc I
-  A-j: ~esc J
-  A-k: ~esc K
-  A-l: ~esc L
-  A-m: ~esc M
-  A-n: ~esc N
-  A-o: ~esc O
-  A-p: ~esc P
-  A-q: ~esc Q
-  A-r: ~esc R
-  A-s: ~esc S
-  A-t: ~esc T
-  A-u: ~esc U
-  A-v: ~esc V
-  A-w: ~esc W
-  A-x: ~esc X
-  A-y: ~esc Y
-  A-z: ~esc Z
+  A-a: ~esc a
+  A-b: ~esc b
+  A-c: ~esc c
+  A-d: ~esc d
+  A-e: ~esc e
+  A-f: ~esc f
+  A-g: ~esc g
+  A-h: ~esc h
+  A-i: ~esc i
+  A-j: ~esc j
+  A-k: ~esc k
+  A-l: ~esc l
+  A-m: ~esc m
+  A-n: ~esc n
+  A-o: ~esc o
+  A-p: ~esc p
+  A-q: ~esc q
+  A-r: ~esc r
+  A-s: ~esc s
+  A-t: ~esc t
+  A-u: ~esc u
+  A-v: ~esc v
+  A-w: ~esc w
+  A-x: ~esc x
+  A-y: ~esc y
+  A-z: ~esc z
 
