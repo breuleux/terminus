@@ -493,17 +493,33 @@ function Screen(term, settings) {
         self.write_at(self.line, self.column, things);
     }
 
-    self.wait_for_height = function(node, line, timeout, increment, ntries) {
+    self.wait_for_height = function(node, node2, timeout, increment, ntries) {
         setTimeout(function () {
             var nh = $(node).height();
             if (nh == 0 && ntries) {
                 console.log(ntries);
-                self.wait_for_height(node, line, timeout + increment, increment, ntries - 1);
+                self.wait_for_height(node, node2, timeout + increment, increment, ntries - 1);
             }
             var h = Math.ceil(nh / self.term.char_height);
             // self.term.log('test', h + " " + node.height + " " + node.innerHeight);
-            self.heights[line] = h;
-            self.lines[line] = node;
+            for (var line = self.nlines; line >= 0; line--) {
+                if (self.lines[line] === node2) {
+                    // Search for the line the node was put on. This
+                    // might not be the original line if we scrolled
+                    // down.
+                    self.heights[line] = h;
+                    self.modified[line] = true;
+                    self.lines[line] = node;
+                    $(node).show();
+                    self.term.display(true);
+                    return;
+                }
+            }
+            // We only get here if the original node scrolled past the
+            // screen before we could display it. If so, we don't need
+            // to play with the heights[] array.
+            $(node2).empty();
+            $(node2).append(node);
             $(node).show();
             self.term.display(true);
         }, timeout);
@@ -525,11 +541,12 @@ function Screen(term, settings) {
             self.heights[line] = Math.ceil(h / self.term.char_height);
         }
         else {
+            var node2 = makediv();
             self.heights[line] = 1;
-            self.lines[line] = makediv();
+            self.lines[line] = node2;
             $(self.lines[line]).html('<span style="color: #808080;">...</span>').append(node);
             $(node).hide();
-            self.wait_for_height(node, line, 1, 10, 10);
+            self.wait_for_height(node, node2, 1, 10, 10);
         }
     }
 
@@ -841,8 +858,9 @@ function ScreenDisplay(terminal, screen, settings) {
         }
         else {
             n_displayed = (scr.nlines
-                           - Math.min(scr.total_height() - scr.nlines,
-                                      scr.bottom_virgins()));
+                           - Math.max(0, 
+                                      Math.min(scr.total_height() - scr.nlines,
+                                               scr.bottom_virgins())));
         }
 
         for (var i = 0; i < n_displayed; i++) {
