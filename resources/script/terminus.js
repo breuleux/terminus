@@ -251,7 +251,7 @@ function Screen(term, settings) {
         // been modified yet (are completely blank).
         var total = 0;
         for (var i = self.nlines - 1; i >= 0; i--) {
-            if (self.virgin[i])
+            if (!self.dirty[i])
                 total++;
             else
                 break;
@@ -306,7 +306,7 @@ function Screen(term, settings) {
                 // Delete all lines below the threshold
                 delete self.matrix[i];
                 delete self.lines[i];
-                delete self.virgin[i];
+                delete self.dirty[i];
                 delete self.modified[i];
                 delete self.ext[i];
                 if (self.nest[i] != null) {
@@ -460,15 +460,15 @@ function Screen(term, settings) {
 
     // WRITE
 
-    self.fresh_line = function(line) {
-        self.modified[line] = true;
-        self.ext[line] = false;
-        self.nest[line] = null;
-        self.virgin[line] = false;
-        self.heights[line] = 1;
-    }
+    // self.fresh_line = function(line) {
+    //     self.modified[line] = true;
+    //     self.ext[line] = false;
+    //     self.nest[line] = null;
+    //     self.dirty[line] = true;
+    //     self.heights[line] = 1;
+    // }
 
-    self.touch_line = function(line, keep_ext) {
+    self.touch_line = function(line, column, keep_ext) {
         self.modified[line] = true;
         if (!keep_ext) {
             self.ext[line] = false;
@@ -477,13 +477,13 @@ function Screen(term, settings) {
                 self.nest[line] = null;
             }
         }
-        self.virgin[line] = false;
+        self.dirty[line] = Math.max(self.dirty[line], column + 1);
         self.heights[line] = 1;
     }
 
     self.write_at = function(line, column, things) {
         self.matrix[line][column] = things;
-        self.touch_line(line);
+        self.touch_line(line, column);
     }
 
     self.write_at_cursor = function(things) {
@@ -535,7 +535,7 @@ function Screen(term, settings) {
         self.modified[line] = true;
         self.ext[line] = true;
         self.nest[line] = nest;
-        self.virgin[line] = false;
+        self.dirty[line] = 1;
         var h = $(node).height();
         if (h != 0) {
             self.heights[line] = Math.ceil(h / self.term.char_height);
@@ -585,7 +585,10 @@ function Screen(term, settings) {
             self.matrix[line][i] = [self.default_character,
                                     self.no_text_properties()];
         }
-        self.touch_line(line);
+        self.touch_line(line, self.ncols);
+        if (column1 == self.ncols) {
+            self.dirty[line] = column0;
+        }
         self.cursor_here();
     }
 
@@ -635,9 +638,10 @@ function Screen(term, settings) {
             self.matrix[i][j] = [self.default_character,
                                  self.no_text_properties()];
         }
-        self.touch_line(i, keep_ext);
-        if (!start_col)
-            self.virgin[i] = true;
+        self.touch_line(i, self.ncols, keep_ext);
+        self.dirty[i] = start_col;
+        // if (!start_col)
+        //     self.dirty[i] = 0;
     }
 
     self.insert_blanks = function(line, start, n) {
@@ -651,7 +655,10 @@ function Screen(term, settings) {
                        self.no_text_properties()];
         }
         self.matrix[line] = rval;
-        self.touch_line(line);
+        self.touch_line(line, self.dirty[line] + n);
+        if (end <= start) {
+            self.dirty[line] = start;
+        }
     }
 
     self.delete_characters = function(line, start, n) {
@@ -665,7 +672,8 @@ function Screen(term, settings) {
                        self.no_text_properties()];
         }
         self.matrix[line] = rval;
-        self.touch_line(line);
+        self.touch_line(line, self.ncols);
+        self.dirty[line] = Math.max(0, self.dirty[line] - n);
     }
 
     self.push_to_end = function(arr, start, end) {
@@ -692,7 +700,7 @@ function Screen(term, settings) {
         self.lines = self.push_to_end(self.lines, start, end);
         self.ext = self.push_to_end(self.ext, start, end);
         self.nest = self.push_to_end(self.nest, start, end);
-        self.virgin = self.push_to_end(self.virgin, start, end);
+        self.dirty = self.push_to_end(self.dirty, start, end);
         self.heights = self.push_to_end(self.heights, start, end);
         self.all_modified(start, self.nlines);
         
@@ -714,7 +722,7 @@ function Screen(term, settings) {
         self.lines = self.push_to_end(self.lines, start, end);
         self.ext = self.push_to_end(self.ext, start, end);
         self.nest = self.push_to_end(self.nest, start, end);
-        self.virgin = self.push_to_end(self.virgin, start, end);
+        self.dirty = self.push_to_end(self.dirty, start, end);
         self.heights = self.push_to_end(self.heights, start, end);
         self.all_modified(start, self.nlines);
         
@@ -733,6 +741,7 @@ function Screen(term, settings) {
 
         self.lines = self.rotate(self.lines);
         self.matrix = self.rotate(self.matrix);
+        self.dirty = self.rotate(self.dirty);
         self.ext = self.rotate(self.ext);
         self.nest = self.rotate(self.nest);
         self.all_modified(0, self.nlines);
@@ -751,7 +760,17 @@ function Screen(term, settings) {
         var s = "";
         var current_style = "";
         var current_cls = "";
-        for (var j = 0; j < self.ncols; j++) {
+        var ubound;
+        if (i == self.line) {
+            ubound = Math.max(self.dirty[i], 
+                              Math.min(self.column + 1,
+                                       self.ncols));
+        }
+        else {
+            ubound = self.dirty[i];
+        }
+        if (!ubound) { ubound = 1; }
+        for (var j = 0; j < ubound; j++) {
             var data = self.extract_character(i, j);
             var c = data[0];
             var style = data[2];
@@ -785,7 +804,10 @@ function Screen(term, settings) {
             // $(span).val("");
             // span.innerHTML = "!";
             setTimeout(function () {
-                var txt = Terminus.strdiff(text, $(span).text());
+                var new_text = $(span).text();
+                // self.term.log('test', '1: ' + text.length + " " + text);
+                // self.term.log('test', '2: ' + new_text.length + " " + new_text);
+                var txt = Terminus.strdiff(text, new_text);
                 self.term.to_send += txt.replace(/\xa0/g, ' ');
                 $(span).html(save);
                 save = "";
@@ -810,7 +832,7 @@ function Screen(term, settings) {
         self.modified = [];
         self.ext = []
         self.nest = [];
-        self.virgin = [];
+        self.dirty = [];
         self.heights = [];
 
         self.lost_nests = [];
@@ -2350,7 +2372,7 @@ Terminus.strdiff = function (before, after) {
             return after.substring(i, i + ldiff);
         }
     }
-    return ""
+    return after.substring(i, i + ldiff);
 }
 
 
