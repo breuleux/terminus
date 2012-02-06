@@ -44,13 +44,13 @@
 }
 
 .top {
-    background-color: red;
+    background-color: #222;
     overflow: hidden;
     /* max-height: 20%; */
 }
 
 .left {
-    background-color: orange;
+    background-color: #222;
     float: left;
     overflow: auto;
 }
@@ -70,13 +70,13 @@
 }
 
 .right {
-    background-color: green;
+    background-color: #222;
     float: left;
     overflow: hidden;
 }
 
 .bottom {
-    background-color: blue;
+    background-color: #222;
     overflow: hidden;
     /* max-height: 20%; */
 }

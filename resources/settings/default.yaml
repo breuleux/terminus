@@ -247,10 +247,18 @@ bindings:
         _stick: true
 
 
-
   # switch logging on or off
   C-S-p: ~log_mode
-  C-S-c: ~clear_log
+
+  # clear stuff
+  C-S-c:
+    l: ~clear_log
+    s: ~clear_scrollback
+    Up: ~clear_up
+    Down: ~clear_down
+    Left: ~clear_left
+    Right: ~clear_right
+    Space: ~clear_up ~clear_down ~clear_left ~clear_right
 
   # clear scrollback
   C-S-l: ~clear_scrollback

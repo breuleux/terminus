@@ -1265,6 +1265,10 @@ function Terminus(div, settings) {
             source.remove();
             dest.set(source);
         },
+
+        OSC: function (data, parameters) {
+            self.log('esc_unknown', 'OSC -> ' + data);
+        },
     }
 
     self.handle_ext = function(ext) {
@@ -1679,6 +1683,22 @@ function Terminus(div, settings) {
             f11: "\x1B[23~",
             f12: "\x1B[24~",
 
+            clear_up: function () {
+                self.remove_child(1);
+            },
+
+            clear_down: function () {
+                self.remove_child(5);
+            },
+
+            clear_left: function () {
+                self.remove_child(2);
+            },
+
+            clear_right: function () {
+                self.remove_child(4);
+            },
+
             clear_scrollback: function () {
                 self.screend.clear_scrollback();
                 return true;
@@ -1987,22 +2007,26 @@ Terminus.input_state_machine = {
     },
 
     esc_40: function () {
-        // ESC ( - switch to stdcode0 and wait for next charactre
+        // ESC ( - switch to stdcode0 and wait for next character
         return ['', 'stdcode0'];
     },
 
-    esc_61: function () { return 'esc_go'; }, // ESC =
-    esc_62: function () { return 'esc_go'; }, // ESC >
+    esc_61: function () { return 'esc_log'; }, // ESC =
+    esc_62: function () { return 'esc_log'; }, // ESC >
 
     esc_91: function () {
         // CSI = ESC [ - switch to stdcode0 and wait for next character
         return ['', 'stdcode0'];
     },
 
-    esc_go: function () {
-        // Switch immediately to exec_<mode>, where mode is the
-        // character code found right after ESC.
-        return 'exec_' + this.escape.mode;
+    esc_93: function () {
+        // CSI = ESC ] - switch to seek_st
+        this.ext = {
+            type: 'OSC',
+            args: {},
+            accum: ""
+        }
+        return ['', 'seek_st0'];
     },
 
     //// STANDARD ESCAPE CODE ////
@@ -2054,11 +2078,18 @@ Terminus.input_state_machine = {
     // Accumulate everything in ext.accum until ESC is found. Ideally,
     // the sequence ends with ESC \, because otherwise we switch to
     // the esc state in order to perform a command if appropriate.
+    // Also ends on BEL (\x07).
 
     seek_st0: function (c) {
         if (c == 27) {
             // ESC
             return ['', 'seek_st1'];
+        }
+        else if (c == 7) {
+            // BEL
+            this.handle_ext(this.ext);
+            this.ext = undefined;
+            return ['', 'init']
         }
         this.ext.accum += String.fromCharCode(c);
         return ['', 'seek_st0'];
@@ -2080,9 +2111,6 @@ Terminus.input_state_machine = {
         // ESC (
         return ['', 'init']
     },
-
-    esc_61: function () { return 'esc_log'; }, // ESC =
-    esc_62: function () { return 'esc_log'; }, // ESC >
 
     exec_91: function () {
         // CSI = ESC [
