@@ -18,6 +18,7 @@
     /* overflow-y: auto; */
     overflow: hidden;
     white-space: nowrap;
+    outline: 0px none transparent;
 }
 
 .log_entry {
