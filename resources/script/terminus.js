@@ -501,7 +501,7 @@ function Screen(term, settings) {
                 self.wait_for_height(node, line, timeout + increment, increment, ntries - 1);
             }
             var h = Math.ceil(nh / self.term.char_height);
-            self.term.log('test', h + " " + node.height + " " + node.innerHeight);
+            // self.term.log('test', h + " " + node.height + " " + node.innerHeight);
             self.heights[line] = h;
             self.lines[line] = node;
             $(node).show();
@@ -750,7 +750,32 @@ function Screen(term, settings) {
             s += c;
         }
         var span = makenode('span');
+
+        // $(span).attr('contenteditable', true);
         span.innerHTML = s;
+
+        var save = "";
+        var text = "";
+
+        // $(span).bind('mousedown', function (e) {
+        //     save = this.innerHTML;
+        // });
+        $(span).bind('paste', function (e) {
+            save = $(this).html();
+            text = $(this).text();
+            self.term.focus();
+            // $(span).empty();
+            // $(span).val("");
+            // span.innerHTML = "!";
+            setTimeout(function () {
+                var txt = Terminus.strdiff(text, $(span).text());
+                self.term.to_send += txt.replace(/\xa0/g, ' ');
+                $(span).html(save);
+                save = "";
+                text = "";
+            }, 0);
+        });
+
         self.lines[i] = span;
     };
 
@@ -815,9 +840,6 @@ function ScreenDisplay(terminal, screen, settings) {
             n_displayed = (scr.nlines - scr.bottom_virgins());
         }
         else {
-            // if (self.terminal.logger) {
-            //     self.terminal.log('test', scr.total_height());
-            // }
             n_displayed = (scr.nlines
                            - Math.min(scr.total_height() - scr.nlines,
                                       scr.bottom_virgins()));
@@ -1282,6 +1304,10 @@ function Terminus(div, settings) {
         }, 0)
     }
 
+    self.focus = function() {
+        self.textarea.focus();
+    }
+
     self.init = function (div, settings) {
 
         // LOG
@@ -1291,6 +1317,9 @@ function Terminus(div, settings) {
         // HANDY POINTERS
 
         self.terminal = div;
+        self.terminal.attr('contenteditable', true);
+        self.terminal.attr('spellcheck', false);
+
         self.d_terminal = div[0];
         self.settings = settings;
 
@@ -1402,9 +1431,11 @@ function Terminus(div, settings) {
         // text area, check what appears in it, and we'll send the
         // contents over to the pty. I don't yet know how to make middle
         // click paste work, unfortunately, so we'll make do with Ctrl+V.
-        var textarea = document.createElement('textarea');
-        self.textarea = $(textarea);
-        self.textarea.css('height', 1).css('width', 1);
+        var textarea = $(makenode('textarea'));
+        textarea.attr('class', 'pastegrab');
+        self.textarea = textarea;
+        self.textarea.css('height', 0).css('width', 0);
+        // self.textarea.css('height', 30).css('width', 100);
         self.add_thing(textarea);
 
         // ESCAPE
@@ -1449,12 +1480,21 @@ function Terminus(div, settings) {
 
         // BINDINGS
 
-        $(document).bind('paste', function(e) {
+        // self.terminal.bind('input', function(e) {
+        //     e.preventDefault();
+        //     e.stopPropagation();
+        // });
+
+        // $(document).bind('paste', function(e) {
+        self.terminal.bind('paste', function(e) {
             var target = self.textarea;
             target.val("");
+            // target.html("");
             setTimeout(function() {
                 var text = target.val();
+                // alert(text);
                 self.to_send += text;
+                self.textarea.focus();
             }, 0);
         });
 
@@ -1561,6 +1601,7 @@ function Terminus(div, settings) {
 
         self.commands = {
             backspace: "\x7F",
+            enter: "\x0D",
             tab: "\x09",
             esc: "\x1B",
 
@@ -1633,18 +1674,26 @@ function Terminus(div, settings) {
             space: " ",
         }
 
-        $(document).bind('keydown', function(e) {
+        self.focus();
+
+        self.terminal.bind('keydown', function(e) {
 
             var bindings = settings.bindings;
-            code = ((e.ctrlKey ? "C-" : "")
+            code = (((e.ctrlKey || e.metaKey) ? "C-" : "")
                     + (e.altKey ? "A-" : "")
                     + (e.shiftKey ? "S-" : "")
                     + (self.keynames[e.which] || "<"+e.which+">"));
 
             // this is needed for paste to work
             if (code.slice(0, 2) == "C-") {
+                // We only do this when the Control key is pressed, to
+                // avoid scrolling to the bottom in too many
+                // situations. When Control is pressed alone, it
+                // should yield C- or C-C- (TODO: normalize that).
                 self.textarea.focus();
             }
+
+            self.log('keydown', code);
 
             var commands = bindings[code];
 
@@ -1689,7 +1738,7 @@ function Terminus(div, settings) {
             }
         });
 
-        $(document).bind('keypress', function(e) {
+        self.terminal.bind('keypress', function(e) {
             if (!e.ctrlKey) {
                 var key = e.which;
                 if (key == 8) {
@@ -1698,7 +1747,7 @@ function Terminus(div, settings) {
                 var s;
                 s = String.fromCharCode(key);
                 self.to_send += s;
-                if (e.charCode) {
+                if (e.charCode || e.keyCode == 13) {
                     e.stopPropagation();
                     e.preventDefault();
                 }
@@ -2268,8 +2317,22 @@ Terminus.csi = {
 
 Terminus.sanitize = function (data) {
     return data
-        .replace('  ', ' &nbsp')
-        .replace('>', '&gt;')
-        .replace('<', '&lt;')
-        .replace('\n', '<br/>');
+        .replace(/  /g, ' &nbsp')
+        .replace(/>/g, '&gt;')
+        .replace(/</g, '&lt;')
+        .replace(/\n/g, '<br/>');
 }
+
+Terminus.strdiff = function (before, after) {
+    var ldiff = after.length - before.length;
+    for (var i = 0; i < before.length; i++) {
+        var bi = before[i].replace('\xa0', ' ');
+        var ai = after[i].replace('\xa0', ' ');
+        if (bi != ai) {
+            return after.substring(i, i + ldiff);
+        }
+    }
+    return ""
+}
+
+

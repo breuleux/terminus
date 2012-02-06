@@ -58,7 +58,7 @@ screens:
 scrolling:
   # If true, we use jscrollpane to display scrollbars. If
   # false, we use the standard OS-issue scrollbars.
-  jscrollpane: true
+  jscrollpane: false
   
   # true iff we want a horizontal scrollbar when appropriate
   # note: if jscrollpane is false, use css on .center (overflow-x = auto or hidden)

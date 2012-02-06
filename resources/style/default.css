@@ -1,4 +1,12 @@
 
+.pastegrab {
+    background-color: black;
+    overflow: hidden;
+    outline: 0px none transparent;
+    border: 0px none transparent;
+    resize: none;
+}
+
 .term_area {
     background-color: black;
     color: white;
