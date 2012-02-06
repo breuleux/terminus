@@ -1726,6 +1726,7 @@ function Terminus(div, settings) {
             word_delete_right: word_operation("right", "\x1B[3~"),
 
             space: " ",
+            tilde: "~",
         }
 
         self.focus();

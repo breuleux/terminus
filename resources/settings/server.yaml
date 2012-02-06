@@ -2,7 +2,7 @@
 host: 'localhost'
 port: 8080
 
-# True iff we only accept connections from localhost
+# TODO True iff we only accept connections from localhost
 only_localhost: true
 
 # Available configurations, run when the client goes to
@@ -17,18 +17,19 @@ only_localhost: true
 # settings: client settings
 #        fetch from: /resources/settings/<settings>
 #        you can give a list, the settings will be merged in order
+#        (untested)
 
-# timeout: time (in seconds) after which the session should be
+# TODO timeout: time (in seconds) after which the session should be
 #        terminated if there is no activity.
 
-# grace_period: time (in seconds) to keep the session alive after the
-#        client disconnects (just in case it was an error on their
+# TODO grace_period: time (in seconds) to keep the session alive after
+#        the client disconnects (just in case it was an error on their
 #        part).
 
 configurations:
 
   bash:
-    command: 'bash'
+    command: 'bash -l'
     template: 'terminus'
     style: 'default.css'
     settings: 'default.yaml'
@@ -44,7 +45,7 @@ configurations:
     grace_period: 60
 
   debug:
-    command: 'bash'
+    command: 'bash -l'
     template: 'debug'
     style: 'default.css'
     settings: 'default.yaml'

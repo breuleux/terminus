@@ -176,12 +176,18 @@ log:
 # key: C- for Ctrl, A- for Alt, S- for Shift, in that order, lowercase for letter
 # value:
 #   ~command: execute the command
-#   ~~X: with a capital letter X, print the character code charcode(X)-64
-#   word: print the word
-#   sub-bindings: you can specify further commands to execute when
-#       other keys are pressed right after the main key.
+#   ~~X: with a (case-sensitive!) character X, print the character code charcode(X)-64
+#   word: print the word verbatim
+#   sub-bindings: instead of a command string, you can specify further
+#       sub-bindings to look through when other keys are pressed right
+#       after the main key.
+
 # You can give more than one command to execute with a given key
 # binding, just make a list separated by spaces.
+
+# ~space to get a literal space and ~tilde to get a literal tilde
+# ~esc for an escape character, ~csi is equivalent to ~esc [
+
 # See the C-S-a example at the top of the bindings.
 
 bindings:
@@ -307,7 +313,7 @@ bindings:
   F11: ~f11
   F12: ~f12
 
-  # CTRL+<KEY>
+  # CTRL+<KEY> (because explicit is better than implicit)
   C-Space: "~~@"
   C-a: ~~A
   C-b: ~~B
