@@ -109,13 +109,19 @@ function Logger(settings) {
         self.active = settings.start;
         self.what = {}
         self.all = false;
-        for (var i = 0; i < settings.what.length; i++) {
-            var type = settings.what[i];
-            if (type == 'all') {
-                self.all = true;
-                break;
+        if (settings.what) {
+            for (var i = 0; i < settings.what.length; i++) {
+                var type = settings.what[i];
+                if (type == false) {
+                    self.what = {};
+                    break;
+                }
+                if (type == 'all') {
+                    self.all = true;
+                    break;
+                }
+                self.what[type] = true;
             }
-            self.what[type] = true;
         }
         self.clear();
     }

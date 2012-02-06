@@ -124,27 +124,27 @@ log:
   start: on
   
   # Where to log
-  #   off/no/false = no logging
-  #   console = log to javascript console
+  #   TODO console = log to javascript console
   #   "#elem" = log to the element with that id
   where: "#log"
 
   # What to log
   #   off: log nothing
   #   all: log everything
-  #   err: unexpected exceptions thrown during execution
+  #   error: unexpected exceptions thrown during execution
   #   esc: log escape codes
   #   esc_unknown: log unknown escape codes
-  #   test: messages sent to logging during development, should be
-  #         none in the production version
+  #   test: messages sent to logging during development, there should be
+  #         no such messages in the production version
   #   info: informative stuff like logging: on/off
-  #   exec: show when key bindings from the bindings list are executed
+  #   nest: debug information about nest creation and removal
+  #   exec: show the key bindings from the bindings list that are executed
   #   keydown: show the keycodes produced as you type (useful if you want
   #         to know how to bind some key combination).
   # Note: you can define a list of things to log.
   what:
-    # - esc
     - error
+    # - esc
     - esc_unknown
     - test
     - info
