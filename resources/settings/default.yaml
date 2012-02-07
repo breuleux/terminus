@@ -250,6 +250,11 @@ bindings:
   # switch logging on or off
   C-S-p: ~log_mode
 
+  # this allows to get the browser key binding for the next key
+  # e.g. C-S-d C-l will focus the location bar, etc.
+  C-S-d:
+    _browser: true
+
   # clear stuff
   C-S-c:
     l: ~clear_log
@@ -344,9 +349,8 @@ bindings:
   C-s: ~~S
   C-t: ~~T   # might not work in all browsers
   C-u: ~~U
-  # C-v: ~~V # disables paste if uncommented
+  # C-v: ~~V # disables paste if uncommented, but you can also do C-S-d C-v
   C-w: ~~W   # might not work in all browsers
-  C-S-w: ~~W
   C-x: ~~X
   C-y: ~~Y
   C-z: ~~Z

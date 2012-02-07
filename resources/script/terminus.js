@@ -1791,6 +1791,12 @@ function Terminus(div, settings) {
                     e.preventDefault();
                     return;
                 }
+                else if (self.bindings && self.bindings._browser) {
+                    if (!just_modifiers) {
+                        delete self.bindings;
+                    }
+                    return;
+                }
                 else if (self.bindings && !just_modifiers) {
                     delete self.bindings;
                     return self.keydown_fn(e);
