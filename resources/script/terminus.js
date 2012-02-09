@@ -179,6 +179,7 @@ function Nest(element) {
         }
         return child._find(nest.slice(1), create);
     }
+
     return self;
 }
 
@@ -265,6 +266,15 @@ function Screen(term, settings) {
         return total;
     }
 
+    self.log_action = function() {
+        var a = Array.prototype.slice.call(arguments);
+        var last = self.action_log[self.action_log.length - 1]
+        // if (last+"" != a+"") {
+        //     self.term.log('test', a)
+        // }
+        self.action_log.push(a)
+    }
+
     self.resize = function(nlines, ncols) {
         if (ncols > self.ncols) {
             // Wider screen
@@ -283,6 +293,7 @@ function Screen(term, settings) {
                 // Discard the extra characters
                 self.matrix[i].splice(self.ncols);
                 self.modified[i] = true;
+                // self.log_action('mod', i);
             }
             if (self.column >= ncols) {
                 // Push back the cursor right past the end of the
@@ -293,6 +304,7 @@ function Screen(term, settings) {
 
         if (nlines > self.nlines) {
             // Taller screen
+            self.log_action('ins', self.nlines, nlines - self.nlines)
             for (var i = self.nlines; i < nlines; i++){
                 // clear_line will populate the line with blanks and
                 // will set the appropriate flags, so we just need to
@@ -320,6 +332,7 @@ function Screen(term, settings) {
                 }
                 delete self.nest[i];
             }
+            self.log_action('rm', nlines, self.nlines - nlines)
             if (self.line >= nlines) {
                 // If the cursor is below the screen, we bump it up
                 // (scroll() did not change it)
@@ -355,12 +368,14 @@ function Screen(term, settings) {
 
     self.cursor_here = function() {
         self.push_prop(self.line, self.column, 200);
-        self.modified[self.line] = true;
+        // self.modified[self.line] = true;
+        // self.log_action('mod', self.line)
     }
 
     self.no_cursor_here = function() {
         self.push_prop(self.line, self.column, 201);
         self.modified[self.line] = true;
+        // self.log_action('mod', self.line)
     }
 
     self.move_to = function(line, column) {
@@ -485,6 +500,7 @@ function Screen(term, settings) {
         }
         self.dirty[line] = Math.max(self.dirty[line], column + 1);
         self.heights[line] = 1;
+        // self.log_action('mod', line);
     }
 
     self.write_at = function(line, column, things) {
@@ -554,6 +570,7 @@ function Screen(term, settings) {
             $(node).hide();
             self.wait_for_height(node, node2, 1, 10, 10);
         }
+        // self.log_action('mod', line)
     }
 
     self.next_line = function() {
@@ -575,10 +592,11 @@ function Screen(term, settings) {
     }
 
     self.send_line_to_scroll = function(i) {
-        var div = makediv();
+        // var div = makediv();
         var line = self.get_line(i);
-        div.appendChild(self.lines[i]);
-        self.scrollback.push([self.nest[i], div]);
+        // div.appendChild(self.lines[i]);
+        self.scrollback.push([self.nest[i], line]);
+        self.log_action('scroll', self.modified[i], line);
     }
 
     // KILL
@@ -708,7 +726,12 @@ function Screen(term, settings) {
         self.nest = self.push_to_end(self.nest, start, end);
         self.dirty = self.push_to_end(self.dirty, start, end);
         self.heights = self.push_to_end(self.heights, start, end);
-        self.all_modified(start, self.nlines);
+        self.modified = self.push_to_end(self.modified, start, end);
+        // self.all_modified(start, self.nlines);
+        // self.all_modified(start, start + n);
+
+        self.log_action('ins', line, n)
+        self.log_action('rm', self.nlines, n)
         
         var clearto = start + n;
         if (clearto > self.scroll1)
@@ -730,7 +753,12 @@ function Screen(term, settings) {
         self.nest = self.push_to_end(self.nest, start, end);
         self.dirty = self.push_to_end(self.dirty, start, end);
         self.heights = self.push_to_end(self.heights, start, end);
-        self.all_modified(start, self.nlines);
+        self.modified = self.push_to_end(self.modified, start, end);
+        // self.all_modified(self.nlines - n, self.nlines);
+        // self.all_modified(start, self.nlines);
+
+        self.log_action('ins', self.nlines, n)
+        self.log_action('rm', line, n)
         
         var clearfrom = self.scroll1 - n;
         if (clearfrom < line)
@@ -743,21 +771,33 @@ function Screen(term, settings) {
     self.scroll = function() {
 
         self.send_line_to_scroll(0);
-        self.clear_line(self.scroll0);
+        self.delete_lines(0, 1);
 
-        self.lines = self.rotate(self.lines);
-        self.matrix = self.rotate(self.matrix);
-        self.dirty = self.rotate(self.dirty);
-        self.ext = self.rotate(self.ext);
-        self.nest = self.rotate(self.nest);
-        self.all_modified(0, self.nlines);
+        // self.clear_line(self.scroll0);
+
+        // self.lines = self.rotate(self.lines);
+        // self.matrix = self.rotate(self.matrix);
+        // self.dirty = self.rotate(self.dirty);
+        // self.ext = self.rotate(self.ext);
+        // self.nest = self.rotate(self.nest);
+        // self.all_modified(0, self.nlines);
     }
+
+    // self.scroll_page = function() {
+    //     self.no_cursor_here();
+    //     for (var i = 0; i < self.nlines; i++) {
+    //         self.send_line_to_scroll(i);
+    //         self.clear_line(i);
+    //     }
+    //     self.cursor_here();
+    // }
 
     self.scroll_page = function() {
         self.no_cursor_here();
         for (var i = 0; i < self.nlines; i++) {
-            self.send_line_to_scroll(i);
-            self.clear_line(i);
+            self.scroll();
+            // self.send_line_to_scroll(i);
+            // self.clear_line(i);
         }
         self.cursor_here();
     }
@@ -827,6 +867,7 @@ function Screen(term, settings) {
 
     self.init = function (term) {
         // INITIALIZE
+        self.action_log = [];
         self.scrollback = [];
         self.term = term;
 
@@ -867,10 +908,6 @@ function ScreenDisplay(terminal, screen, settings) {
 
     var self = obj();
 
-    self.add_thing = function(thing) {
-        self.box.appendChild(thing);
-    }
-
     self.display = function(force) {
         var scr = self.screen;
 
@@ -891,10 +928,74 @@ function ScreenDisplay(terminal, screen, settings) {
                                                scr.bottom_virgins())));
         }
 
+        var al = scr.action_log;
+        scr.action_log = [];
+
+        var actions = {
+            scroll: function (modified, value) {
+                // self.terminal.log('test', 'scroll' + " " + modified +  " " + arguments.length);
+                var child = self.box.childNodes[self.nscroll];
+                if (self.nscroll >= settings.scrollback) {
+                    self.box.removeChild(self.box.firstChild);
+                }
+                else {
+                    self.nscroll = self.nscroll + 1;
+                }
+                if (modified) {
+                    $(child).empty();
+                    child.appendChild(value);
+                }
+                var div = makediv();
+                $(div).text('YYY')
+                self.box.insertBefore(div, child.nextSibling);
+
+                // self.terminal.log('test', 'scroll' + " " + arguments.length);
+                // var child = self.box.childNodes[self.nscroll];
+                // self.terminal.log('test', 'scroll__' + " " + child.childNodes.length);
+                // self.nscroll = self.nscroll + 1;
+                // var next_child = self.box.childNodes[self.nscroll];
+                // var div = makediv();
+                // $(div).text('YYY')
+                // self.box.insertBefore(div, next_child);
+                // self.terminal.log('test', self.nscroll + " " + self.box.childNodes.length);
+            },
+            ins: function (line, n) {
+                // self.terminal.log('test', 'ins' + " " + line + " " + n + " " + arguments.length);
+                var elem = self.box.childNodes[self.nscroll + line];
+                for (var j = 0; j < n; j++) {
+                    var div = makediv();
+                    $(div).append('XXX')
+                    if (elem === undefined) {
+                        self.box.appendChild(div);
+                    }
+                    else {
+                        self.box.insertBefore(div, elem);
+                    }
+                }
+            },
+            rm: function (line, n) {
+                // self.terminal.log('test', 'rm' + " " + line + " " + n + " " + arguments.length);
+                for (var j = 0; j < n; j++) {
+                    var child = self.box.childNodes[self.nscroll + line];
+                    self.box.removeChild(child);
+                }
+            },
+            // mod: function () {}
+        }
+
+        for (var i = 0; i < al.length; i++) {
+            var entry = al[i];
+            // if (entry[0] != 'mod') {
+            //     self.terminal.log('test', entry);
+            // }
+            actions[entry[0]].apply(self, entry.slice(1));
+        }
+
         for (var i = 0; i < n_displayed; i++) {
             if (scr.modified[i] || force) {
                 var line = scr.get_line(i);
-                var cont = self.contents[i];
+                var cont = self.box.childNodes[self.nscroll + i] // self.contents[i];
+                $(cont).show();
                 if (cont.hasChildNodes()) {
                     cont.replaceChild(line, cont.childNodes[0]);
                 }
@@ -905,8 +1006,10 @@ function ScreenDisplay(terminal, screen, settings) {
                 changes = true;
             }
         }
+
         for (var i = n_displayed; i < scr.nlines; i++) {
-            $(self.contents[i]).empty();
+            var cont = self.box.childNodes[self.nscroll + i] // self.contents[i];
+            $(cont).hide();
         }
 
         if (!changes && !force) {
@@ -922,70 +1025,63 @@ function ScreenDisplay(terminal, screen, settings) {
             if (idx != -1) {
                 lost.splice(idx, 1);
             }
-            self.add_scroll(scrollback[i][1], nest);
+            // self.add_scroll(scrollback[i][1], nest);
         }
         self.lost_nests = self.lost_nests.concat(lost);
 
         return true;
-        // self.scroll_to_bottom();
-    }
-
-    self.rotate_scrollback = function () {
-        self.scrollbacks.children().first().remove();
-        self.lost_nests = self.lost_nests.concat(self.nests.shift());
-        var new_div = document.createElement('div');
-        self.scrollbacks.append(new_div);
-        self.nests.push([]);
     }
 
     self.clear_scrollback = function() {
-        self.scrollbacks.empty();
-        for (var i = 0; i < self.n_scrolls; i++) {
-            var new_div = document.createElement('div');
-            self.scrollbacks.append(new_div);
-            if (self.nests[i]) {
-                self.lost_nests = self.lost_nests.concat(self.nests[i]);
-            }
-            self.nests[i] = [];
+        for (var i = 0; i < self.nscroll; i++) {
+            self.box.removeChild(self.box.firstChild);
         }
+        self.nscroll = 0;
     }
 
     self.add_scroll = function(x, nest) {
         if (nest != null) {
-            self.nests[self.n_scrolls - 1].push(nest);
+            self.nests.push(nest);
         }
-        var add_to = self.scrollbacks.children().last();
-        add_to.append(x);
-        var len = add_to.children().length;
-        if (len == self.scroll_chunk) {
-            self.rotate_scrollback();
+        var idx = self.nscroll; // children.length - self.nlines;
+        var children = self.box.childNodes;
+        self.box.insertBefore(x, children[idx]);
+        if (idx >= settings.scrollback) {
+            self.box.removeChild(self.box.firstChild);
+        }
+        else {
+            self.nscroll += 1;
         }
     }
 
     self.resize = function (nlines, ncols) {
 
-        self.nlines = nlines;
-        self.ncols = ncols;
+        // for (var i = 0; i < self.nlines; i++) {
+        //     self.box.removeChild(self.box.lastChild);
+        // }
 
-        var contents = [];
-        var container = self.container;
-        $(container).empty();
-        for (var i = 0; i < self.nlines; i++) {
-            var new_div = document.createElement('div');
-            contents.push(new_div);
-            container.appendChild(new_div);
-        }
+        // self.nlines = nlines;
+        // self.ncols = ncols;
 
-        // Pad the bottom so that the first line is flush with the top of
-        // the screen when we're scrolled down completely.
-        var diff = (self.terminal.center_outer.height()
-                    - (self.screen.nlines * self.terminal.char_height));
-        // diff - 4 is a bit arbitrary, but it works well for me in
-        // Chrome. I don't know about others.
-        $(container).css('margin-bottom', (diff - 4) + 'px');
+        // var contents = [];
+        // var container = self.box;
+        // for (var i = 0; i < self.nlines; i++) {
+        //     var new_div = document.createElement('div');
+        //     contents.push(new_div);
+        //     container.appendChild(new_div);
+        // }
 
-        self.contents = contents;
-        self.invalid = true;
+
+        // // Pad the bottom so that the first line is flush with the top of
+        // // the screen when we're scrolled down completely.
+        // var diff = (self.terminal.center_outer.height()
+        //             - (self.screen.nlines * self.terminal.char_height));
+        // // diff - 4 is a bit arbitrary, but it works well for me in
+        // // Chrome. I don't know about others.
+        // $(self.box).css('margin-bottom', (diff - 4) + 'px');
+
+        // self.contents = contents;
+        // self.invalid = true;
     }
 
     self.init = function (terminal, screen, settings) {
@@ -999,27 +1095,14 @@ function ScreenDisplay(terminal, screen, settings) {
         // SCROLLBACK
 
         if (!settings.scrollback) { settings.scrollback = 0; }
-        self.scroll_chunk = settings.scroll_chunk || 100;
-        self.n_scrolls = Math.ceil(settings.scrollback / self.scroll_chunk);
-
-        var scrollbacks = document.createElement('div');
-        scrollbacks.setAttribute('id', 'scrollbacks');
-        self.scrollbacks = $(scrollbacks);
-        self.add_thing(scrollbacks);
+        self.nscroll = 0;
 
         self.nests = [];
         self.lost_nests = [];
 
-        self.clear_scrollback();
-
         // CONTENTS (populated by resize, resize called elsewhere)
-        
-        var container = document.createElement('div');
-        container.setAttribute('id', 'contents');
-        self.container = container;
-        self.add_thing(container);
 
-        self.resize(self.screen.nlines, self.screen.ncols);
+        // self.resize(self.screen.nlines, self.screen.ncols);
     }
 
     self.init(terminal, screen, settings);
@@ -1059,9 +1142,20 @@ function Terminus(div, settings) {
         if (settings.nlines_max) { nlines = Math.min(nlines, settings.nlines_max); }
         if (settings.ncols_max) { ncols = Math.min(ncols, settings.ncols_max); }
 
+        // Pad the bottom so that the first line is flush with the top of
+        // the screen when we're scrolled down completely.
+        var diff = (self.center_outer.height()
+                    - (self.nlines * self.char_height));
+        if (self.screens) {
+            for (var i = 0; i < self.screens.length; i++) {
+                $(self.screends[i].box).css('margin-bottom', (diff + settings.fiddle) + 'px');
+            }
+        }
+
         if (nlines == self.nlines && ncols == self.ncols) {
             return;
         }
+        self.log('test', 'changement');
 
         self.nlines = nlines;
         self.ncols = ncols;
@@ -1069,7 +1163,6 @@ function Terminus(div, settings) {
         if (self.screens) {
             for (var i = 0; i < self.screens.length; i++) {
                 self.screens[i].resize(self.nlines, self.ncols);
-                self.screends[i].resize(self.nlines, self.ncols);
             }
         }
 
@@ -1291,17 +1384,13 @@ function Terminus(div, settings) {
     }
 
     self.use_screen = function(n) {
+        if (self.screend) {
+            $(self.screend.box).hide();
+        }
         self.screen = self.screens[n];
         var new_screend = self.screends[n];
-        var target = self.center[0];
-        if (self.screend !== undefined) {
-            target.replaceChild(new_screend.box,
-                                self.screend.box);
-        }
-        else {
-            target.appendChild(new_screend.box);
-        }
         self.screend = new_screend;
+        $(self.screend.box).show();
         self.display(true);
     }
 
@@ -1472,7 +1561,10 @@ function Terminus(div, settings) {
             var sgr = $.extend(true, {}, self.settings.sgr, settings.screens[i].sgr || {});
             var screen = Screen(self, sgr);
             self.screens.push(screen);
-            self.screends.push(ScreenDisplay(self, screen, settings.screens[i]));
+            var screend = ScreenDisplay(self, screen, settings.screens[i]);
+            self.screends.push(screend);
+            self.center.append(screend.box);
+            $(screend.box).hide();
         }
         self.use_screen(0);
 
@@ -1503,9 +1595,15 @@ function Terminus(div, settings) {
             self.adjust_size();
         }, 100)
 
-        setInterval(function () {
+        // setInterval(function () {
+        //     self.display();
+        // }, 100)
+
+        var df = function () {
             self.display();
-        }, 100)
+            setTimeout(df, 100);
+        }
+        df();
 
         setInterval(function () {
             $('.cursor').each (function () {

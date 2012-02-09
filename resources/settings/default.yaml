@@ -20,21 +20,23 @@ ncols_max: 1000
 nlines_sub: 0
 ncols_sub: 0
 
+# An adjustment to the padding of the terminal when its height is not
+# a multiple of the character height.
+fiddle: -2
+
 
 ## BUFFERS
 
 # The terminal normally comes with two buffers (two screens). Each has
-# its own scrollback. The number of lines can be customized, and they
-# will be grouped in blocks of size scroll_chunk. If cut_bottom is
-# true for a given screen, blank lines at the bottom will not be
-# displayed.
+# its own scrollback. The number of lines can be customized. If
+# cut_bottom is true for a given screen, blank lines at the bottom
+# will not be displayed.
 
 screens:
 
   # 0
   # Main screen (default)
   - scrollback: 1000
-    scroll_chunk: 100
     cut_bottom: false
     # You can customize colors for a particular screen by adding
     # something like this (this makes black red):
@@ -46,7 +48,6 @@ screens:
   # The alternate screen, used by most full-screen applications like
   # emacs, vi, screen, etc. has no scrollback.
   - scrollback: 0
-    scroll_chunk: 100
     cut_bottom: false
 
   # You can add more screens if it suits your fancy, but right now
