@@ -142,6 +142,7 @@ log:
   #   exec: show the key bindings from the bindings list that are executed
   #   keydown: show the keycodes produced as you type (useful if you want
   #         to know how to bind some key combination).
+  #   resize: when the terminal is resized
   # Note: you can define a list of things to log.
   what:
     - error
@@ -152,6 +153,7 @@ log:
     # - nest
     # - exec
     # - keydown
+    - resize
 
   # Prefix to all logged things (useful to determine source if there
   # are nested terminals).
