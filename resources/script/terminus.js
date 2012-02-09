@@ -412,8 +412,8 @@ function Screen(term, settings) {
     self.compute_style = function(properties) {
         var style = settings.base_style;
         var bold = false;
-        var color = 7;
-        var bgcolor = 0;
+        var color = settings.default_fg;
+        var bgcolor = settings.default_bg;
         var reverse = false;
         var cursor = false;
         var blink = false;
@@ -450,9 +450,12 @@ function Screen(term, settings) {
             style += "color:" + settings.colors[bgcolor] + ";";
         }
         else {
-            style += "background-color:" + settings.colors[bgcolor] + ";";
+            if (bgcolor != -1) {
+                style += "background-color:" + settings.colors[bgcolor] + ";";
+            }
             style += "color:" + settings.colors[color] + ";";
         }
+        style += "opacity:" + settings.opacity;
         var cls;
         if (cursor && self.cursor_visible)
             cls = "cursor";
@@ -529,7 +532,7 @@ function Screen(term, settings) {
                     self.modified[line] = true;
                     self.lines[line] = node;
                     $(node).show();
-                    self.term.display(true);
+                    self.term.display();
                     return;
                 }
             }
@@ -539,7 +542,7 @@ function Screen(term, settings) {
             $(node2).empty();
             $(node2).append(node);
             $(node).show();
-            self.term.display(true);
+            self.term.display();
         }, timeout);
     }
 
@@ -706,13 +709,11 @@ function Screen(term, settings) {
         if (end < start)
             end = start;
 
-        self.matrix = self.push_to_end(self.matrix, start, end);
-        self.lines = self.push_to_end(self.lines, start, end);
-        self.ext = self.push_to_end(self.ext, start, end);
-        self.nest = self.push_to_end(self.nest, start, end);
-        self.dirty = self.push_to_end(self.dirty, start, end);
-        self.heights = self.push_to_end(self.heights, start, end);
-        self.modified = self.push_to_end(self.modified, start, end);
+        var fields = 'matrix lines ext nest dirty heights modified'.split(' ')
+        for (var i in fields) {
+            var field = fields[i];
+            self[field] = self.push_to_end(self[field], start, end);
+        }
         self.all_modified(self.scroll1, self.nlines);
 
         self.log_action('ins', line, n)
@@ -732,13 +733,11 @@ function Screen(term, settings) {
         if (end > self.scroll1)
             end = self.scroll1;
 
-        self.matrix = self.push_to_end(self.matrix, start, end);
-        self.lines = self.push_to_end(self.lines, start, end);
-        self.ext = self.push_to_end(self.ext, start, end);
-        self.nest = self.push_to_end(self.nest, start, end);
-        self.dirty = self.push_to_end(self.dirty, start, end);
-        self.heights = self.push_to_end(self.heights, start, end);
-        self.modified = self.push_to_end(self.modified, start, end);
+        var fields = 'matrix lines ext nest dirty heights modified'.split(' ')
+        for (var i in fields) {
+            var field = fields[i];
+            self[field] = self.push_to_end(self[field], start, end);
+        }
         self.all_modified(self.scroll1, self.nlines);
 
         self.log_action('ins', self.nlines, n)
@@ -839,6 +838,7 @@ function Screen(term, settings) {
 
         self.text_properties = self.no_text_properties();
         self.default_character = "&nbsp;";
+        // The following is useful for debug:
         // self.default_character = ".";
 
         self.nlines = 0;
@@ -861,13 +861,9 @@ function ScreenDisplay(terminal, screen, settings) {
 
     var self = obj();
 
-    self.display = function(force) {
+    self.display = function() {
         var scr = self.screen;
 
-        if (self.invalid) {
-            force = true;
-            self.invalid = false;
-        }
         var changes = false;
 
         var n_displayed;
@@ -928,7 +924,7 @@ function ScreenDisplay(terminal, screen, settings) {
         }
 
         for (var i = 0; i < n_displayed; i++) {
-            if (scr.modified[i] || force) {
+            if (scr.modified[i]) { // || force) {
                 var line = scr.get_line(i);
                 var cont = self.box.childNodes[self.nscroll + i]
                 $(cont).show();
@@ -948,7 +944,7 @@ function ScreenDisplay(terminal, screen, settings) {
             $(cont).hide();
         }
 
-        if (!changes && !force) {
+        if (!changes) { // && !force) {
             return false;
         }
         var scrollback = scr.scrollback;
@@ -1256,8 +1252,8 @@ function Terminus(div, settings) {
 
     // DISPLAY
 
-    self.display = function(force) {
-        if (self.screend.display(force)) {
+    self.display = function() {
+        if (self.screend.display()) {
             self.scroll_to_bottom();
         }
         var lost = self.screend.lost_nests;
@@ -1275,7 +1271,7 @@ function Terminus(div, settings) {
         var new_screend = self.screends[n];
         self.screend = new_screend;
         $(self.screend.box).show();
-        self.display(true);
+        self.display();
     }
 
     // WRITING
@@ -1286,6 +1282,7 @@ function Terminus(div, settings) {
             self.to_write = "";
             self.write_string(tow);
         }
+        self.display();
     }
 
     self.write_string = function(data) {
@@ -1314,7 +1311,6 @@ function Terminus(div, settings) {
                        if (data != "") {
                            self.to_write += data;
                            self.write_all();
-                           self.display();
                        }
                        self.get_data();
                    })
@@ -1483,11 +1479,11 @@ function Terminus(div, settings) {
         //     self.display();
         // }, 100)
 
-        var df = function () {
-            self.display();
-            setTimeout(df, 100);
-        }
-        df();
+        // var df = function () {
+        //     self.display();
+        //     setTimeout(df, 100);
+        // }
+        // df();
 
         setInterval(function () {
             $('.cursor').each (function () {

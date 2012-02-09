@@ -84,6 +84,16 @@ sgr:
   # Style for bold or bright characters
   bold_style: "font-weight: bold;"
 
+  # Style for default foreground
+  default_fg: 7
+
+  # Style for default background
+  # -1 to have no background at all
+  default_bg: -1
+
+  # Opacity of the characters (0.0 - 1.0)
+  opacity: 1.0
+
   # Styles to give spans that are given certain modes
   styles:
     3: "font-style: italic;"
@@ -212,6 +222,11 @@ bindings:
 
     # If it is k we will kill the line
     k: ~~K
+
+    # If it is y we will paste what we killed
+    # IMPORTANT: y and n are interpreted as true and false
+    # respectively, so put quotes around them.
+    "y": ~~Y
 
     # _eat: true means that if a key is not recognized, its effect
     # will not happen, but we will revert to the top level bindings
@@ -375,7 +390,7 @@ bindings:
     k: ~~K
     l: ~~L
     m: ~~M
-    n: ~~N
+    "n": ~~N
     o: ~~O
     p: ~~P
     q: ~~Q
@@ -383,9 +398,10 @@ bindings:
     s: ~~S
     t: ~~T
     u: ~~U
+    v: ~~V
     w: ~~W
     x: ~~X
-    y: ~~Y
+    "y": ~~Y
     z: ~~Z
 
   # ALT+<KEY>
