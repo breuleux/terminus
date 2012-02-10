@@ -323,7 +323,7 @@ function Screen(term, settings) {
                 delete self.dirty[i];
                 delete self.modified[i];
                 delete self.ext[i];
-                if (self.nest[i] != null) {
+                if (self.nest[i] !== null && self.nest[i] !== undefined) {
                     self.lost_nests.push(self.nest[i]);
                 }
                 delete self.nest[i];
@@ -492,8 +492,9 @@ function Screen(term, settings) {
         self.modified[line] = true;
         if (!keep_ext) {
             self.ext[line] = false;
-            if (self.nest[line] != null) {
-                self.lost_nests.push(self.nest[line]);
+            if (self.nest[line] !== null) {
+                if (self.nest[line] !== undefined)
+                    self.lost_nests.push(self.nest[line]);
                 self.nest[line] = null;
             }
         }
@@ -594,8 +595,8 @@ function Screen(term, settings) {
         // var div = makediv();
         var line = self.get_line(i);
         // div.appendChild(self.lines[i]);
-        self.scrollback.push([self.nest[i], line]);
-        self.log_action('scroll', self.modified[i], line);
+        // self.scrollback.push([self.nest[i], line]);
+        self.log_action('scroll', self.modified[i], self.nest[i], line);
     }
 
     // KILL
@@ -877,14 +878,24 @@ function ScreenDisplay(terminal, screen, settings) {
                                                scr.bottom_virgins())));
         }
 
+        var lost = scr.lost_nests;
+        // self.terminal.log('test', lost.length);
+        scr.lost_nests = [];
+
         var al = scr.action_log;
         scr.action_log = [];
 
         var actions = {
-            scroll: function (modified, value) {
+            scroll: function (modified, nest, value) {
                 var child = self.box.childNodes[self.nscroll];
+                self.nests[self.nscroll] = nest;
+                var idx = lost.indexOf(nest);
+                if (idx != -1) {
+                    lost.splice(idx, 1);
+                }
                 if (self.nscroll >= settings.scrollback) {
                     self.box.removeChild(self.box.firstChild);
+                    lost.push(self.nests.shift());
                 }
                 else {
                     self.nscroll = self.nscroll + 1;
@@ -894,26 +905,32 @@ function ScreenDisplay(terminal, screen, settings) {
                     child.appendChild(value);
                 }
                 var div = makediv();
-                $(div).text('-- SHOULD NOT BE HERE (from scroll) --')
+                $(div).text('-- SHOULD NOT BE HERE (from scroll) --');
+                self.nests.splice(self.nscroll, 0, null);
                 self.box.insertBefore(div, child.nextSibling);
             },
             ins: function (line, n) {
-                var elem = self.box.childNodes[self.nscroll + line];
+                var idx = self.nscroll + line;
+                var elem = self.box.childNodes[idx];
                 for (var j = 0; j < n; j++) {
                     var div = makediv();
                     $(div).text('-- SHOULD NOT BE HERE (from insert) --')
                     if (elem === undefined) {
                         self.box.appendChild(div);
+                        self.nests.push(null)
                     }
                     else {
                         self.box.insertBefore(div, elem);
+                        self.nests.splice(idx, 0, null);
                     }
                 }
             },
             rm: function (line, n) {
                 for (var j = 0; j < n; j++) {
-                    var child = self.box.childNodes[self.nscroll + line];
+                    var idx = self.nscroll + line;
+                    var child = self.box.childNodes[idx];
                     self.box.removeChild(child);
+                    self.nests.splice(idx, 1);
                 }
             },
         }
@@ -925,8 +942,9 @@ function ScreenDisplay(terminal, screen, settings) {
 
         for (var i = 0; i < n_displayed; i++) {
             if (scr.modified[i]) { // || force) {
+                var idx = self.nscroll + i;
                 var line = scr.get_line(i);
-                var cont = self.box.childNodes[self.nscroll + i]
+                var cont = self.box.childNodes[idx]
                 $(cont).show();
                 if (cont.hasChildNodes()) {
                     cont.replaceChild(line, cont.childNodes[0]);
@@ -935,6 +953,7 @@ function ScreenDisplay(terminal, screen, settings) {
                     cont.appendChild(line);
                 }
                 scr.modified[i] = false;
+                self.nests[idx] = scr.nest[i];
                 changes = true;
             }
         }
@@ -944,21 +963,24 @@ function ScreenDisplay(terminal, screen, settings) {
             $(cont).hide();
         }
 
+        self.lost_nests = self.lost_nests.concat(lost);
+
         if (!changes) { // && !force) {
             return false;
         }
-        var scrollback = scr.scrollback;
-        var lost = scr.lost_nests;
-        scr.lost_nests = [];
-        scr.scrollback = [];
-        for (var i = 0; i < scrollback.length; i++) {
-            var nest = scrollback[i][0];
-            var idx = lost.indexOf(nest);
-            if (idx != -1) {
-                lost.splice(idx, 1);
-            }
-        }
-        self.lost_nests = self.lost_nests.concat(lost);
+
+        // var scrollback = scr.scrollback;
+        // var lost = scr.lost_nests;
+        // scr.lost_nests = [];
+        // scr.scrollback = [];
+        // for (var i = 0; i < scrollback.length; i++) {
+        //     var nest = scrollback[i][0];
+        //     var idx = lost.indexOf(nest);
+        //     if (idx != -1) {
+        //         lost.splice(idx, 1);
+        //     }
+        // }
+        // self.lost_nests = self.lost_nests.concat(lost);
 
         return true;
     }
@@ -966,6 +988,10 @@ function ScreenDisplay(terminal, screen, settings) {
     self.clear_scrollback = function() {
         for (var i = 0; i < self.nscroll; i++) {
             self.box.removeChild(self.box.firstChild);
+            var nest = self.nests.shift();
+            if (nest !== null) {
+                self.lost_nests.push(nest);
+            }
         }
         self.nscroll = 0;
     }
@@ -1137,7 +1163,7 @@ function Terminus(div, settings) {
             self.to_write += sub_element;
         }
         else {
-            self.screen.write_html_line(sub_element);
+            self.screen.write_html_line(sub_element, null);
             self.screen.move_to(self.screen.line, self.ncols);
         }
     }
@@ -1679,6 +1705,7 @@ function Terminus(div, settings) {
 
             clear_scrollback: function () {
                 self.screend.clear_scrollback();
+                self.display();
                 return true;
             },
 

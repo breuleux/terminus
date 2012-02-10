@@ -160,7 +160,7 @@ log:
     - esc_unknown
     - test
     - info
-    # - nest
+    - nest
     # - exec
     # - keydown
     - resize
