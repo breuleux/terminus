@@ -323,10 +323,10 @@ function Screen(term, settings) {
                 delete self.dirty[i];
                 delete self.modified[i];
                 delete self.ext[i];
-                if (self.nest[i] !== null && self.nest[i] !== undefined) {
-                    self.lost_nests.push(self.nest[i]);
+                if (self.nests[i] !== null && self.nests[i] !== undefined) {
+                    self.lost_nests.push(self.nests[i]);
                 }
-                delete self.nest[i];
+                delete self.nests[i];
             }
             self.log_action('rm', nlines, self.nlines - nlines)
             if (self.line >= nlines) {
@@ -483,7 +483,7 @@ function Screen(term, settings) {
     // self.fresh_line = function(line) {
     //     self.modified[line] = true;
     //     self.ext[line] = false;
-    //     self.nest[line] = null;
+    //     self.nests[line] = null;
     //     self.dirty[line] = true;
     //     self.heights[line] = 1;
     // }
@@ -492,10 +492,10 @@ function Screen(term, settings) {
         self.modified[line] = true;
         if (!keep_ext) {
             self.ext[line] = false;
-            if (self.nest[line] !== null) {
-                if (self.nest[line] !== undefined)
-                    self.lost_nests.push(self.nest[line]);
-                self.nest[line] = null;
+            if (self.nests[line] !== null) {
+                if (self.nests[line] !== undefined)
+                    self.lost_nests.push(self.nests[line]);
+                self.nests[line] = null;
             }
         }
         self.dirty[line] = Math.max(self.dirty[line], column + 1);
@@ -522,8 +522,8 @@ function Screen(term, settings) {
                 console.log(ntries);
                 self.wait_for_height(node, node2, timeout + increment, increment, ntries - 1);
             }
-            var h = Math.ceil(nh / self.term.char_height);
-            // self.term.log('test', h + " " + node.height + " " + node.innerHeight);
+            var h = Math.ceil(nh / self.terminal.char_height);
+            // self.terminal.log('test', h + " " + node.height + " " + node.innerHeight);
             for (var line = self.nlines; line >= 0; line--) {
                 if (self.lines[line] === node2) {
                     // Search for the line the node was put on. This
@@ -533,7 +533,7 @@ function Screen(term, settings) {
                     self.modified[line] = true;
                     self.lines[line] = node;
                     $(node).show();
-                    self.term.display();
+                    self.terminal.display();
                     return;
                 }
             }
@@ -543,7 +543,7 @@ function Screen(term, settings) {
             $(node2).empty();
             $(node2).append(node);
             $(node).show();
-            self.term.display();
+            self.terminal.display();
         }, timeout);
     }
 
@@ -556,11 +556,11 @@ function Screen(term, settings) {
         self.lines[line] = node;
         self.modified[line] = true;
         self.ext[line] = true;
-        self.nest[line] = nest;
+        self.nests[line] = nest;
         self.dirty[line] = 1;
         var h = $(node).height();
         if (h != 0) {
-            self.heights[line] = Math.ceil(h / self.term.char_height);
+            self.heights[line] = Math.ceil(h / self.terminal.char_height);
         }
         else {
             var node2 = makediv();
@@ -595,8 +595,8 @@ function Screen(term, settings) {
         // var div = makediv();
         var line = self.get_line(i);
         // div.appendChild(self.lines[i]);
-        // self.scrollback.push([self.nest[i], line]);
-        self.log_action('scroll', self.modified[i], self.nest[i], line);
+        // self.scrollback.push([self.nests[i], line]);
+        self.log_action('scroll', self.modified[i], self.nests[i], line);
     }
 
     // KILL
@@ -710,7 +710,7 @@ function Screen(term, settings) {
         if (end < start)
             end = start;
 
-        var fields = 'matrix lines ext nest dirty heights modified'.split(' ')
+        var fields = 'matrix lines ext nests dirty heights modified'.split(' ')
         for (var i in fields) {
             var field = fields[i];
             self[field] = self.push_to_end(self[field], start, end);
@@ -734,7 +734,7 @@ function Screen(term, settings) {
         if (end > self.scroll1)
             end = self.scroll1;
 
-        var fields = 'matrix lines ext nest dirty heights modified'.split(' ')
+        var fields = 'matrix lines ext nests dirty heights modified'.split(' ')
         for (var i in fields) {
             var field = fields[i];
             self[field] = self.push_to_end(self[field], start, end);
@@ -803,11 +803,11 @@ function Screen(term, settings) {
         $(span).bind('paste', function (e) {
             save = $(this).html();
             text = $(this).text();
-            self.term.focus();
+            self.terminal.focus();
             setTimeout(function () {
                 var new_text = $(span).text();
                 var txt = Terminus.strdiff(text, new_text);
-                self.term.to_send += txt.replace(/\xa0/g, ' ');
+                self.terminal.to_send += txt.replace(/\xa0/g, ' ');
                 $(span).html(save);
                 save = "";
                 text = "";
@@ -822,7 +822,7 @@ function Screen(term, settings) {
         // INITIALIZE
         self.action_log = [];
         self.scrollback = [];
-        self.term = term;
+        self.terminal = term;
 
         var nlines = term.nlines;
         var ncols = term.ncols;
@@ -831,7 +831,7 @@ function Screen(term, settings) {
         self.lines = [];
         self.modified = [];
         self.ext = []
-        self.nest = [];
+        self.nests = [];
         self.dirty = [];
         self.heights = [];
 
@@ -953,7 +953,7 @@ function ScreenDisplay(terminal, screen, settings) {
                     cont.appendChild(line);
                 }
                 scr.modified[i] = false;
-                self.nests[idx] = scr.nest[i];
+                self.nests[idx] = scr.nests[i];
                 changes = true;
             }
         }
