@@ -89,7 +89,7 @@ function Logger(settings) {
 
         if (settings.animate) {
             self.target.hide();
-            setInterval(function () {
+            setTimeout(function () {
                 self.target.slideDown('fast');
             }, 10);
         }
@@ -480,14 +480,6 @@ function Screen(term, settings) {
 
     // WRITE
 
-    // self.fresh_line = function(line) {
-    //     self.modified[line] = true;
-    //     self.ext[line] = false;
-    //     self.nests[line] = null;
-    //     self.dirty[line] = true;
-    //     self.heights[line] = 1;
-    // }
-
     self.touch_line = function(line, column, keep_ext) {
         self.modified[line] = true;
         if (!keep_ext) {
@@ -592,10 +584,7 @@ function Screen(term, settings) {
     }
 
     self.send_line_to_scroll = function(i) {
-        // var div = makediv();
         var line = self.get_line(i);
-        // div.appendChild(self.lines[i]);
-        // self.scrollback.push([self.nests[i], line]);
         self.log_action('scroll', self.modified[i], self.nests[i], line);
     }
 
@@ -808,6 +797,7 @@ function Screen(term, settings) {
                 var new_text = $(span).text();
                 var txt = Terminus.strdiff(text, new_text);
                 self.terminal.to_send += txt.replace(/\xa0/g, ' ');
+                self.terminal.send();
                 $(span).html(save);
                 save = "";
                 text = "";
@@ -821,7 +811,6 @@ function Screen(term, settings) {
     self.init = function (term) {
         // INITIALIZE
         self.action_log = [];
-        self.scrollback = [];
         self.terminal = term;
 
         var nlines = term.nlines;
@@ -879,7 +868,6 @@ function ScreenDisplay(terminal, screen, settings) {
         }
 
         var lost = scr.lost_nests;
-        // self.terminal.log('test', lost.length);
         scr.lost_nests = [];
 
         var al = scr.action_log;
@@ -895,7 +883,9 @@ function ScreenDisplay(terminal, screen, settings) {
                 }
                 if (self.nscroll >= settings.scrollback) {
                     self.box.removeChild(self.box.firstChild);
-                    lost.push(self.nests.shift());
+                    var nest = self.nests.shift();
+                    if (nest !== null)
+                        lost.push(nest);
                 }
                 else {
                     self.nscroll = self.nscroll + 1;
@@ -941,7 +931,7 @@ function ScreenDisplay(terminal, screen, settings) {
         }
 
         for (var i = 0; i < n_displayed; i++) {
-            if (scr.modified[i]) { // || force) {
+            if (scr.modified[i]) {
                 var idx = self.nscroll + i;
                 var line = scr.get_line(i);
                 var cont = self.box.childNodes[idx]
@@ -959,28 +949,15 @@ function ScreenDisplay(terminal, screen, settings) {
         }
 
         for (var i = n_displayed; i < scr.nlines; i++) {
-            var cont = self.box.childNodes[self.nscroll + i] // self.contents[i];
+            var cont = self.box.childNodes[self.nscroll + i];
             $(cont).hide();
         }
 
         self.lost_nests = self.lost_nests.concat(lost);
 
-        if (!changes) { // && !force) {
+        if (!changes) {
             return false;
         }
-
-        // var scrollback = scr.scrollback;
-        // var lost = scr.lost_nests;
-        // scr.lost_nests = [];
-        // scr.scrollback = [];
-        // for (var i = 0; i < scrollback.length; i++) {
-        //     var nest = scrollback[i][0];
-        //     var idx = lost.indexOf(nest);
-        //     if (idx != -1) {
-        //         lost.splice(idx, 1);
-        //     }
-        // }
-        // self.lost_nests = self.lost_nests.concat(lost);
 
         return true;
     }
@@ -1143,6 +1120,9 @@ function Terminus(div, settings) {
         }
         child.demote = function () {
             delete self.children[id];
+        }
+        if (id == 1 || id == 2 || id == 4 || id == 5) {
+            setTimeout(self.adjust_size, 10);
         }
         return id;
     }
@@ -1499,7 +1479,7 @@ function Terminus(div, settings) {
 
         setInterval(function () {
             self.adjust_size();
-        }, 100)
+        }, 500)
 
         // setInterval(function () {
         //     self.display();
@@ -1518,19 +1498,29 @@ function Terminus(div, settings) {
                 var bgc = elem.css('background-color');
                 elem.css('color', bgc);
                 elem.css('background-color', c);
-            })}, 200)
+            })}, 500)
 
         self.get_data();
 
         self.to_write = "";
         self.to_send = "";
-        setInterval(function () {
+
+        self.send = function () {
             if (self.to_send != "") {
                 var to_send = self.to_send;
                 self.to_send = "";
                 $.post(settings.path+"/send", {data: to_send, magic: settings.magic});
             }
-        }, 10);
+        };
+
+        // setInterval(function () {
+        //     if (self.to_send != "") {
+        //         var to_send = self.to_send;
+        //         self.to_send = "";
+        //         $.post(settings.path+"/send", {data: to_send, magic: settings.magic});
+        //     }
+        // }, 10);
+
 
         // BINDINGS
 
@@ -1538,6 +1528,10 @@ function Terminus(div, settings) {
         //     e.preventDefault();
         //     e.stopPropagation();
         // });
+
+        $(window).bind('resize', function (e) {
+            setTimeout(self.adjust_size, 10);
+        });
 
         // $(document).bind('paste', function(e) {
         self.terminal.bind('paste', function(e) {
@@ -1549,6 +1543,7 @@ function Terminus(div, settings) {
                 // alert(text);
                 self.to_send += text;
                 self.textarea.focus();
+                self.send();
             }, 0);
         });
 
@@ -1858,6 +1853,7 @@ function Terminus(div, settings) {
                 e.stopPropagation();
                 e.preventDefault();
             }
+            self.send();
         };
 
         self.terminal.bind('keydown', self.keydown_fn);
@@ -1875,6 +1871,7 @@ function Terminus(div, settings) {
                     e.stopPropagation();
                     e.preventDefault();
                 }
+                self.send();
             }
         });
     }
