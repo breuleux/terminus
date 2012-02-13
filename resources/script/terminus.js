@@ -296,6 +296,10 @@ function DivNest(div) {
         }
     }
 
+    self.make_node = function (html) {
+        return $(html)[0];
+    }
+
     $.extend(self.actions, {
         // '+': function (command) {
         //     var child = Terminus.construct_nest(command);
@@ -303,7 +307,7 @@ function DivNest(div) {
         //     self.latest = id;
         // },
         ':': function (command) {
-            $(self.element).append(command.text);
+            $(self.element).append(command.text.trim());
         },
         '/': function (command) {
             var txt = command.text;
@@ -323,19 +327,44 @@ function DivNest(div) {
         },
         '~': function (command) {
             // TODO: verify that this always works
+            var txt = command.text;
+            var split = Terminus.split_one(command.text, " ");
+            var id = split[0];
+            var contents = split[1].trim();
+            var query = "#" + self.nestid + " " + id;
+
             setTimeout(function () {
-                var txt = command.text;
-                var pos = txt.indexOf(" ");
-                var id = txt.substring(0, pos);
-                var query = "#" + self.nestid + " " + id;
-                var to_replace = document.querySelector(query);
-                new_child = makenode('span');
-                new_child.innerHTML = command.text.substring(pos + 1);
-                to_replace.parentNode.replaceChild(
-                    new_child,
-                    to_replace);
+                var target = document.querySelector(query);
+                if (contents[0] == "<") {
+                    var new_child = self.make_node(contents);
+                    target.parentNode.replaceChild(
+                        new_child,
+                        target);
+                }
+                else {
+                    var split = Terminus.split_one(contents, "=");
+                    var attr = split[0].trim();
+                    var value = split[1].trim();
+                    target.setAttribute(attr, value);
+                }
             }, 0);
         }
+
+        // '~': function (command) {
+        //     // TODO: verify that this always works
+        //     setTimeout(function () {
+        //         var txt = command.text;
+        //         var pos = txt.indexOf(" ");
+        //         var id = txt.substring(0, pos);
+        //         var query = "#" + self.nestid + " " + id;
+        //         var to_replace = document.querySelector(query);
+        //         new_child = makenode('span');
+        //         new_child.innerHTML = command.text.substring(pos + 1);
+        //         to_replace.parentNode.replaceChild(
+        //             new_child,
+        //             to_replace);
+        //     }, 0);
+        // }
     })
 
     return self;
@@ -2810,6 +2839,10 @@ function SVGNest(div) {
                        pan: true,
                        zoom_speed: 1.5});
 
+    self.make_node = function (html) {
+        return $("<svg>" + html + "</svg>")[0].childNodes[0];
+    }
+
     $.extend(self.actions, {
         '+': function (command) {
             // TODO: +svg in svg -> <g> tag
@@ -2818,41 +2851,46 @@ function SVGNest(div) {
         ':': function (command) {
             $(self.element).append(command.text);
         },
-        '/': function (command) {
-            var txt = command.text;
-            var pos = txt.indexOf(" ");
-            var setting = txt.substring(0, pos);
-            if (setting == "style") {
-                var data = txt.substring(pos + 1);
-                var style = $("<svg><style>"
-                              + "#" + self.nestid + " " + data
-                              + "</style></svg>")[0].childNodes[0];
-                // var style = makenode('style');
-                // // The style will only apply under self div.
-                // style.innerHTML = "#" + self.nestid + " " + data;
-                // // It is not standards compliant to put <style>
-                // // tags outside <head>, but it is practical to do
-                // // so since the style will be removed if the nest
-                // // is deleted.
-                $(self.element).append(style);
-            }
-        },
-        '~': function (command) {
-            // TODO: verify that this always works
-            setTimeout(function () {
-                var txt = command.text;
-                var pos = txt.indexOf(" ");
-                var id = txt.substring(0, pos);
-                var query = "#" + self.nestid + " " + id;
-                var to_replace = document.querySelector(query);
-                // new_child = makenode('span');
-                // new_child.innerHTML = command.text.substring(pos + 1);
-                var new_child = $("<svg>" + command.text.substring(pos + 1) + "</svg>")[0].childNodes[0];
-                to_replace.parentNode.replaceChild(
-                    new_child,
-                    to_replace);
-            }, 0);
-        }
+        // '/': function (command) {
+        //     var txt = command.text;
+        //     var pos = txt.indexOf(" ");
+        //     var setting = txt.substring(0, pos);
+        //     if (setting == "style") {
+        //         var data = txt.substring(pos + 1);
+        //         var style = makenode('style');
+        //         // The style will only apply under self div.
+        //         style.innerHTML = "#" + self.nestid + " " + data;
+        //         // It is not standards compliant to put <style>
+        //         // tags outside <head>, but it is practical to do
+        //         // so since the style will be removed if the nest
+        //         // is deleted.
+        //         $(self.element).append(style);
+        //     }
+        // },
+        // '~': function (command) {
+        //     // TODO: verify that this always works
+        //     var txt = command.text;
+        //     var split = Terminus.split_one(command.text, " ");
+        //     var id = split[0];
+        //     var contents = split[1].trim();
+        //     var query = "#" + self.nestid + " " + id;
+
+        //     setTimeout(function () {
+        //         var target = document.querySelector(query);
+        //         if (contents[0] == "<") {
+        //             var new_child = self.make_node(contents);
+        //             target.parentNode.replaceChild(
+        //                 new_child,
+        //                 target);
+        //         }
+        //         else {
+        //             var split = Terminus.split_one(contents, "=");
+        //             var attr = split[0].trim();
+        //             var value = split[1].trim();
+        //             target.setAttribute(attr, value);
+        //         }
+        //     }, 0);
+        // }
     });
 
     // self.process = function(command) {
