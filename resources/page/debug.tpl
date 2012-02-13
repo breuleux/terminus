@@ -10,6 +10,7 @@
     <script type="text/javascript" src="/resources/script/mwheelIntent.js"></script>
     <script type="text/javascript" src="/resources/script/jquery.jscrollpane.js"></script>
     <script type="text/javascript" src="/resources/script/js-yaml.min.js"></script>
+    <script type="text/javascript" src="/resources/script/svg.js"></script>
     <script type="text/javascript" src="/resources/script/terminus.js"></script>
   </head>
 

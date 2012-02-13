@@ -136,19 +136,34 @@ function Nest(element) {
 
     self.n = 1;
     self.element = element;
+    self.nestid = 'nest-' + self.id.substring(1);
+    $(self.element).attr('id', self.nestid);
     self.children = {};
+    self.latest = null;
+    self.nest_type = null;
 
-    self.create = function() {
+    self.create = function(child) {
         while (self.children[self.n] !== undefined) {
             self.n++;
         }
-        self.set_child(self.n, EmptyNest());
+        self.set_child(self.n, child || EmptyNest());
+        self.latest = self.n;
         return self.n;
     }
 
     self.get_child = function(id, create) {
-        if (create && (self.children[id] === undefined)) {
-            id = self.set_child(id, EmptyNest());
+        if (id == 0) {
+            var child = self.get_latest();
+            if (child == null) {
+                id = self.create();
+            }
+            else {
+                return child;
+            }
+        }
+        else if (create && (self.children[id] == null)) {
+            self.set_child(id, EmptyNest());
+            self.latest = id;
         }
         return self.children[id];
     }
@@ -174,10 +189,46 @@ function Nest(element) {
         }
         var first = nest[0];
         var child = self.get_child(first, create);
-        if (child === undefined) {
+        if (child == null) {
             throw 'no_nest';
         }
         return child._find(nest.slice(1), create);
+    }
+
+    self.get_latest = function () {
+        if (self.latest == null) {
+            return null;
+        }
+        else {
+            return self.children[self.latest];
+        }
+    }
+
+    self.push_command = function(command) {
+        // self.terminal.log('test', 'ok...');
+        var latest = self.get_latest();
+        if (latest !== null
+            && latest.nest_type == command.nest_type
+            && command.action != '+') {
+            latest.process(command);
+        }
+        else if (self.nest_type == command.nest_type) {
+            try {
+                self.process(command);
+            }
+            catch(e) {
+                err = ('unknown action for nest type '
+                       + command.nest_type + ': '
+                       + command.action);
+                throw err;
+            }
+            return;
+        }
+        else {
+            var child = Terminus.construct_nest.call(self, command);
+            var id = self.create(child);
+            self.latest = id;
+        }
     }
 
     return self;
@@ -185,6 +236,7 @@ function Nest(element) {
 
 function DivNest(div) {
     var self = Nest(div);
+    self.nest_type = 'h';
 
     self.set_child = function(id, child) {
         var existing = self.children[id]
@@ -196,7 +248,7 @@ function DivNest(div) {
             existing.demote = undefined;
         }
         else {
-            self.element.appendChild(child.element)
+            self.element.appendChild(child.element);
         }
         self.children[id] = child;
         child.set = function (new_child) {
@@ -225,6 +277,52 @@ function DivNest(div) {
         else {
             $(self.element).append(sub_element);
         }
+    }
+
+    self.actions = {
+        '+': function (command) {
+            var child = Terminus.construct_nest(command);
+            var id = self.create(child);
+            self.latest = id;
+        },
+        ':': function (command) {
+            $(self.element).append(command.text);
+        },
+        '/': function (command) {
+            var txt = command.text;
+            var pos = txt.indexOf(" ");
+            var setting = txt.substring(0, pos);
+            if (setting == "style") {
+                var data = txt.substring(pos + 1);
+                var style = makenode('style');
+                // The style will only apply under self div.
+                style.innerHTML = "#" + self.nestid + " " + data;
+                // It is not standards compliant to put <style>
+                // tags outside <head>, but it is practical to do
+                // so since the style will be removed if the nest
+                // is deleted.
+                $(self.element).append(style);
+            }
+        },
+        '~': function (command) {
+            // TODO: verify that this always works
+            setTimeout(function () {
+                var txt = command.text;
+                var pos = txt.indexOf(" ");
+                var id = txt.substring(0, pos);
+                var query = "#" + self.nestid + " " + id;
+                var to_replace = document.querySelector(query);
+                new_child = makenode('span');
+                new_child.innerHTML = command.text.substring(pos + 1);
+                to_replace.parentNode.replaceChild(
+                    new_child,
+                    to_replace);
+            }, 0);
+        }
+    }
+
+    self.process = function(command) {
+        self.actions[command.action](command);
     }
 
     return self;
@@ -425,7 +523,7 @@ function Screen(term, settings) {
             else if (n == 22) bold = false;
             else if (n == 25) blink = false;
             else if (n == 27) reverse = false;
-            else if (n == 200) cursor = true;
+            else if (n == 200) cursor = self.cursor_visible;
             else if (n == 201) cursor = false;
             else if (n >= 30 && n <= 37) color = (n - 30);
             else if (n == 39) color = 7;
@@ -447,7 +545,12 @@ function Screen(term, settings) {
         }
         if (reverse || blink) {
             style += "background-color:" + settings.colors[color] + ";";
-            style += "color:" + settings.colors[bgcolor] + ";";
+            if (bgcolor != -1) {
+                style += "color:" + settings.colors[bgcolor] + ";";
+            }
+            else {
+                style += "color:" + settings.colors[0] + ";";
+            }
         }
         else {
             if (bgcolor != -1) {
@@ -457,7 +560,7 @@ function Screen(term, settings) {
         }
         style += "opacity:" + settings.opacity;
         var cls;
-        if (cursor && self.cursor_visible)
+        if (cursor)
             cls = "cursor";
         return [style, cls];
     }
@@ -753,6 +856,7 @@ function Screen(term, settings) {
         }
         self.cursor_here();
     }
+
 
     self.make_line = function(i) {
         var s = "";
@@ -1087,6 +1191,18 @@ function Terminus(div, settings) {
 
     // CHILDREN
 
+    self.get_latest = function () {
+        var nests = self.screen.nests;
+        // We are in the context of the cursor.
+        var thenest = nests[self.screen.line];
+        if (thenest === null) {
+            return null;
+        }
+        else {
+            return self.children[thenest];
+        }
+    }
+
     self.set_child = function(id, child) {
         var existing = self.children[id];
         var wrap;
@@ -1161,6 +1277,40 @@ function Terminus(div, settings) {
     }
 
     self.handlers = {
+
+        // push_stream: function (data, parameters) {
+        //     var nest = parameters.nest;
+        //     var latest = self
+
+        //     var target = self.find(nest.slice(0, nest.length), true);
+        //     var command = Terminus.parse_command(data);
+        //     self.log('test', command.action);
+        //     self.log('test', command.nest_type);
+        //     self.log('test', command.text);
+        //     try {
+        //         target.push_command(command);
+        //     }
+        //     catch(e) {
+        //         self.log('error', e);
+        //     }
+        // },
+
+        push: function (data, parameters) {
+            try {
+                // self.log('test', self.screen.line + " " + self.screen.nests + " " + self.screen.nests[self.screen.line]);
+                var nest = parameters.nest;
+                var target = self.find(nest, true);
+                var command = Terminus.parse_command(data);
+                // self.log('test', data + "/");
+                // self.log('test', command.action + "/");
+                // self.log('test', command.nest_type + "/");
+                // self.log('test', command.text + "/");
+                target.push_command(command);
+            }
+            catch(e) {
+                self.log('error', e);
+            }
+        },
 
         text_set: function (data, parameters) {
             if (!parameters.nest.length) {
@@ -1369,6 +1519,7 @@ function Terminus(div, settings) {
 
         // CHILDREN
 
+        self.n = 10;
         self.children_wrappers = {};
         self.child_protected = {};
 
@@ -2027,14 +2178,19 @@ Terminus.input_state_machine = {
         return ['', 'stdcode0'];
     },
 
+    esc_92: function () {
+        // ST = ESC \ - do nothing
+        return ['', 'init'];
+    },
+
     esc_93: function () {
-        // CSI = ESC ] - switch to seek_st
+        // OSC = ESC ] - switch to seek
         this.ext = {
             type: 'OSC',
             args: {},
             accum: ""
         }
-        return ['', 'seek_st0'];
+        return ['', 'seek0'];
     },
 
     //// STANDARD ESCAPE CODE ////
@@ -2081,36 +2237,41 @@ Terminus.input_state_machine = {
                 fallback: 'esc_unknown'};
     },
 
-    //// SEEK ST ////
-    // ST = ESC \
-    // Accumulate everything in ext.accum until ESC is found. Ideally,
-    // the sequence ends with ESC \, because otherwise we switch to
-    // the esc state in order to perform a command if appropriate.
-    // Also ends on BEL (\x07).
+    //// SEEK ////
+    // Accumulate everything in ext.accum until ext.delim is found.
+    // The sequence also ends with ESC (and executes the appropriate
+    // escape code if needed). ext.escape contains an escape
+    // character. Any character output right after it is copied
+    // verbatim in the accumulator.
 
-    seek_st0: function (c) {
+    seek0: function (c) {
         if (c == 27) {
             // ESC
-            return ['', 'seek_st1'];
+            return ['', 'seek1'];
         }
-        else if (c == 7) {
-            // BEL
+        else if (c == this.ext.delim) {
+            // DELIMITER
             this.handle_ext(this.ext);
             this.ext = undefined;
             return ['', 'init']
         }
+        else if (c == this.ext.escape) {
+            return ['', 'seekX'];
+        }
         this.ext.accum += String.fromCharCode(c);
-        return ['', 'seek_st0'];
+        return ['', 'seek0'];
     },
 
-    seek_st1: function (c) {
+    seekX: function (c) {
+        // This character was escaped, therefore it passes verbatim.
+        this.ext.accum += String.fromCharCode(c);
+        return ['', 'seek0'];
+    },
+
+    seek1: function (c) {
         this.handle_ext(this.ext);
         this.ext = undefined;
-        if (c != 92) {
-            // did not find a backslash
-            return 'esc';
-        }
-        return ['', 'init']
+        return 'esc';
     },
 
     //// EXEC ////
@@ -2224,6 +2385,7 @@ Terminus.state_machine = function(machine, initial_state, target) {
             }
             if (!count) {
                 self.log("error", "potentially infinite loop (state = " + self.state + ")");
+                return '';
             }
             count--;
         }
@@ -2366,6 +2528,78 @@ Terminus.csi = {
     s0: function (_) { this.screen.save_cursor(); },
     u0: function (_) { this.screen.restore_cursor(); },
 
+    "?y0": function (_) { }, // invalid (no-op)
+    "?y": function (n) {
+        var types = {
+            0: [['push', 'delim', 'escape', ';;', '*nest'],
+                false],
+
+            100: [['js', 'delim', 'escape', ';;', '*nest'],
+                  false],
+
+            200: [['create', '*nest'],
+                  true],
+            201: [['demote', '*nest'],
+                  true],
+            202: [['remove', '*nest'],
+                  true],
+            203: [['move', '*source', ';;', '*dest'],
+                  true],
+        };
+        var type = n[0];
+        if (types[type] === undefined) {
+            return;
+        }
+        var desc = types[type][0];
+        var now = types[type][1];
+        if (desc !== undefined) {
+            var data = {};
+            var j = 1;
+            var edge = function() {
+                return n[j] === undefined || isNaN(n[j]);
+            }
+            for (var i = 1; i < desc.length; i++) {
+                var propname = desc[i];
+                if (propname[0] == '*') {
+                    var value = [];
+                    while (!edge()) {
+                        value.push(n[j]);
+                        j++;
+                    }
+                    data[propname.substring(1)] = value;
+                }
+                else if (propname == ';;') {
+                    if (!edge()) {
+                        return;
+                    }
+                    j++;
+                }
+                else {
+                    if (!edge()) {
+                        var value = n[j]; // undefined if absent
+                        data[propname] = value;
+                        j++;
+                    }
+                }
+            }
+            if (now) {
+                this.handle_ext({type: desc[0],
+                                 args: data,
+                                 accum: ""});
+            }
+            else {
+                this.ext = {
+                    type: desc[0],
+                    args: data,
+                    accum: "",
+                    delim: data.delim === undefined ? 10 : data.delim,
+                    escape: data.escape === undefined ? 1 : data.escape
+                }
+                return 'seek0';
+            }
+        }
+    },
+
     "?z0": function (_) { }, // invalid (no-op)
     "?z": function (n) {
         var types = {
@@ -2436,9 +2670,11 @@ Terminus.csi = {
                 this.ext = {
                     type: desc[0],
                     args: data,
-                    accum: ""
+                    accum: "",
+                    delim: 7,
+                    escape: 1
                 }
-                return 'seek_st0';
+                return 'seek0';
             }
         }
     }
@@ -2464,4 +2700,134 @@ Terminus.strdiff = function (before, after) {
     return after.substring(i, i + ldiff);
 }
 
+Terminus.constructors = {
+    // DivNest (HTML)
+    'h': function (command) {
+        var div = makediv();
+        var nest = DivNest(div);
+        if (command.action == '+') {
+            div.innerHTML = command.text;
+        }
+        else {
+            nest.process(command);
+        }
+        return nest;
+    },
+
+    // Terminus
+    't': function (command) {
+    },
+
+    // TableNest
+    'tb': function (command) {
+    },
+
+    // PlotNest
+    'plot': function (command) {
+    },
+
+    // FileNest
+    'f': function (command) {
+    },
+
+    // ProgressBarNest
+    'progress': function (command) {
+    },
+
+    // SVGNest
+    'svg': function (command) {
+        var nest;
+        if (command.action == '+') {
+            // this.log('test', command.action);
+            // this.log('test', command.nest_type);
+            // this.log('test', Terminus.sanitize(command.text));
+            nest = SVGNest($(command.text)[0]);
+        }
+        else {
+            var div = makenode('svg');
+            nest = SVGNest(div);
+            nest.process(command);
+        }
+        return nest;
+    },
+}
+
+Terminus.split_one = function (text, c) {
+    var pos = text.indexOf(c);
+    return [text.substring(0, pos),
+            text.substring(pos + 1)];
+}
+
+Terminus.parse_command = function (text) {
+    var action = text[0];
+    text = text.slice(1);
+    var things = Terminus.split_one(text, " ");
+    var nest_type = things[0] || text.trim();
+    var contents = things[1] || "";
+    return {
+        action: action,
+        nest_type: nest_type,
+        text: contents
+    }
+}
+
+Terminus.construct_nest = function (command) {
+    var constructor = Terminus.constructors[command.nest_type];
+    return constructor.call(this, command);
+}
+
+
+
+
+
+function SVGNest(div) {
+    var self = DivNest(div);
+    self.nest_type = 'svg';
+    svg_interact(div, {zoom: true,
+                       pan: true,
+                       zoom_speed: 1.5});
+
+    self.actions = {
+        ':': function (command) {
+            $(self.element).append(command.text);
+        },
+        '/': function (command) {
+            var txt = command.text;
+            var pos = txt.indexOf(" ");
+            var setting = txt.substring(0, pos);
+            if (setting == "style") {
+                var data = txt.substring(pos + 1);
+                var style = makenode('style');
+                // The style will only apply under self div.
+                style.innerHTML = "#" + self.nestid + " " + data;
+                // It is not standards compliant to put <style>
+                // tags outside <head>, but it is practical to do
+                // so since the style will be removed if the nest
+                // is deleted.
+                $(self.element).append(style);
+            }
+        },
+        '~': function (command) {
+            // TODO: verify that this always works
+            setTimeout(function () {
+                var txt = command.text;
+                var pos = txt.indexOf(" ");
+                var id = txt.substring(0, pos);
+                var query = "#" + self.nestid + " " + id;
+                var to_replace = document.querySelector(query);
+                new_child = makenode('span');
+                new_child.innerHTML = command.text.substring(pos + 1);
+                to_replace.parentNode.replaceChild(
+                    new_child,
+                    to_replace);
+            }, 0);
+        }
+    }
+
+    self.process = function(command) {
+        self.actions[command.action](command);
+    }
+
+    return self;
+}
 
