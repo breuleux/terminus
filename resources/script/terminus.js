@@ -204,7 +204,19 @@ function Nest(element) {
         }
     }
 
-    self.push_command = function(command) {
+    self.actions = {
+        '+': function (command) {
+            var child = Terminus.construct_nest.call(self, command);
+            var id = self.create(child);
+            self.latest = id;
+        }
+    }
+
+    self.process = function(command) {
+        self.actions[command.action](command);
+    }
+
+    self.push_command = function(command, second_pass) {
         // self.terminal.log('test', 'ok...');
         var latest = self.get_latest();
         if (latest !== null
@@ -212,7 +224,8 @@ function Nest(element) {
             && command.action != '+') {
             latest.process(command);
         }
-        else if (self.nest_type == command.nest_type) {
+        else if (self.nest_type == command.nest_type
+                 || command.action == '+') {
             try {
                 self.process(command);
             }
@@ -224,10 +237,14 @@ function Nest(element) {
             }
             return;
         }
-        else {
-            var child = Terminus.construct_nest.call(self, command);
-            var id = self.create(child);
-            self.latest = id;
+        else if (!second_pass) {
+            self.process({action: '+',
+                          nest_type: command.nest_type,
+                          text: ""});
+            self.push_command(command, true);
+            // var child = Terminus.construct_nest.call(self, command);
+            // var id = self.create(child);
+            // self.latest = id;
         }
     }
 
@@ -279,12 +296,12 @@ function DivNest(div) {
         }
     }
 
-    self.actions = {
-        '+': function (command) {
-            var child = Terminus.construct_nest(command);
-            var id = self.create(child);
-            self.latest = id;
-        },
+    $.extend(self.actions, {
+        // '+': function (command) {
+        //     var child = Terminus.construct_nest(command);
+        //     var id = self.create(child);
+        //     self.latest = id;
+        // },
         ':': function (command) {
             $(self.element).append(command.text);
         },
@@ -319,11 +336,7 @@ function DivNest(div) {
                     to_replace);
             }, 0);
         }
-    }
-
-    self.process = function(command) {
-        self.actions[command.action](command);
-    }
+    })
 
     return self;
 }
@@ -1296,7 +1309,7 @@ function Terminus(div, settings) {
         // },
 
         push: function (data, parameters) {
-            try {
+            // try {
                 // self.log('test', self.screen.line + " " + self.screen.nests + " " + self.screen.nests[self.screen.line]);
                 var nest = parameters.nest;
                 var target = self.find(nest, true);
@@ -1306,10 +1319,11 @@ function Terminus(div, settings) {
                 // self.log('test', command.nest_type + "/");
                 // self.log('test', command.text + "/");
                 target.push_command(command);
-            }
-            catch(e) {
-                self.log('error', e);
-            }
+            // }
+            // catch(e) {
+            //     self.log('error', e);
+            //     throw e;
+            // }
         },
 
         text_set: function (data, parameters) {
@@ -2741,7 +2755,8 @@ Terminus.constructors = {
             // this.log('test', command.action);
             // this.log('test', command.nest_type);
             // this.log('test', Terminus.sanitize(command.text));
-            nest = SVGNest($(command.text)[0]);
+            nest = SVGNest($(command.text.trim()
+                             || "<svg></svg>")[0]);
         }
         else {
             var div = makenode('svg');
@@ -2754,6 +2769,9 @@ Terminus.constructors = {
 
 Terminus.split_one = function (text, c) {
     var pos = text.indexOf(c);
+    if (pos == -1) {
+        return [text, ''];
+    }
     return [text.substring(0, pos),
             text.substring(pos + 1)];
 }
@@ -2762,7 +2780,7 @@ Terminus.parse_command = function (text) {
     var action = text[0];
     text = text.slice(1);
     var things = Terminus.split_one(text, " ");
-    var nest_type = things[0] || text.trim();
+    var nest_type = (things[0] || text).trim();
     var contents = things[1] || "";
     return {
         action: action,
@@ -2773,7 +2791,12 @@ Terminus.parse_command = function (text) {
 
 Terminus.construct_nest = function (command) {
     var constructor = Terminus.constructors[command.nest_type];
-    return constructor.call(this, command);
+    if (constructor == null) {
+        throw "no constructor for '" + command.nest_type + "'.";
+    }
+    else {
+        return constructor.call(this, command);
+    }
 }
 
 
@@ -2787,7 +2810,11 @@ function SVGNest(div) {
                        pan: true,
                        zoom_speed: 1.5});
 
-    self.actions = {
+    $.extend(self.actions, {
+        '+': function (command) {
+            // TODO: +svg in svg -> <g> tag
+            // other nest types -> no effect
+        },
         ':': function (command) {
             $(self.element).append(command.text);
         },
@@ -2797,13 +2824,16 @@ function SVGNest(div) {
             var setting = txt.substring(0, pos);
             if (setting == "style") {
                 var data = txt.substring(pos + 1);
-                var style = makenode('style');
-                // The style will only apply under self div.
-                style.innerHTML = "#" + self.nestid + " " + data;
-                // It is not standards compliant to put <style>
-                // tags outside <head>, but it is practical to do
-                // so since the style will be removed if the nest
-                // is deleted.
+                var style = $("<svg><style>"
+                              + "#" + self.nestid + " " + data
+                              + "</style></svg>")[0].childNodes[0];
+                // var style = makenode('style');
+                // // The style will only apply under self div.
+                // style.innerHTML = "#" + self.nestid + " " + data;
+                // // It is not standards compliant to put <style>
+                // // tags outside <head>, but it is practical to do
+                // // so since the style will be removed if the nest
+                // // is deleted.
                 $(self.element).append(style);
             }
         },
@@ -2815,18 +2845,19 @@ function SVGNest(div) {
                 var id = txt.substring(0, pos);
                 var query = "#" + self.nestid + " " + id;
                 var to_replace = document.querySelector(query);
-                new_child = makenode('span');
-                new_child.innerHTML = command.text.substring(pos + 1);
+                // new_child = makenode('span');
+                // new_child.innerHTML = command.text.substring(pos + 1);
+                var new_child = $("<svg>" + command.text.substring(pos + 1) + "</svg>")[0].childNodes[0];
                 to_replace.parentNode.replaceChild(
                     new_child,
                     to_replace);
             }, 0);
         }
-    }
+    });
 
-    self.process = function(command) {
-        self.actions[command.action](command);
-    }
+    // self.process = function(command) {
+    //     self.actions[command.action](command);
+    // }
 
     return self;
 }
