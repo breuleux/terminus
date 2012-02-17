@@ -1,12 +1,9 @@
 
-================================================
 Terminus - the terminal's most natural extension
 ================================================
 
-.. _intro:
-
 What is Terminus?
-=================
+-----------------
 
 Terminus is a terminal emulator with special capabilities, namely the
 ability to print out inline HTML and let itself be manipulated by
@@ -21,7 +18,7 @@ machine you can SSH to, and send HTML to display from over there!
 
 
 Why Terminus?
-=============
+-------------
 
 One might wonder why exactly they would want to print inline HTML in a
 terminal, let alone manipulate it with JavaScript commands. I could
@@ -78,9 +75,9 @@ display options for terminals. Here are a few ideas:
   constrained to a tidy box which you can review later, and it does
   not get in your way!
 
-* Pipe to a file. ``cat`` the file. The HTML shows and the JavaScript
+* Pipe to a file. `cat` the file. The HTML shows and the JavaScript
   is executed all the same (note: there might be slight interference
-  if you ``cat`` more than once, because of DIV id clashes). This
+  if you `cat` more than once, because of DIV id clashes). This
   means you can easily save graphical output for later view.
 
 In any case, as mentioned before, Terminus is a full terminal emulator
@@ -91,17 +88,17 @@ you lose nothing :)
 
 Note that you can determine whether you are outputting to Terminus or
 to some other terminal, and whether you are outputting to a terminal
-or to a pipe - this is the kind of thing ``ls`` and other commands do
+or to a pipe - this is the kind of thing `ls` and other commands do
 to output something different interactively than in a command
 pipeline.
 
 Therefore, it is very possible to override standard commands such as
-``ls`` so that they display richly in Terminus, normally in other
+`ls` so that they display richly in Terminus, normally in other
 terminals, and plainly to a file or pipe.
 
 
 How it works
-============
+------------
 
 It's very simple: Terminus has the capability to print HTML and to
 execute JavaScript through special escape codes. An escape code is a
@@ -109,30 +106,32 @@ series of characters one can print to the terminal to tell it to do
 certain things, like move the cursor around or to a specific
 coordinate, or insert/remove lines, or set the text color, and so
 on. Many of these codes already exist. Most of them are of the form
-``\x1B[`` (also called the CSI character; the sequence of the ASCII
-characters 27 and 91), sometimes followed by a modifier (``?``, ``<``,
+`\x1B[` (also called the CSI character; the sequence of the ASCII
+characters 27 and 91), sometimes followed by a modifier (`?`, `<`,
 etc.), then followed by a semicolon-separated list of numbers, and
-finally ending with a letter. For instance, ``\x1B[3A`` moves the
-cursor up three rows and ``\x1B[1;3m`` sets the text to color
+finally ending with a letter. For instance, `\x1B[3A` moves the
+cursor up three rows and `\x1B[1;3m` sets the text to color
 bold/bright yellow.
 
 Terminus defines and recognizes special codes that greatly enhance the
 expressiveness of terminals.
 
-Let's see a quick example: to print out ``<b>Hello world</b>``, just
-print out ``\x1B[?0z<b>Hello world</b>\x1B\x5C`` to the console (you
-can use ``echo -e`` or the interactive shell for your favorite
-language). Let's break it down:
+Let's see a quick example: to print out `<b>Hello world</b>`, just
+print out `\x1B[?0y:h <b>Hello world</b>` to the console (you can use
+`echo -e` or the interactive shell for your favorite language). Let's
+break it down:
 
-1. ``\x1B[?0z`` is the *escape code*. The 0 corresponds to the
-   **set_html** feature. Other numbers trigger other features.
+1. `\x1B[?0y` is the *escape code*. The 0 corresponds to the
+   **command** feature. Other numbers trigger other features.
 
-2. ``<b>Hello world</b>`` is the HTML code we want to print out inline
+2. `:h` is the command. This one essentially means append (:) html
+   (h).
+
+3. `<b>Hello world</b>` is the HTML code we want to print out inline
    in the terminal.
 
-3. ``\x1B\x5C`` is the ESC character followed by a backslash. It
-   indicates the end of the HTML snippet, and tells Terminus to
-   display it.
+The command ends with the new line, though it is possible to give
+another delimiter.
 
 Most consoles will ignore the escape sequences (because they don't
 know what they mean) and just print the HTML code in plain text
@@ -141,24 +140,5 @@ on the other hand, will render the HTML.
 
 No special libraries required!
 
-For full documentation on the escape codes, see the :ref:`protocol`
-section.
-
-
-Contents
-========
-
-.. toctree::
-   :maxdepth: 3
-
-   protocol
-   future
-
-
-Indices and tables
-==================
-
-* :ref:`genindex`
-* :ref:`modindex`
-* :ref:`search`
-
+For full documentation on the escape codes, see the protocol
+documentation.

@@ -205,17 +205,15 @@ the request. For example, you might send `\x1B[?200z` and read back
   use one of the `set_X` commands to discard it afterwards.
 
 **Warning**: even though it might appear unnecessary to do so, it is
-  sometimes necessary to call `recreate` (see below) on the nest that
+  sometimes necessary to call `demote` (see below) on the nest that
   was reported back before using it. The reason why is that if you
   store the program's output into a file to print it back, the nests
   are hardcoded in the stream. Think about what happens if you print
   the file twice: the same nest will be reused, so you won't see the
   output twice, you'll see it once, and then it will be refreshed in
-  the same place.
-
-  In the future, a smart shell could solve the issue by creating a
-  fresh nest for every process and filtering the escape codes to make
-  sure that different processes don't share nests.
+  the same place. In the future, a smart shell could solve the issue
+  by creating a fresh nest for every process and filtering the escape
+  codes to make sure that different processes don't share nests.
 
 ### 201: demote
 
