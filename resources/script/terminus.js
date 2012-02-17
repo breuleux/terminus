@@ -1061,6 +1061,16 @@ function ScreenDisplay(terminal, screen, settings) {
                 if (idx != -1) {
                     lost.splice(idx, 1);
                 }
+                if (modified) {
+                    $(child).empty();
+                    child.appendChild(value);
+                }
+                var div = makediv();
+                $(div).text('-- SHOULD NOT BE HERE (from scroll) --');
+                self.nests.splice(self.nscroll + 1, 0, null);
+                self.box.insertBefore(div, child.nextSibling);
+
+                // Check if we scrolled past our target
                 if (self.nscroll >= settings.scrollback) {
                     self.box.removeChild(self.box.firstChild);
                     var nest = self.nests.shift();
@@ -1070,14 +1080,6 @@ function ScreenDisplay(terminal, screen, settings) {
                 else {
                     self.nscroll = self.nscroll + 1;
                 }
-                if (modified) {
-                    $(child).empty();
-                    child.appendChild(value);
-                }
-                var div = makediv();
-                $(div).text('-- SHOULD NOT BE HERE (from scroll) --');
-                self.nests.splice(self.nscroll, 0, null);
-                self.box.insertBefore(div, child.nextSibling);
             },
             ins: function (line, n) {
                 var idx = self.nscroll + line;
@@ -1832,6 +1834,21 @@ function Terminus(div, settings) {
             }
         }
 
+        self.app_keypad = function (suffix, kp_suffix) {
+            return function () {
+                if (self.app_key) {
+                    self.to_send += "\x1BO" + (kp_suffix || suffix);
+                }
+                else {
+                    self.to_send += "\x1B[" + suffix;
+                }
+            };
+        }
+
+        self.csi_command = function (suffix) {
+            return "\x1B[" + suffix;
+        }
+
         self.commands = {
             backspace: "\x7F",
             enter: "\x0D",
@@ -1840,30 +1857,30 @@ function Terminus(div, settings) {
             csi: "\x1B[",
             noop: "",
 
-            up: "\x1B[A",
-            down: "\x1B[B",
-            right:"\x1B[C",
-            left: "\x1B[D",
+            up: self.app_keypad("A"),
+            down: self.app_keypad("B"),
+            right: self.app_keypad("C"),
+            left: self.app_keypad("D"),
 
-            home: "\x1B[1~",
-            insert: "\x1B[2~",
-            "delete": "\x1B[3~",
-            end: "\x1B[4~",
-            pgup: "\x1B[5~",
-            pgdn: "\x1B[6~",
+            home: self.app_keypad("H"),
+            insert: self.csi_command("2~"),
+            "delete": self.csi_command("3~"),
+            end: self.app_keypad("F"),
+            pgup: self.csi_command("5~"),
+            pgdn: self.csi_command("6~"),
 
-            f1: "\x1B[[A",
-            f2: "\x1B[[B",
-            f3: "\x1B[[C",
-            f4: "\x1B[[D",
-            f5: "\x1B[[E",
-            f6: "\x1B[17~",
-            f7: "\x1B[18~",
-            f8: "\x1B[19~",
-            f9: "\x1B[20~",
-            f10: "\x1B[21~",
-            f11: "\x1B[23~",
-            f12: "\x1B[24~",
+            f1: "\x1BOP",
+            f2: "\x1BOQ",
+            f3: "\x1BOR",
+            f4: "\x1BOS",
+            f5: self.csi_command("15~"),
+            f6: self.csi_command("17~"),
+            f7: self.csi_command("18~"),
+            f8: self.csi_command("19~"),
+            f9: self.csi_command("20~"),
+            f10: self.csi_command("21~"),
+            f11: self.csi_command("23~"),
+            f12: self.csi_command("24~"),
 
             clear_up: function () {
                 self.remove_child(1);
@@ -2310,6 +2327,12 @@ Terminus.input_state_machine = {
 
     esc_61: function () { return 'esc_log'; }, // ESC =
     esc_62: function () { return 'esc_log'; }, // ESC >
+
+    esc_77: function () {
+        // RI = ESC M - reverse index, aka scrolling up one line
+        this.screen.insert_lines(0, 1);
+        return ['', 'init'];
+    },
 
     esc_91: function () {
         // CSI = ESC [ - switch to stdcode0 and wait for next character
