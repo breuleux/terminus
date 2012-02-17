@@ -1443,8 +1443,7 @@ function Terminus(div, settings) {
                 f.call(target);
             }
             catch(whatever) {
-                // self.write_all("JS ERROR -> " + whatever);
-                self.to_write += "JS ERROR -> " + whatever;
+                self.log('usererror', whatever);
             }
         },
 

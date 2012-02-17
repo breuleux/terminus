@@ -11,9 +11,9 @@ Install
 -------
 
 Terminus requires `node` to be installed. A bit annoyingly, the
-`setWindowSize` function, which allows resizing the pty, disappeared
-in node 0.6.0, so you'll have to install an older version for the time
-being. Here's exactly what to do:
+`tty.setWindowSize` function, which allows terminal resizing,
+disappeared in node 0.6.0, so you'll have to install an older version
+for the time being. Here's exactly what to do:
 
 ``` bash
 # install node
@@ -47,8 +47,9 @@ There's also a Python server but it's pretty bad compared to the node
 one (plus, I broke it). You can go back in time on the repo (Feb
 15-ish) if you want to try that.
 
-**IMPORTANT**: client/server communication is not encrypted at
-all. Only run Terminus locally, and don't run it on a shared machine!
+**IMPORTANT**: client/server communication is not encrypted at all
+(for the time being - integrating ssl should be easy enough). Only run
+Terminus locally, and don't run it on a shared machine!
 
 **IMPORTANT**: using escape codes, programs can do arbitrary
 javascript injection, and this includes simulating keyboard strokes
@@ -85,17 +86,28 @@ to style it, else it'll be black on black). Now try this:
 echo -e '\x1B[?0;;19y/h style b {color: red}'
 echo -e '\x1B[?0;;19y:h <b>Hello</b>'
 sleep 1
-echo -e '\x1B[?0;;19y:h <b>world!</b>'
+echo -e '\x1B[?0;;19y:h <b> world!</b>'
 ```
 
-The 19 is arbitrary: it's a "nest id" telling Terminus where to put
-stuff. The first command will create the div since it doesn't already
-exist and the second command will append to what was already
-created. The nests 1, 2, 4 and 5 are special: they represent top,
-left, right and bottom respectively.
+This will write "Hello world!" in red in the same cell. The 19 is
+arbitrary: it's a "nest id" telling Terminus where to put stuff. The
+first command will create the div since it doesn't already exist and
+the second command will append to what was already created. The nests
+1, 2, 4 and 5 are special: they represent top, left, right and bottom
+respectively.
+
+`:h` is the HTML writer. There is also `:svg`, which allows you to
+insert SVG, and automatically adds code to zoom and pan (note: doesn't
+work in Firefox). I will add `:plot` and `:table` soon.
+
+You can also execute some JavaScript:
+
+``` bash
+echo -e '\x1B[?100ythis.push_command({action: "+", nest_type: "h", text: "<b>hello</b>"})'
+```
 
 The Terminus server gives access to the filesystem in
-/f/path/from/root, so you can link to files or images on the
+`/f/path/from/root`, so you can link to files or images on the
 filesystem that way.
 
 So, you see, it's really easy. Since it works with escape codes on
@@ -110,16 +122,28 @@ is not my problem :)
 Documentation
 -------------
 
-There is more documentation in doc/, use ``make html`` (you'll need
-``sphinx``), or you can read as plain text if it suits your fancy.
+There is more documentation in doc/, use `make html` (you'll need
+`sphinx`), or you can read as plain text if it suits your fancy.
 
 Do note that the documentation is a bit of a design document
-sometimes, and some features it describes are not really implemented
-yet.
+sometimes, and some features it describes might not really be
+implemented yet.
 
 Configuration
 -------------
 
-See `server/server.yaml` and `resources/settings/default.yaml`. They
-are documented. If you change default.yaml you can just refresh the
-page to see the changes.
+See `server/server.yaml` and `resources/settings/default.yaml`. The
+options are extensive (including nearly total customization of key
+bindings), and documented. If you change default.yaml you can just
+refresh the page to see the changes.
+
+What needs to be fixed
+----------------------
+
+Terminus is still under heavy development. It is usable in its current
+state, but there are some cases where it'll hang up (just refresh if
+that happens, it won't lose your session). Many standard VT100 escape
+codes are not implemented yet (and some of them I'm not even sure what
+they do exactly). There are some graphical glitches appearing
+inconsistently from time to time.
+

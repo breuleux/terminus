@@ -143,6 +143,7 @@ log:
   #   off: log nothing
   #   all: log everything
   #   error: unexpected exceptions thrown during execution
+  #   usererror: errors thrown by javascript code given by the user
   #   esc: log escape codes
   #   esc_unknown: log unknown escape codes
   #   test: messages sent to logging during development, there should be
@@ -156,6 +157,7 @@ log:
   # Note: you can define a list of things to log.
   what:
     - error
+    - usererror
     # - esc
     - esc_unknown
     - test
