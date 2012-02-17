@@ -42,7 +42,7 @@ function TTY(command, actions) {
     return self;
 }
 
-function TTYHandler(settings, actions) {
+function TTYFactory(settings, actions) {
 
     var self = {};
 
@@ -150,7 +150,7 @@ function TerminusServer(settings) {
     var app = express.createServer();
     var io = sio.listen(app);
 
-    var handlers = {}
+    var factories = {}
 
     io.set('log level', 1);
     app.set("view options", {layout: false});
@@ -158,7 +158,7 @@ function TerminusServer(settings) {
 
     self.register_configuration = function (type, cfg) {
         cfg.type = type;
-        var handler = TTYHandler(cfg, {
+        var factory = TTYFactory(cfg, {
             data: function (data) {
                 if (this.socket) {
                     this.socket.emit('data', data.toString());
@@ -175,21 +175,21 @@ function TerminusServer(settings) {
             }
         });
 
-        handlers[type] = handler;
+        factories[type] = factory;
 
         app.get('/' + type, function (req, res) {
-            var id = handler.create();
+            var id = factory.create();
             res.redirect('/' + type + '/' + id);
         });
 
         app.get('/' + type + '/:id', function (req, res) {
             var id = req.params.id;
             console.log('Requesting: ' + type + "/" + id);
-            if (!handler[id]) {
-                handler.make(id);
+            if (!factory[id]) {
+                factory.make(id);
             }
             else {
-                handler.notimeout(id);
+                factory.notimeout(id);
             }
             var client_settings = cfg.settings;
             if (typeof(client_settings) != "string") {
@@ -234,25 +234,25 @@ function TerminusServer(settings) {
             console.log('connect to: ' + data.command + '/' + data.id);
             command = data.command;
             id = data.id;
-            handlers[command].set_socket(id, socket);
+            factories[command].set_socket(id, socket);
         });
 
         socket.on('setsize', function (data) {
             if (command != null) {
                 console.log(command + "#" + id + ' | setsize: ' + data.h + "x" + data.w);
-                handlers[command][id].set_window_size(data.h, data.w);
+                factories[command][id].set_window_size(data.h, data.w);
             }
         });
 
         socket.on('data', function (data) {
             if (command != null) {
-                handlers[command][id].send(data);
+                factories[command][id].send(data);
             }
         });
 
         socket.on('disconnect', function () {
             if (command != null) {
-                handlers[command].schedule_terminate(id);
+                factories[command].schedule_terminate(id);
             }
         });
     });

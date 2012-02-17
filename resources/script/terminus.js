@@ -126,6 +126,8 @@ function Logger(settings) {
         self.clear();
     }
 
+    self.init(settings);
+
     return self
 }
 

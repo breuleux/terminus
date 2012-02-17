@@ -36,6 +36,8 @@
             settings.id = "{{id}}";
             settings.magic = "{{magic}}";
             settings.path = "/" + settings.termtype + "/" + settings.id;
+            settings.server = "{{server}}";
+            settings.port = "{{port}}";
             term_div = $("#terminal");
             terminal = Terminus(term_div, settings);
             terminal.connect_socket_io();
