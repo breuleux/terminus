@@ -126,7 +126,6 @@ function Logger(settings) {
         self.clear();
     }
 
-    self.init(settings);
     return self
 }
 
@@ -287,6 +286,7 @@ function DivNest(div) {
     }
 
     self.append = function(sub_element) {
+        // DEPRECATED
         if (typeof sub_element == "string") {
             var div = $(makediv()).html(Terminus.sanitize(sub_element));
             $(self.element).append(div);
@@ -300,30 +300,48 @@ function DivNest(div) {
         return $(html)[0];
     }
 
+    self.opt_setters = {
+        'style': function (data) {
+            var style = makenode('style');
+            // The style will only apply under self div.
+            style.innerHTML = "#" + self.nestid + " " + data;
+            // It is not standards compliant to put <style>
+            // tags outside <head>, but it is practical to do
+            // so since the style will be removed if the nest
+            // is deleted.
+            $(self.element).append(style);
+        },
+        '_default': function(setting, data) {
+            // Nothing.
+        }
+    }
+
     $.extend(self.actions, {
-        // '+': function (command) {
-        //     var child = Terminus.construct_nest(command);
-        //     var id = self.create(child);
-        //     self.latest = id;
-        // },
         ':': function (command) {
-            $(self.element).append(command.text.trim());
+            $(self.element).append(self.make_node(command.text.trim()));
         },
         '/': function (command) {
-            var txt = command.text;
-            var pos = txt.indexOf(" ");
-            var setting = txt.substring(0, pos);
-            if (setting == "style") {
-                var data = txt.substring(pos + 1);
-                var style = makenode('style');
-                // The style will only apply under self div.
-                style.innerHTML = "#" + self.nestid + " " + data;
-                // It is not standards compliant to put <style>
-                // tags outside <head>, but it is practical to do
-                // so since the style will be removed if the nest
-                // is deleted.
-                $(self.element).append(style);
-            }
+            var split = Terminus.split_one(command.text, " ");
+            (self.opt_setters[split[0]]
+             || self.opt_setters._default)(split[1]);
+            // var txt = command.text;
+            // var pos = txt.indexOf(" ");
+            // var setting = txt.substring(0, pos);
+            // var data = txt.substring(pos + 1);
+            // if (setting == "style") {
+            //     var data = txt.substring(pos + 1);
+            //     var style = makenode('style');
+            //     // The style will only apply under self div.
+            //     style.innerHTML = "#" + self.nestid + " " + data;
+            //     // It is not standards compliant to put <style>
+            //     // tags outside <head>, but it is practical to do
+            //     // so since the style will be removed if the nest
+            //     // is deleted.
+            //     $(self.element).append(style);
+            // }
+            // else {
+            //     self.set_option();
+            // }
         },
         '~': function (command) {
             // TODO: verify that this always works
@@ -335,36 +353,48 @@ function DivNest(div) {
 
             setTimeout(function () {
                 var target = document.querySelector(query);
-                if (contents[0] == "<") {
-                    var new_child = self.make_node(contents);
+
+                if (contents == "") {
+                    // console.log(target);
+                    // console.log(target.parentNode);
+                    // target.parentNode.removeChild(target);
+                    $(target).remove();
+                }
+
+                else if (contents[0] == "=") {
+                    var new_child = self.make_node(contents.substring(1).trim());
                     target.parentNode.replaceChild(
                         new_child,
                         target);
                 }
+
+                else if (contents[0] == "<") {
+                    var new_child = self.make_node(contents);
+                    target.appendChild(new_child);
+                }
+
                 else {
                     var split = Terminus.split_one(contents, "=");
                     var attr = split[0].trim();
                     var value = split[1].trim();
                     target.setAttribute(attr, value);
                 }
+
+
+                // if (contents[0] == "<") {
+                //     var new_child = self.make_node(contents);
+                //     target.parentNode.replaceChild(
+                //         new_child,
+                //         target);
+                // }
+                // else {
+                //     var split = Terminus.split_one(contents, "=");
+                //     var attr = split[0].trim();
+                //     var value = split[1].trim();
+                //     target.setAttribute(attr, value);
+                // }
             }, 0);
         }
-
-        // '~': function (command) {
-        //     // TODO: verify that this always works
-        //     setTimeout(function () {
-        //         var txt = command.text;
-        //         var pos = txt.indexOf(" ");
-        //         var id = txt.substring(0, pos);
-        //         var query = "#" + self.nestid + " " + id;
-        //         var to_replace = document.querySelector(query);
-        //         new_child = makenode('span');
-        //         new_child.innerHTML = command.text.substring(pos + 1);
-        //         to_replace.parentNode.replaceChild(
-        //             new_child,
-        //             to_replace);
-        //     }, 0);
-        // }
     })
 
     return self;
@@ -668,7 +698,9 @@ function Screen(term, settings) {
                     // down.
                     self.heights[line] = h;
                     self.modified[line] = true;
-                    self.lines[line] = node;
+                    // self.lines[line] = node;
+                    $(self.lines[line]).empty()
+                    $(self.lines[line]).append(node)
                     $(node).show();
                     self.terminal.display();
                     return;
@@ -767,8 +799,8 @@ function Screen(term, settings) {
 
     self.kill_screen = function (n) {
         if (n == 0) {
-            self.kill_lines((self.line + 1) % self.nlines,
-                            self.reln(self.nlines));
+            self.kill_lines(Math.min((self.line + 1), self.nlines - 1),
+                            self.nlines);
             self.kill_line(0);
         }
         else if (n == 1){
@@ -1197,7 +1229,7 @@ function Terminus(div, settings) {
             }
         }
 
-        $.post(settings.path+'/setsize', {h: self.nlines, w: self.ncols, magic: settings.magic});
+        self.setsize(self.nlines, self.ncols);
     }
 
 
@@ -1297,6 +1329,7 @@ function Terminus(div, settings) {
     }
 
     self.append = function(sub_element) {
+        // DEPRECATED
         if (typeof sub_element == "string") {
             self.to_write += sub_element;
         }
@@ -1501,27 +1534,6 @@ function Terminus(div, settings) {
         }
     }
 
-    self.get_data = function () {
-        // setTimeout avoids the annoying "waiting..." message
-        // browsers display while the request hangs.
-        setTimeout(function () {
-            $.post(settings.path + "/get", {magic: settings.magic},
-                   function(data) {
-                       if (data != "") {
-                           self.to_write += data;
-                           self.write_all();
-                       }
-                       self.get_data();
-                   })
-                .error(function () {
-                    self.to_write += '\n\x1B[1;31mConnection to server terminated';
-                    self.to_write += ' because this session was opened elsewhere.';
-                    self.to_write += '\nRefresh to reclaim session.\x1B[0m';
-                    self.write_all();
-                })
-        }, 0)
-    }
-
     self.focus = function() {
         self.textarea.focus();
     }
@@ -1671,19 +1683,9 @@ function Terminus(div, settings) {
 
         // WORKERS
 
-        setInterval(function () {
-            self.adjust_size();
-        }, 500)
-
         // setInterval(function () {
-        //     self.display();
-        // }, 100)
-
-        // var df = function () {
-        //     self.display();
-        //     setTimeout(df, 100);
-        // }
-        // df();
+        //     self.adjust_size();
+        // }, 500)
 
         setInterval(function () {
             $('.cursor').each (function () {
@@ -1694,40 +1696,26 @@ function Terminus(div, settings) {
                 elem.css('background-color', c);
             })}, 500)
 
-        self.get_data();
+        // self.get_data();
 
         self.to_write = "";
         self.to_send = "";
 
-        self.send = function () {
-            if (self.to_send != "") {
-                var to_send = self.to_send;
-                self.to_send = "";
-                $.post(settings.path+"/send", {data: to_send, magic: settings.magic});
-            }
-        };
-
-        // setInterval(function () {
+        // self.send = function () {
         //     if (self.to_send != "") {
         //         var to_send = self.to_send;
         //         self.to_send = "";
         //         $.post(settings.path+"/send", {data: to_send, magic: settings.magic});
         //     }
-        // }, 10);
+        // };
 
 
         // BINDINGS
-
-        // self.terminal.bind('input', function(e) {
-        //     e.preventDefault();
-        //     e.stopPropagation();
-        // });
 
         $(window).bind('resize', function (e) {
             setTimeout(self.adjust_size, 10);
         });
 
-        // $(document).bind('paste', function(e) {
         self.terminal.bind('paste', function(e) {
             var target = self.textarea;
             target.val("");
@@ -1939,6 +1927,21 @@ function Terminus(div, settings) {
             word_delete_left: word_operation("left", "\x7f"),
             word_delete_right: word_operation("right", "\x1B[3~"),
 
+            garbage: function () {
+                for (var j = 0; j < 10; j++) {
+                    var s = "";
+                    for (var i = 0; i < 50; i++) {
+                        // s += '\x1B[3' + ~~(Math.random()*7 + 1) + 'm'
+                        // s += Math.random().toString().substring(2) + "\n";
+                        s += '\x1B[?0;;99y:h <div style="color: green">'
+                        s += Math.random().toString().substring(2);
+                        s += '</div>\n'
+                    }
+                    self.to_write += s;
+                    self.write_all();
+                }
+            },
+
             space: " ",
             tilde: "~",
         }
@@ -2070,7 +2073,96 @@ function Terminus(div, settings) {
         });
     }
 
-    self.init(div, settings);
+    self.connect = function () {
+
+        self.send = function () {
+            if (self.to_send != "") {
+                var to_send = self.to_send;
+                self.to_send = "";
+                $.post(settings.path+"/send", {data: to_send, magic: settings.magic});
+            }
+        };
+
+        self.setsize = function (nlines, ncols) {
+            $.post(settings.path+'/setsize',
+                   {h: nlines, w: ncols, magic: settings.magic});
+        };
+
+        self.get_data = function () {
+            // setTimeout avoids the annoying "waiting..." message
+            // browsers display while the request hangs.
+            setTimeout(function () {
+                $.post(settings.path + "/get", {magic: settings.magic},
+                       function(data) {
+                           if (data != "") {
+                               self.to_write += data;
+                               self.write_all();
+                           }
+                           self.get_data();
+                       })
+                    .error(function () {
+                        self.to_write += '\n\x1B[1;31mConnection to server terminated';
+                        self.to_write += ' because this session was opened elsewhere.';
+                        self.to_write += '\nRefresh to reclaim session.\x1B[0m';
+                        self.write_all();
+                    })
+            }, 0)
+        };
+
+        self.init(div, settings);
+
+        setInterval(function () {
+            self.adjust_size();
+        }, 500)
+
+        self.get_data();
+    }
+
+    self.connect_socket_io = function () {
+
+        var socket = io.connect('http://'
+                                + settings.server
+                                + ":" + settings.port);
+
+        socket.emit('connect_to', {command: settings.termtype,
+                                   id: settings.id});
+
+        self.setsize = function (nlines, ncols) {
+            socket.emit('setsize', {h: nlines, w: ncols});
+        };
+
+        self.send = function () {
+            if (self.to_send != "") {
+                var to_send = self.to_send;
+                self.to_send = "";
+                socket.emit('data', to_send);
+            }
+        };
+        
+        socket.on('data', function (data) {
+            if (data != "") {
+                self.to_write += data;
+                self.write_all();
+            }
+        });
+
+        socket.on('exit', function (data) {
+            self.to_write += '\n\x1B[1;31mProcess ended.\x1B[0m';
+            self.write_all();
+        });
+
+        socket.on('disconnect', function (data) {
+            self.to_write += '\n\x1B[1;31mConnection to server terminated.\x1B[0m';
+            self.write_all();
+            socket.disconnect();
+        });
+
+        self.init(div, settings);
+    }
+
+
+
+    // self.init(div, settings);
     return self;
 }
 
@@ -2505,7 +2597,8 @@ Terminus.csi = {
         this.screen.delete_characters(this.screen.line, this.screen.column, n[0]);
     },
 
-    ">c0": function (_) { this.to_send += "\x1B[>0;0;0c"; },
+    // ">c0": function (_) { this.to_send += "\x1B[>0;0;0c"; },
+    ">c0": function (_) { },
     ">c1": '>c0',
 
     d0: function (_) { this.screen.move_to(1, this.screen.column); },
@@ -2776,24 +2869,6 @@ Terminus.constructors = {
     // ProgressBarNest
     'progress': function (command) {
     },
-
-    // SVGNest
-    'svg': function (command) {
-        var nest;
-        if (command.action == '+') {
-            // this.log('test', command.action);
-            // this.log('test', command.nest_type);
-            // this.log('test', Terminus.sanitize(command.text));
-            nest = SVGNest($(command.text.trim()
-                             || "<svg></svg>")[0]);
-        }
-        else {
-            var div = makenode('svg');
-            nest = SVGNest(div);
-            nest.process(command);
-        }
-        return nest;
-    },
 }
 
 Terminus.split_one = function (text, c) {
@@ -2826,77 +2901,5 @@ Terminus.construct_nest = function (command) {
     else {
         return constructor.call(this, command);
     }
-}
-
-
-
-
-
-function SVGNest(div) {
-    var self = DivNest(div);
-    self.nest_type = 'svg';
-    svg_interact(div, {zoom: true,
-                       pan: true,
-                       zoom_speed: 1.5});
-
-    self.make_node = function (html) {
-        return $("<svg>" + html + "</svg>")[0].childNodes[0];
-    }
-
-    $.extend(self.actions, {
-        '+': function (command) {
-            // TODO: +svg in svg -> <g> tag
-            // other nest types -> no effect
-        },
-        ':': function (command) {
-            $(self.element).append(command.text);
-        },
-        // '/': function (command) {
-        //     var txt = command.text;
-        //     var pos = txt.indexOf(" ");
-        //     var setting = txt.substring(0, pos);
-        //     if (setting == "style") {
-        //         var data = txt.substring(pos + 1);
-        //         var style = makenode('style');
-        //         // The style will only apply under self div.
-        //         style.innerHTML = "#" + self.nestid + " " + data;
-        //         // It is not standards compliant to put <style>
-        //         // tags outside <head>, but it is practical to do
-        //         // so since the style will be removed if the nest
-        //         // is deleted.
-        //         $(self.element).append(style);
-        //     }
-        // },
-        // '~': function (command) {
-        //     // TODO: verify that this always works
-        //     var txt = command.text;
-        //     var split = Terminus.split_one(command.text, " ");
-        //     var id = split[0];
-        //     var contents = split[1].trim();
-        //     var query = "#" + self.nestid + " " + id;
-
-        //     setTimeout(function () {
-        //         var target = document.querySelector(query);
-        //         if (contents[0] == "<") {
-        //             var new_child = self.make_node(contents);
-        //             target.parentNode.replaceChild(
-        //                 new_child,
-        //                 target);
-        //         }
-        //         else {
-        //             var split = Terminus.split_one(contents, "=");
-        //             var attr = split[0].trim();
-        //             var value = split[1].trim();
-        //             target.setAttribute(attr, value);
-        //         }
-        //     }, 0);
-        // }
-    });
-
-    // self.process = function(command) {
-    //     self.actions[command.action](command);
-    // }
-
-    return self;
 }
 

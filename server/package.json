@@ -1,0 +1,17 @@
+
+{
+    "name": "terminus-server",
+    "version": "0.1.0",
+    "description": "Server for the Terminus terminal.",
+    "homepage" : "https://github.com/breuleux/terminus",
+    "author" : "Olivier Breuleux",
+
+    "main": "./terminus-server.js",
+
+    "dependencies": {
+        "js-yaml": "*",
+        "socket.io": "*",
+        "express": "*",
+        "mustache": "*"
+    }
+}

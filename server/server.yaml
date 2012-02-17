@@ -2,6 +2,9 @@
 host: 'localhost'
 port: 8080
 
+# Path to resources ($ is the directory in which this file is)
+path: '$/../resources'
+
 # TODO True iff we only accept connections from localhost
 only_localhost: true
 
@@ -19,12 +22,9 @@ only_localhost: true
 #        you can give a list, the settings will be merged in order
 #        (untested)
 
-# TODO timeout: time (in seconds) after which the session should be
-#        terminated if there is no activity.
-
 # TODO grace_period: time (in seconds) to keep the session alive after
 #        the client disconnects (just in case it was an error on their
-#        part).
+#        part). yes = do not close
 
 configurations:
 
@@ -33,7 +33,6 @@ configurations:
     template: 'terminus'
     style: 'default.css'
     settings: 'default.yaml'
-    timeout_period: no
     grace_period: 60
 
   python:
@@ -41,7 +40,6 @@ configurations:
     template: 'terminus'
     style: 'default.css'
     settings: 'default.yaml'
-    timeout_period: no
     grace_period: 60
 
   debug:
@@ -49,6 +47,5 @@ configurations:
     template: 'debug'
     style: 'default.css'
     settings: 'default.yaml'
-    timeout_period: no
     grace_period: 60
 

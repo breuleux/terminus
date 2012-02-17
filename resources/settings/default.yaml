@@ -18,7 +18,7 @@ ncols_max: 1000
 # this number. You can use this e.g. to not overlap with the
 # vertical scrollbar if there is one.
 nlines_sub: 0
-ncols_sub: 0
+ncols_sub: 2
 
 # An adjustment to the padding of the terminal when its height is not
 # a multiple of the character height.
@@ -47,7 +47,7 @@ screens:
   # 1
   # The alternate screen, used by most full-screen applications like
   # emacs, vi, screen, etc. has no scrollback.
-  - scrollback: 0
+  - scrollback: 1000
     cut_bottom: false
 
   # You can add more screens if it suits your fancy, but right now
@@ -204,6 +204,8 @@ log:
 # See the C-S-a example at the top of the bindings.
 
 bindings:
+
+  C-S-z: ~garbage
 
   # EXAMPLE (edit it to your heart's content, it's really completely
   # arbitrary stuff to show you how to customize bindings)

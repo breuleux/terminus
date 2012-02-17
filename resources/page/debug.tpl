@@ -10,8 +10,9 @@
     <script type="text/javascript" src="/resources/script/mwheelIntent.js"></script>
     <script type="text/javascript" src="/resources/script/jquery.jscrollpane.js"></script>
     <script type="text/javascript" src="/resources/script/js-yaml.min.js"></script>
-    <script type="text/javascript" src="/resources/script/svg.js"></script>
     <script type="text/javascript" src="/resources/script/terminus.js"></script>
+    <script type="text/javascript" src="/resources/script/svg.js"></script>
+    <script type="text/javascript" src="/socket.io/socket.io.js"></script>
   </head>
 
   <body>
@@ -37,6 +38,7 @@
             settings.path = "/" + settings.termtype + "/" + settings.id;
             term_div = $("#terminal");
             terminal = Terminus(term_div, settings);
+            terminal.connect_socket_io();
             term = terminal;
         });
 

@@ -10,20 +10,15 @@
     <script type="text/javascript" src="/resources/script/mwheelIntent.js"></script>
     <script type="text/javascript" src="/resources/script/jquery.jscrollpane.js"></script>
     <script type="text/javascript" src="/resources/script/js-yaml.min.js"></script>
-    <script type="text/javascript" src="/resources/script/svg.js"></script>
     <script type="text/javascript" src="/resources/script/terminus.js"></script>
+    <script type="text/javascript" src="/resources/script/svg.js"></script>
+    <script type="text/javascript" src="/socket.io/socket.io.js"></script>
   </head>
 
   <body>
 
     <div id="terminal" class="term_area">
-      <!-- <div class="font_control_div"> -->
-      <!--   <span class="font_control">X</span> -->
-      <!-- </div> -->
     </div>
-
-    <!-- <div id="log"> -->
-    <!-- </div> -->
 
     <script>
       $(document).ready(function() {
@@ -36,8 +31,11 @@
             settings.id = "{{id}}";
             settings.magic = "{{magic}}";
             settings.path = "/" + settings.termtype + "/" + settings.id;
+            settings.server = "{{server}}";
+            settings.port = "{{port}}";
             term_div = $("#terminal");
             terminal = Terminus(term_div, settings);
+            terminal.connect_socket_io();
             term = terminal;
         });
 
