@@ -212,7 +212,7 @@ function TerminusServer(settings) {
             }
             res.render(path.join(settings.path,
                                  'page',
-                                 cfg.template + '.tpl'),
+                                 cfg.template),
                        {termtype: type,
                         id: id,
                         magic: 12345678,
@@ -262,7 +262,7 @@ function TerminusServer(settings) {
 
         socket.on('setsize', function (data) {
             if (command != null) {
-                console.log(command + "#" + id + ' | setsize: ' + data.h + "x" + data.w);
+                console.log('from ' + command + "#" + id + ' -> setsize: ' + data.h + "x" + data.w);
                 factories[command][id].set_window_size(data.h, data.w);
             }
         });
@@ -280,7 +280,8 @@ function TerminusServer(settings) {
         });
     });
 
-    app.listen(settings.port);
+    app.listen(settings.port, settings.host);
+    console.log('Terminus serving on http://' + settings.host + ":" + settings.port)
 
     return self;
 }

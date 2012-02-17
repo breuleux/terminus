@@ -2,8 +2,16 @@
 host: 'localhost'
 port: 8080
 
+# TODO
 # If ssl = true you will have to use https to connect.
 ssl: false
+
+# TODO
+# Password to connect to the server. If password-plain is true, the
+# password field is the real password in plain text, else it is the
+# sha1-encrypted version of the password.
+password-plain: true
+password: no
 
 # Path to resources ($/ is the directory in which this file is). You
 # can use environment variables.
@@ -25,13 +33,14 @@ path: '$/../resources'
 fileserve:
   "$USER@$HOSTNAME": '/'
 
-# TODO True iff we only accept connections from localhost
-only_localhost: true
-
 # Available configurations, run when the client goes to
 # /<conf_name>
 
 # command: command to run under the pseudo-terminal
+
+# template: template to use (layout file of the terminal, essentially)
+#        fetch from: /resources/page/<template>
+#        The .tpl extension uses mustache.
 
 # style: stylesheet to serve to clients
 #        fetch from: /resources/style/<style>
@@ -42,29 +51,29 @@ only_localhost: true
 #        you can give a list, the settings will be merged in order
 #        (untested)
 
-# TODO grace_period: time (in seconds) to keep the session alive after
-#        the client disconnects (just in case it was an error on their
+# grace_period: time (in seconds) to keep the session alive after the
+#        client disconnects (just in case it was an error on their
 #        part). yes = do not close
 
 configurations:
 
   bash:
     command: 'bash -l'
-    template: 'terminus'
+    template: 'terminus.tpl'
     style: 'default.css'
     settings: 'default.yaml'
     grace_period: 60
 
   python:
     command: 'python'
-    template: 'terminus'
+    template: 'terminus.tpl'
     style: 'default.css'
     settings: 'default.yaml'
     grace_period: 60
 
   debug:
     command: 'bash -l'
-    template: 'debug'
+    template: 'debug.tpl'
     style: 'default.css'
     settings: 'default.yaml'
     grace_period: 60
