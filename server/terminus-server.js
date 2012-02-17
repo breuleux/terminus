@@ -1,17 +1,10 @@
 
-// var http = require('http');
-// var fs = require('fs');
-// var fserve = require('node-static');
-// var http = require('http');
-
 var yaml = require('js-yaml');
 var tty = require('tty');
 var path = require('path');
 var mustache = require('mustache');
 var express = require('express')
 var sio = require('socket.io')
-
-
 
 function TTY(command, actions) {
     var self = {};
@@ -80,7 +73,6 @@ function TTYHandler(settings, actions) {
 
     self.notimeout = function (id) {
         var term = self[id];
-        // console.log('clearing timeout: ' + id);
         if (term && term.timeout) {
             clearTimeout(term.timeout);
             term.timeout = null;
@@ -88,9 +80,8 @@ function TTYHandler(settings, actions) {
     }
 
     self.schedule_terminate = function(id) {
-        // console.log('scheduling timeout: ' + id);
         var term = self[id];
-        // self.notimeout(id);
+        self.notimeout(id);
         if (settings.grace_period !== true) {
             if (!settings.grace_period) {
                 self.terminate(id);
@@ -177,9 +168,6 @@ function TerminusServer(settings) {
                 }
             },
             exit: function () {
-                // if (this.socket) {
-                //     this.socket.emit('close');
-                // }
                 if (this.socket) {
                     this.socket.emit('exit');
                 }
@@ -277,22 +265,6 @@ function TerminusServer(settings) {
 
 function main() {
 
-    // var resource_path = path.resolve(process.argv[2]);
-    // if (!resource_path) {
-    //     console.error("Usage: "
-    //                   + process.argv[0]
-    //                   + " " + process.argv[1]
-    //                   + " <resource path>");
-    //     return
-    // }
-
-    // var settings_file = path.join(resource_path, 'settings', 'server.yaml');
-    // var settings = require(settings_file)[0];
-    // settings.path = resource_path;
-
-    // TerminusServer(settings);
-
-
     var settings_file = path.resolve(process.argv[2]);
     var settings_dir = path.normalize(path.join(settings_file, '..'));
     var resource_path = process.argv[3];
@@ -304,7 +276,6 @@ function main() {
         return
     }
 
-    // var settings_file = path.join(resource_path, 'settings', 'server.yaml');
     var settings = require(settings_file)[0];
     settings.path = path.resolve((resource_path || settings.path)
                                  .replace('$', settings_dir));
