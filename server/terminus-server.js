@@ -1,7 +1,9 @@
 
-var yaml = require('js-yaml');
-var tty = require('tty');
+var os = require('os')
 var path = require('path');
+var tty = require('tty');
+
+var yaml = require('js-yaml');
 var mustache = require('mustache');
 var express = require('express')
 var sio = require('socket.io')
@@ -144,6 +146,16 @@ var mustache_templater = {
 };
 
 
+function expand_env(name) {
+    name = name.replace('$/', process.env['/']);
+    name = name.replace(/\$[A-Za-z_]+/g,
+                        function (match) {
+                            return process.env[match.substring(1)];
+                        });
+    return name;
+}
+
+
 function TerminusServer(settings) {
     var self = {};
 
@@ -211,17 +223,28 @@ function TerminusServer(settings) {
         });
     }
 
-    app.get('/f/*', function (req, res) {
-        var file = req.params[0]
-        res.sendfile(path.join('/', file));
-    });
+    process.env.HOSTNAME = os.hostname()
+    self.register_filesystem = function (name, mountpoint) {
+        name = expand_env(name);
+        app.get('/f/' + name + "/*", function (req, res) {
+            var file = req.params[0]
+            res.sendfile(path.join(mountpoint, file));
+        });
+        console.log('mounted ' + mountpoint + ' on /' + name);
+    }
+
+    if (settings.fileserve) {
+        for (var name in settings.fileserve) {
+            self.register_filesystem(name, settings.fileserve[name]);
+        }
+    }
 
     app.get('/resources/*', function (req, res) {
         var file = req.params[0]
         res.sendfile(path.join(settings.path, file));
     });
 
-    for (type in settings.configurations) {
+    for (var type in settings.configurations) {
         self.register_configuration(type, settings.configurations[type]);
     }
 
@@ -266,7 +289,7 @@ function TerminusServer(settings) {
 function main() {
 
     var settings_file = path.resolve(process.argv[2]);
-    var settings_dir = path.normalize(path.join(settings_file, '..'));
+    var settings_dir = path.normalize(path.join(settings_file, '..')) + '/';
     var resource_path = process.argv[3];
     if (!settings_file) {
         console.error("Usage: "
@@ -276,9 +299,10 @@ function main() {
         return
     }
 
+    process.env['/'] = settings_dir;
+
     var settings = require(settings_file)[0];
-    settings.path = path.resolve((resource_path || settings.path)
-                                 .replace('$', settings_dir));
+    settings.path = path.resolve(expand_env(resource_path || settings.path));
 
     console.log('resource path: ' + settings.path);
 

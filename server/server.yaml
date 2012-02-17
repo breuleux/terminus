@@ -2,8 +2,28 @@
 host: 'localhost'
 port: 8080
 
-# Path to resources ($ is the directory in which this file is)
+# If ssl = true you will have to use https to connect.
+ssl: false
+
+# Path to resources ($/ is the directory in which this file is). You
+# can use environment variables.
 path: '$/../resources'
+
+# Filesystems to mount. If you have an entry that reads "name: /path",
+# then accessing "/name/something" will serve the file at
+# "/f/path/something". You can set fileserve to false/off/no if you
+# don't want to serve any files at all. You can use environment
+# variables.
+
+# Tip: you can use sshfs to mount a remote filesystem through ssh and
+# give access here. By convention, the name should be "<remote
+# terminus_name>" or "<remote user>@<remote host>", as seen from the
+# host (echo $TERMINUS_NAME $USER@$HOSTNAME remotely). The path is
+# where you mounted the filesystem. Using this technique, remote
+# programs that try to display inline images from their own filesystem
+# will succeed.
+fileserve:
+  "$USER@$HOSTNAME": '/'
 
 # TODO True iff we only accept connections from localhost
 only_localhost: true
