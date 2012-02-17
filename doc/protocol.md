@@ -1,10 +1,8 @@
 
-=================
 Terminus protocol
 =================
 
-Nesting
-=======
+## Nesting
 
 Terminus not only allows the display of inline HTML, it also allows
 *nesting* these elements. The **nest** of an element is a sequence of
@@ -35,8 +33,7 @@ one *logical* row, as far as the screen is concerned.
   respect to its parent. Indeed, the nests may be created in any
   order, and some ids may even be skipped entirely.
 
-Nest #0
--------
+#### Nest #0
 
 The nest `0` represents the nest on which there is "focus". In a
 terminal window, that is the nest at the line occupied by the
@@ -44,8 +41,7 @@ cursor. In other nests, it is typically the last nest that was
 created.
 
 
-Terminology
-===========
+## Terminology
 
 * `CSI` is the sequence of two characters `\x1B\x5B`, that is, the
   escape character followed by the `[` character (`\x1B[`).
@@ -54,8 +50,7 @@ Terminology
   `<x>` means `x` is a parameter.
 
 
-0: The principal command
-========================
+## The principal command
 
 **Syntax**: `CSI` `?` `0` `[;<terminator>[;<escape>]]` `[;;<nest>]` `y` `<action><nest_type>` `<data>` `<terminator>`
 
@@ -66,24 +61,24 @@ Terminology
 
 Whew. Let's break this down:
 
-* `terminator`: you can specify the ASCII character that will end
-  the sequence. By default, it is the newline character (ASCII
-  character 13, `\n`, or `\x0C`), so the command ends with the
-  newline. If your command contains newlines, you can pick the bell
-  character instead (ASCII character 7, `\a`, or `\x07`). Note
-  that the ESC character (`\x1B`) *always* ends the command.
+**terminator**: you can specify the ASCII character that will end the
+  sequence. By default, it is the newline character (ASCII character
+  13, `\n`, or `\x0C`), so the command ends with the newline. If your
+  command contains newlines, you can pick the bell character instead
+  (ASCII character 7, `\a`, or `\x07`). Note that the ESC character
+  (`\x1B`) *always* ends the command.
 
-* `escape`: this character will escape the character that follows
-  it. By default this is the ASCII character 1 `\x01`. What this
-  means is that `\x01<terminator>` will let the terminator character
-  through without ending the command. `\x01\x01` will append the
-  escape character itself. The ESC character (`\x1B`) can be escaped
-  that way.
+**escape**: this character will escape the character that follows
+  it. By default this is the ASCII character 1 `\x01`. What this means
+  is that `\x01<terminator>` will let the terminator character through
+  without ending the command. `\x01\x01` will append the escape
+  character itself. The ESC character (`\x1B`) can be escaped that
+  way.
 
-* `nest`: the nest where the command will be executed. By default,
+**nest**: the nest where the command will be executed. By default,
   this is the terminal itself.
 
-* `action`: there are four types of actions that are allowed:
+**action**: there are four types of actions that are allowed:
 
   * `+<nest_type> <arguments>`: create a *new nest* with the given
     type and the given arguments. There must be defaults for all
@@ -106,7 +101,7 @@ Whew. Let's break this down:
     argument may vary. The nest must already exist and it must have
     the right type for this action to work.
 
-* `nest_type`: this can be one of the following values:
+**nest_type**: this can be one of the following values:
 
   * `h`: HTML element.
 
@@ -146,14 +141,12 @@ Whew. Let's break this down:
       zoom, 2.0 means 200% zoom with each scroll, etc.
 
 
-100-199: Scripting
-==================
+## Scripting
 
 The following commands execute scripting commands in the browser with
 the specified nest as their context.
 
-100: javascript
----------------
+### 100: javascript
 
 **Syntax**: `CSI` `?` `100` `[;<terminator>[;<escape>]]` `[;;<nest>]` `y` `<javascript>` `<terminator>`
 
@@ -182,19 +175,16 @@ variable set to the nest. The nest has the following methods
   right type, unless the action is `+`).
 
 
-101: coffeescript
------------------
+### 101: coffeescript
 
 TODO!
 
 
-200-299: Nesting
-================
+## Nesting
 
 These commands manipulate nests: creating, demoting, removing, etc.
 
-200: create
------------
+### 200: create
 
 **Syntax**: `CSI` `?` `200` `[<nest>]` `z`
 
@@ -227,8 +217,7 @@ the request. For example, you might send `\x1B[?200z` and read back
   fresh nest for every process and filtering the escape codes to make
   sure that different processes don't share nests.
 
-201: demote
------------
+### 201: demote
 
 **Syntax**: `CSI` `?` `201` `[<nest>]` `z`
 
@@ -238,16 +227,14 @@ corresponding to this nest, it will cease corresponding to that
 nest. It will not disappear from the stream, but merely become
 unaddressable.
 
-202: remove
------------
+### 202: remove
 
 **Syntax**: `CSI` `?` `202` `[<nest>]` `z`
 
 This is a stronger version of `demote` which also happens to remove
 the element from the stream.
 
-203: move
----------
+### 203: move
 
 **Syntax**: `CSI` `?` `203` `[<source_nest>]` `[;;<target_nest>]` `z`
 
