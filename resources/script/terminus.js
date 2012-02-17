@@ -2160,9 +2160,11 @@ function Terminus(div, settings) {
         });
 
         self.init(div, settings);
+
+        setInterval(function () {
+            self.adjust_size();
+        }, 500)
     }
-
-
 
     // self.init(div, settings);
     return self;

@@ -10,19 +10,42 @@ codes that are not yet supported).
 Install
 -------
 
-You will need Python >=2.6 with the packages ``bottle``, ``paste``,
-``pexpect`` and ``pyyaml``.
+Terminus requires `node` to be installed. A bit annoyingly, the
+`setWindowSize` function, which allows resizing the pty, disappeared
+in node 0.6.0, so you'll have to install an older version for the time
+being. Here's exactly what to do:
 
-Then, position yourself in the root project directory and execute ::
+``` bash
+# install node
+wget http://nodejs.org/dist/v0.5.9/node-v0.5.9.tar.gz
+tar -zxvf node-v0.5.9.tar.gz
+cd node-v0.5.9
+./configure && make && make install
 
-  export PYTHONPATH=/path/to/terminus:$PYTHONPATH
-  bin/terminus resources/
+# install npm
+curl http://npmjs.org/install.sh | sh
 
-(You can put the export in your .bashrc to make it permanent). Then
-open your browser at ``http://localhost:8080/bash``. It should work
-fine with Chrome. I have not tried with any other browser, but it
-shouldn't be difficult to make Terminus work everywhere. Instead of
-``bash``, you can also go to ``debug`` or ``python``.
+# start the server
+cd /path/to/terminus
+cd server
+npm install
+node --use-legacy terminus-server.js server.yaml
+
+# open the client (chrome recommended, but firefox should work ok)
+google-chrome http://localhost:8080/bash
+```
+
+You can also go to /debug or /python instead of /bash. Read the
+`server.yaml` file.
+
+If you don't want to mess with an existing, more recent version of
+node, you can install node 0.5.9 in some isolated place with
+`configure --prefix=~/local`, or you can omit `make install` and run
+`/path/to/node/out/Release/node`.
+
+There's also a Python server but it's pretty bad compared to the node
+one (plus, I broke it). You can go back in time on the repo (Feb
+15-ish) if you want to try that.
 
 **IMPORTANT**: client/server communication is not encrypted at
 all. Only run Terminus locally, and don't run it on a shared machine!
@@ -34,6 +57,7 @@ possible for serious wreckage to occur with a mere *cat* of a
 malicious file. Anybody who can tell me how to properly sandbox
 JavaScript within JavaScript to avoid this gets a cookie.
 
+
 Using
 -----
 
@@ -41,34 +65,34 @@ Terminus is used much like a normal xterm. You can run commands, top,
 emacs, vi, ipython, irb, ssh, without many problems. Not all escape
 codes are handled yet and there might be some slight bugs in those
 that are, so commands like reset (!) and screen are iffy, and for some
-reason ipython seems to show the wrong colors. Also, *paste with
-Ctrl-V*.  But hey, project is only two weeks old after all.
+reason ipython seems to show the wrong colors. You can paste with
+Ctrl+V or the mouse wheel.
 
 Right now, Terminus's novel capabilities are not really shown off
 because my priority is to make the whole system as solid as
 possible. It is very easy to use, though. Start with typing this in
-the terminal ::
+the terminal:
 
-  echo -e '\x1B[?11z<b>Hello world!</b>\x1B\\'
+``` bash
+echo -e '\x1B[?0y:h <img src="http://www.catfacts.org/american-bobtail-cat-facts.jpg" />'
+```
 
 Note that this is the standard echo, *not* a hacked up version. Have
 some fun using an <img> tag instead, or make a table (you might have
-to style it, else it'll be black on black). Now try this ::
+to style it, else it'll be black on black). Now try this:
 
-  echo -e '\x1B[?11;;19z<b>Hello</b>\x1B\\'
-  sleep 1
-  echo -e '\x1B[?11;;19z<b>world!</b>\x1B\\'
+``` bash
+echo -e '\x1B[?0;;19y/h style b {color: red}'
+echo -e '\x1B[?0;;19y:h <b>Hello</b>'
+sleep 1
+echo -e '\x1B[?0;;19y:h <b>world!</b>'
+```
 
 The 19 is arbitrary: it's a "nest id" telling Terminus where to put
 stuff. The first command will create the div since it doesn't already
 exist and the second command will append to what was already
 created. The nests 1, 2, 4 and 5 are special: they represent top,
-left, right and bottom respectively. Try them!
-
-You can also execute JavaScript in the appropriate context ($ is
-jQuery)::
-
-  echo -e '\x1B[?100;;19z$(this.element).append("<i>test</i>")\x1B\\'
+left, right and bottom respectively.
 
 The Terminus server gives access to the filesystem in
 /f/path/from/root, so you can link to files or images on the
@@ -96,21 +120,6 @@ yet.
 Configuration
 -------------
 
-See the server.yaml and default.yaml files in resources/settings. They
+See `server/server.yaml` and `resources/settings/default.yaml`. They
 are documented. If you change default.yaml you can just refresh the
 page to see the changes.
-
-What needs to be fixed
-----------------------
-
-Terminus is still under heavy development. It is usable in its current
-state, but there are some cases where it'll hang up (just refresh if
-that happens, it won't lose your session). The server never closes the
-ptys it creates. The documented escape codes are not all implemented
-yet. Many standard vtXXX escape codes are not implemented (and some of
-them I'm not even sure what they do exactly). The console is more
-sluggish than I feel that it should be (especially evident when you
-open an emacs session in it with clear background). It also uses a bit
-too many resources.
-
-But anyway... have fun! And give me some feedback :)
