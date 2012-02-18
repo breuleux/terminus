@@ -1,4 +1,4 @@
-
+B
 <html>
   <head>
     <meta charset="utf-8">
@@ -11,7 +11,7 @@
     <script type="text/javascript" src="/resources/script/jquery.jscrollpane.js"></script>
     <script type="text/javascript" src="/resources/script/js-yaml.min.js"></script>
     <script type="text/javascript" src="/resources/script/terminus.js"></script>
-    <script type="text/javascript" src="/resources/script/svg.js"></script>
+    <script type="text/javascript" src="/resources/script/terminus-svg.js"></script>
     <script type="text/javascript" src="/socket.io/socket.io.js"></script>
   </head>
 
