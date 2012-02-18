@@ -65,6 +65,7 @@ extmap = dict(
     mp3 = handle_audio,
 
     mp4 = handle_video,
+    avi = handle_video,
     )
 
 

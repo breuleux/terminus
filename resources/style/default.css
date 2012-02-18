@@ -18,7 +18,7 @@
     /* overflow-x: hidden; */
     /* overflow-y: auto; */
     overflow: hidden;
-    white-space: nowrap;
+    /* white-space: nowrap; */
     outline: 0px none transparent;
 }
 

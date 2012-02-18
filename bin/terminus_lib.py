@@ -15,26 +15,34 @@ class Printer:
         end = kw.pop('end', None)
         esc = kw.pop('esc', None)
         where = kw.pop('where', sys.stdout)
-        where.write("\x1B[?0{end}{esc}{nest}y{action}{type} {contents}{endc}".format(
-                end = ";" + end if end else "",
-                esc = ";" + esc if esc else "",
-                nest = ";;" + ";".join(map(str, nest)) if nest else "",
-                action = action,
-                type = self.nest_type,
-                contents = " ".join(args),
-                endc = chr(end or 10)))
+        s = "\x1B[?0{end}{esc}{nest}y{action}{type} {contents}{endc}".format(
+            end = ";" + end if end else "",
+            esc = ";" + esc if esc else "",
+            nest = ";;" + ";".join(map(str, nest)) if nest else "",
+            action = action,
+            type = self.nest_type,
+            contents = " ".join(args),
+            endc = chr(end or 10))
+        try:
+            where.write(s)
+        except IOError:
+            pass
 
     def js(self, *args, **kw):
         nest = self.nest + kw.pop('nest', ())
         end = kw.pop('end', None)
         esc = kw.pop('esc', None)
         where = kw.pop('where', sys.stdout)
-        where.write("\x1B[?100{end}{esc}{nest}y{contents}{endc}".format(
-                end = ";" + end if end else "",
-                esc = ";" + esc if esc else "",
-                nest = ";;" + ";".join(map(str, nest)) if nest else "",
-                contents = ";".join(args),
-                endc = chr(end or 10)))
+        s = "\x1B[?100{end}{esc}{nest}y{contents}{endc}".format(
+            end = ";" + end if end else "",
+            esc = ";" + esc if esc else "",
+            nest = ";;" + ";".join(map(str, nest)) if nest else "",
+            contents = ";".join(args),
+            endc = chr(end or 10))
+        try:
+            where.write(s)
+        except IOError:
+            pass
 
     def new(self, *args, **kw):
         return self.command('+', *args, **kw)
@@ -48,12 +56,16 @@ class Printer:
     def mod(self, *args, **kw):
         return self.command('~', *args, **kw)
 
+    def do(self, *args, **kw):
+        return self.command('!', *args, **kw)
+
     def __call__(self, *args, **kw):
         return self.append(*args, **kw)
 
 class printers:
     h = Printer("h")
     svg = Printer("svg")
+    tb = Printer("tb")
 
 
 if __name__ == '__main__':

@@ -1,0 +1,230 @@
+#!/usr/bin/env python3
+
+from terminus_lib import *
+import os
+import sys
+import optparse
+import stat
+import datetime
+import pwd
+import grp
+import math
+
+try:
+    chr = unichr
+except NameError:
+    pass
+
+def mode_string(mode):
+    s = ""
+
+    permissions = stat.S_IMODE(mode)
+    s += 'r' if permissions & (1 << 8) else '-'
+    s += 'w' if permissions & (1 << 7) else '-'
+    s += ['-', 'S', 'x', 's'][2 * bool(permissions & (1 << 6))
+                              + bool(permissions & (1 << 11))]
+
+    s += 'r' if permissions & (1 << 5) else '-'
+    s += 'w' if permissions & (1 << 4) else '-'
+    s += ['-', 'S', 'x', 's'][2 * bool(permissions & (1 << 3))
+                              + bool(permissions & (1 << 10))]
+
+    s += 'r' if permissions & (1 << 2) else '-'
+    s += 'w' if permissions & (1 << 1) else '-'
+    s += ['-', 'T', 'x', 't'][2 * bool(permissions & (1 << 0))
+                              + bool(permissions & (1 << 9))]
+
+    chars = {stat.S_ISDIR: 'd',
+             stat.S_ISCHR: 'c',
+             stat.S_ISBLK: 'b',
+             stat.S_ISREG: '-',
+             stat.S_ISFIFO: 'f',
+             stat.S_ISLNK: 'l',
+             stat.S_ISSOCK: 's'}
+
+    for k, v in chars.items():
+        if k(mode):
+            return v + s
+    return '?' + s
+
+def merge_lists(entries):
+    cache = {}
+    to_visit = list(entries)
+    while to_visit:
+        entry = to_visit.pop()
+        if isinstance(entry, list):
+            to_visit.extend(entry)
+        else:
+            if entry['path'] in cache:
+                cache[entry['path']]['values'].extend(entry['values'])
+            else:
+                cache[entry['path']] = entry
+    l = list(cache.values())
+    if len(l) == 1:
+        return l[0]
+    return l
+
+def to_human(size, mult):
+    if size <= 0:
+        return size
+    m = int(math.log(size) / math.log(mult))
+    suffix = ['', 'K', 'M', 'G'][m]
+    if suffix:
+        value = int(size / mult**m * 10.0) / 10.0
+    else:
+        value = size
+    return '{value}{suffix}'.format(value = value, suffix = suffix)
+
+def extract_stat(entry, base, follow_dir):
+    absolute = base + "/" + entry
+    stats = os.lstat(absolute)
+    if (follow_dir and stat.S_ISDIR(stats.st_mode)):
+        ml = merge_lists([extract_stat(subentry, entry, False)
+                          for subentry in (os.listdir(entry) + ['.', '..'])])
+        return ml
+    if (entry in ['.', '..']):
+        rval = {'path': os.path.abspath(base)}
+    else:
+        rval = {'path': '/'.join(os.path.abspath(absolute).split('/')[:-1])}
+    values = {}
+    values['mode'] = mode_string(stats.st_mode)
+    values['nlinks'] = stats.st_nlink
+    values['uid'] = stats.st_uid
+    values['uname'] = pwd.getpwuid(stats.st_uid).pw_name
+    values['gid'] = stats.st_gid
+    values['gname'] = grp.getgrgid(stats.st_gid).gr_name
+    values['size'] = stats.st_size
+    values['size_h'] = to_human(stats.st_size, 1024)
+    values['size_si'] = to_human(stats.st_size, 1000)
+    values['mtime'] = datetime.datetime.fromtimestamp(stats.st_mtime)
+    values['atime'] = datetime.datetime.fromtimestamp(stats.st_atime)
+    values['ctime'] = datetime.datetime.fromtimestamp(stats.st_ctime)
+    values['name'] = entry
+    values['tag'] = ((stat.S_ISDIR(stats.st_mode) and '/')
+                     or (stat.S_ISLNK(stats.st_mode) and '@')
+                     or ('x' in values['mode'] and '*')
+                     or '.')
+    values['nametag'] = values['name'] + values['tag']
+    rval['values'] = [values];
+    return rval
+
+def str_description(description, field_order, separator):
+    # print(description['name'])
+    return separator.join(str(description[field]) for field in field_order)
+
+def column_name(results):
+    printers.tb.set('c', 'name.type', 'file')
+    printers.tb.set('c', 'name.path', root + results['path'] + '/')
+
+def column_nametag(results):
+    printers.tb.set('c', 'nametag.type', 'file')
+    printers.tb.set('c', 'nametag.tags', 'true')
+    printers.tb.set('c', 'nametag.path', root + results['path'] + '/')
+    printers.tb.set('style', '.col-nametag', '{max-width: 300}')
+
+# def column_size(results):
+#     printers.tb.set('style', '.col-size', '{text-align: right}')
+
+# def column_size_h(results):
+#     printers.tb.set('style', '.col-size_h', '{text-align: right}')
+
+# def column_size_si(results):
+#     printers.tb.set('style', '.col-size_si', '{text-align: right}')
+
+def print_results(results,
+                  headers,
+                  sort_column = None,
+                  filter = lambda x: True,
+                  sepn = 160):
+    fields = [h.split(":")[0] for h in headers.split(" ")]
+    printers.tb.new(headers)
+    printers.tb.set('header_freq', '20')
+    for field in fields:
+        fn = globals().get('column_' + field, None)
+        if fn:
+            fn(results)
+    printers.tb.set('sep', str(sepn))
+    if sort_column:
+        if sort_column.startswith('~'):
+            sorted_results = reversed(sorted(results['values'],
+                                             key = lambda x: x[sort_column[1:]]))
+        else:
+            sorted_results = sorted(results['values'],
+                                    key = lambda x: x[sort_column])
+    else:
+        sorted_results = results['values']
+    for data in sorted_results:
+        if filter(data):
+            s = str_description(data, fields, sep)
+            printers.tb(s)
+    # printers.tb.do('sort', 'size');
+
+
+if __name__ == '__main__':
+
+    parser = optparse.OptionParser(usage = "Usage: %prog [options] <directory>",
+                                   description = "List files")
+    parser.set_conflict_handler('resolve')
+
+    parser.add_option("-a", "--all", action="store_true", dest="all", default=False,
+                      help="Do not ignore entries starting with .")
+
+    parser.add_option("-A", "--almost-all", action="store_true",
+                      dest="almost_all", default=False,
+                      help="Do not list implied . and ..")
+
+    parser.add_option("-l", action="store_true", dest="long", default=False,
+                      help="Use a long listing format")
+
+    parser.add_option("-S", action="store_true", dest="sort_size", default=False,
+                      help="Sort by file size")
+
+    parser.add_option("-h", action="store_true", dest="human", default=False,
+                      help="Display human-readable size (1K = 1024)")
+
+    parser.add_option("--si", action="store_true", dest="si", default=False,
+                      help="Display human-readable size (1K = 1000)")
+
+    (options, args) = parser.parse_args()
+
+    if not args:
+        args = ['.']
+
+    results = merge_lists([
+            extract_stat(
+                entry, '' if entry.startswith('/') else '.',
+                True)
+            for entry in args])
+
+    sepn = 160
+    sep = chr(sepn)
+
+    user = os.getenv("USER")
+    host = os.getenv("HOSTNAME")
+    root = '/f/' + (os.getenv("TERMINUS_NAME")
+                    or "{user}@{host}".format(user = user, host = host))
+
+    headers = 'mode:Mode nlinks:# uname:User gname:Group size:Size mtime:Modified nametag:Filename'
+    sort_by = 'name'
+    filter = lambda x: not x['name'].startswith('.')
+
+    if options.all:
+        filter = lambda x: True
+
+    if options.almost_all:
+        filter = lambda x: x['name'] not in ('.', '..')
+
+    if options.human:
+        headers = headers.replace('size:Size', 'size_h:Size')
+    elif options.si:
+        headers = headers.replace('size:Size', 'size_si:Size')
+
+    if options.sort_size:
+        sort_by = '~size'
+
+    if isinstance(results, list):
+        for result in results:
+            print(result['path'] + ":")
+            print_results(result, headers, sort_by, filter, sepn)
+    else:
+        print_results(results, headers, sort_by, filter, sepn)

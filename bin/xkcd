@@ -49,8 +49,10 @@ if __name__ == '__main__':
         del data['month']
         del data['day']
         del data['year']
+
+        printers.tb.new('prop', 'value');
+        printers.tb.set('sep', '7');
+        printers.tb.set('style', '.col-prop {color: #0f0; font-weight: bold}');
         for k, v in sorted(data.items()):
             if v:
-                print('\x1B[1;32m{k}:\x1B[0m {v}').format(
-                        k = k,
-                        v = v)
+                printers.tb("{k}\a{v}".format(k = k, v = v))

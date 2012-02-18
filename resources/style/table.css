@@ -1,0 +1,54 @@
+
+table {
+    font-family: monospace;
+    font-size: 12pt;
+    color: white;
+    border: 2px solid white;
+    margin: 5px;
+    border-collapse: collapse;
+}
+
+td, th {
+    border-left: 1px solid #888;
+    border-right: 1px solid #888;
+    padding-left: 5px;
+    padding-right: 5px;
+}
+
+th {
+    background-color: #444;
+    border-bottom: 3px solid #888;
+}
+
+.odd {
+    background-color: #000;
+}
+
+.even {
+    background-color: #222;
+}
+
+
+
+.file {
+    font-weight: bold;
+}
+
+.file a {
+    text-decoration: none;
+    color: white;
+}
+
+.file a.executable {
+    color: #0f0;
+}
+
+.file a.link {
+    color: #0ff;
+}
+
+.file a.directory {
+    color: #44f;
+}
+
+

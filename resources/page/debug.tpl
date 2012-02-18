@@ -4,6 +4,7 @@ B
     <meta charset="utf-8">
     <title>Terminus</title>
     <link type="text/css" href="/resources/style/{{style}}" rel="stylesheet"/>
+    <link type="text/css" href="/resources/style/table.css" rel="stylesheet"/>
     <link type="text/css" href="/resources/style/jquery.jscrollpane.css" rel="stylesheet" media="all" />
     <script type="text/javascript" src="/resources/script/jquery.js"></script>
     <script type="text/javascript" src="/resources/script/jquery.mousewheel.js"></script>
@@ -12,6 +13,7 @@ B
     <script type="text/javascript" src="/resources/script/js-yaml.min.js"></script>
     <script type="text/javascript" src="/resources/script/terminus.js"></script>
     <script type="text/javascript" src="/resources/script/terminus-svg.js"></script>
+    <script type="text/javascript" src="/resources/script/terminus-table.js"></script>
     <script type="text/javascript" src="/socket.io/socket.io.js"></script>
   </head>
 
