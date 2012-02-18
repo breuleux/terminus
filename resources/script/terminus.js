@@ -1440,6 +1440,7 @@ function Terminus(div, settings) {
             try {
                 var target = self.find(parameters.nest, true);
                 var f = function() {
+                    var self = null;
                     eval(data);
                 }
                 f.call(target);

@@ -1,0 +1,104 @@
+#!/usr/bin/env python
+
+from terminus_lib import *
+import sys
+import os
+import urlparse
+import optparse
+
+user = os.getenv("USER")
+host = os.getenv("HOSTNAME")
+root_name = (os.getenv("TERMINUS_NAME")
+             or "{user}@{host}".format(user = user, host = host))
+
+def resolve(path):
+    results = urlparse.urlparse(path)
+    if results.scheme in ('file', ''):
+        abspath = os.path.abspath(results.netloc or results.path)
+        path = "/f/{root}{path}".format(root = root_name, path = abspath)
+    return path
+
+def handle_image(orig, target, extension, options):
+    h = ' height="{h}"'.format(h = options.height) if options.height else ""
+    w = ' width="{w}"'.format(w = options.width) if options.width else ""
+    printers.h('<img src="{target}"{h}{w}/>'.format(target = target, h = h, w = w))
+
+def handle_audio(orig, target, extension, options):
+    printers.h('<audio id="player" controls><source src="{target}"/><audio/>'.format(target = target))
+    if options.play:
+        # A delay is necessary, because Terminus moves stuff around and
+        # the sound will be uncorrelated with the controls. The audio
+        # tag's autoplay option will not work here.
+        printers.h.js('var self = this',
+                      'setTimeout(function(){ '
+                      '$("#" + self.nestid + " #player")[0].play()'
+                      '}, 100)', nest = (0,))
+
+def handle_video(orig, target, extension, options):
+    h = ' height="{h}"'.format(h = options.height) if options.height else ""
+    w = ' width="{w}"'.format(w = options.width) if options.width else ""
+    printers.h('<video id="player"{h}{w} controls><source src="{target}" type="video/{ext}"></video>'.format(target = target, ext = extension, h = h, w = w))
+    if options.play:
+        # A delay is necessary, because Terminus moves stuff around and
+        # the sound will be uncorrelated with the controls. The video
+        # tag's autoplay option will not work here.
+        printers.h.js('var self = this',
+                      'setTimeout(function(){ '
+                      '$("#" + self.nestid + " #player")[0].play()'
+                      '}, 100)', nest = (0,))
+
+def handle_iframe(orig, target, extension, options):
+    h = ' height="{h}"'.format(h = options.height) if options.height else ""
+    w = ' width="{w}"'.format(w = options.width) if options.width else ""
+    printers.h('<iframe src="{target}"{h}{w}/>'.format(target = target, h = h, w = w))
+
+
+extmap = dict(
+    png = handle_image,
+    jpg = handle_image,
+    jpeg = handle_image,
+    gif = handle_image,
+    bmp = handle_image,
+
+    svg = handle_iframe,
+
+    mp3 = handle_audio,
+
+    mp4 = handle_video,
+    )
+
+
+if __name__ == '__main__':
+
+    parser = optparse.OptionParser(usage = "Usage: %prog [options] <file>",
+                                   description = "Show or play a media file in the terminal.")
+    parser.set_conflict_handler('resolve')
+    parser.add_option("-h", "--height", dest="height", default=None,
+                      help="Specify the height of the element to show.")
+    parser.add_option("-w", "--width", dest="width", default=None,
+                      help="Specify the width of the element to show.")
+    parser.add_option("-n", "--noplay", action="store_false", dest="play", default=True,
+                      help="Do not autoplay the audio or video file.")
+    parser.add_option("--handler", dest="handler", default=None,
+                      help="Use a particular handler.")
+
+    (options, args) = parser.parse_args()
+
+    if len(args) != 1:
+        parser.print_help()
+        sys.exit(0)
+
+    path = args[0]
+    uri = resolve(path)
+    extension = uri.split(".")[-1].lower()
+
+    if options.handler:
+        handler = globals()['handle_' + options.handler]
+    else:
+        if extension not in extmap:
+            sys.stderr.write("Cannot show extension {ext}\n".format(ext = extension))
+            sys.exit(0)
+        handler = extmap[extension]
+
+    handler(path, uri, extension, options)
+

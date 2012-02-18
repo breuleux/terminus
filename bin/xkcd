@@ -1,0 +1,56 @@
+#!/usr/bin/env python
+
+from terminus_lib import *
+import sys
+import json
+import urllib
+import optparse
+
+if __name__ == '__main__':
+
+    parser = optparse.OptionParser(usage = "Usage: %prog [options] <comic number>",
+                                   description = "Browse the xkcd webcomic (http://xkcd.com)")
+
+    parser.add_option("-n", "--no-alt", action="store_false", dest="showalt", default=True,
+                      help="Don't print the alt text.")
+    parser.add_option("-i", "--info",
+                      action="store_true", dest="info", default=False,
+                      help="Show all information (date, filename, etc.).")
+    parser.add_option("-x", "--no-image",
+                      action="store_false", dest="showimage", default=True,
+                      help="Don't display the image.")
+
+    (options, args) = parser.parse_args()
+
+    if args:
+        comic = 'http://xkcd.com/{n}'.format(n = args[0])
+    else:
+        comic = 'http://xkcd.com'
+
+    source = comic + '/info.0.json'
+
+    f = urllib.urlopen(source)
+    data = json.loads(f.read())
+    f.close()
+
+    if options.showimage:
+        printers.h('<img src="{target}"/>'.format(
+                target = data['img']))
+
+    if options.showalt:
+        print('\x1B[1;32m{alt}\x1B[0m').format(
+            alt = data['alt'])
+
+    if options.info:
+        data['url'] = comic
+        data['date'] = '{m}/{d}/{y}'.format(m = data['month'],
+                                            d = data['day'],
+                                            y = data['year'])
+        del data['month']
+        del data['day']
+        del data['year']
+        for k, v in sorted(data.items()):
+            if v:
+                print('\x1B[1;32m{k}:\x1B[0m {v}').format(
+                        k = k,
+                        v = v)
