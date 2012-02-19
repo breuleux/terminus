@@ -37,8 +37,14 @@
             settings.port = "{{port}}";
             term_div = $("#terminal");
             terminal = Terminus(term_div, settings);
-            terminal.connect_socket_io();
+            terminal.connect(SocketIOExtern);
+            Terminus.interact(terminal, settings.bindings);
+            <!-- terminal.connect_socket_io(); -->
             term = terminal;
+
+            $(window).bind('resize', function (e) {
+                setTimeout(term.adjust_size, 10);
+            });
         });
 
       });

@@ -1180,6 +1180,42 @@ function ScreenDisplay(terminal, screen, settings) {
 }
 
 
+function SocketIOExtern(terminal, settings) {
+    var self = obj();
+
+    var socket = io.connect('http://'
+                            + settings.server
+                            + ":" + settings.port);
+
+    socket.emit('connect_to', {command: settings.termtype,
+                               id: settings.id});
+
+    self.setsize = function (nlines, ncols) {
+        socket.emit('setsize', {h: nlines, w: ncols});
+    };
+
+    self.send = function (data) {
+        socket.emit('data', data);
+    };
+        
+    socket.on('data', function (data) {
+        if (data != "") {
+            terminal.new_data(data);
+        }
+    });
+
+    socket.on('exit', function (data) {
+        terminal.new_data('\n\x1B[1;31mProcess ended.\x1B[0m');
+    });
+
+    socket.on('disconnect', function (data) {
+        terminal.new_data('\n\x1B[1;31mConnection to server terminated.\x1B[0m');
+        socket.disconnect();
+    });
+
+    return self;
+}
+
 
 function Terminus(div, settings) {
     var self = Nest(div);
@@ -1235,7 +1271,7 @@ function Terminus(div, settings) {
             }
         }
 
-        self.setsize(self.nlines, self.ncols);
+        self.extern.setsize(self.nlines, self.ncols);
     }
 
 
@@ -1719,9 +1755,9 @@ function Terminus(div, settings) {
 
         // BINDINGS
 
-        $(window).bind('resize', function (e) {
-            setTimeout(self.adjust_size, 10);
-        });
+        // $(window).bind('resize', function (e) {
+        //     setTimeout(self.adjust_size, 10);
+        // });
 
         self.terminal.bind('paste', function(e) {
             var target = self.textarea;
@@ -1736,461 +1772,800 @@ function Terminus(div, settings) {
             }, 0);
         });
 
-        self.keynames = {
-            8: "Backspace",
-            9: "Tab",
-            13: "Enter",
-            16: "S-",
-            17: "C-",
-            18: "A-",
-            27: "Esc",
-            32: "Space",
-            33: "PgUp",
-            34: "PgDn",
-            35: "End",
-            36: "Home",
-            37: "Left",
-            38: "Up",
-            39: "Right",
-            40: "Down",
-            45: "Insert",
-            46: "Delete",
-            48: "0",
-            49: "1",
-            50: "2",
-            51: "3",
-            52: "4",
-            53: "5",
-            54: "6",
-            55: "7",
-            56: "8",
-            57: "9",
-            65: "a",
-            66: "b",
-            67: "c",
-            68: "d",
-            69: "e",
-            70: "f",
-            71: "g",
-            72: "h",
-            73: "i",
-            74: "j",
-            75: "k",
-            76: "l",
-            77: "m",
-            78: "n",
-            79: "o",
-            80: "p",
-            81: "q",
-            82: "r",
-            83: "s",
-            84: "t",
-            85: "u",
-            86: "v",
-            87: "w",
-            88: "x",
-            89: "y",
-            90: "z",
-            112: "F1",
-            113: "F2",
-            114: "F3",
-            115: "F4",
-            116: "F5",
-            117: "F6",
-            118: "F7",
-            119: "F8",
-            120: "F9",
-            121: "F10",
-            122: "F11",
-            123: "F12",
-        }
+        // self.keynames = {
+        //     8: "Backspace",
+        //     9: "Tab",
+        //     13: "Enter",
+        //     16: "S-",
+        //     17: "C-",
+        //     18: "A-",
+        //     27: "Esc",
+        //     32: "Space",
+        //     33: "PgUp",
+        //     34: "PgDn",
+        //     35: "End",
+        //     36: "Home",
+        //     37: "Left",
+        //     38: "Up",
+        //     39: "Right",
+        //     40: "Down",
+        //     45: "Insert",
+        //     46: "Delete",
+        //     48: "0",
+        //     49: "1",
+        //     50: "2",
+        //     51: "3",
+        //     52: "4",
+        //     53: "5",
+        //     54: "6",
+        //     55: "7",
+        //     56: "8",
+        //     57: "9",
+        //     65: "a",
+        //     66: "b",
+        //     67: "c",
+        //     68: "d",
+        //     69: "e",
+        //     70: "f",
+        //     71: "g",
+        //     72: "h",
+        //     73: "i",
+        //     74: "j",
+        //     75: "k",
+        //     76: "l",
+        //     77: "m",
+        //     78: "n",
+        //     79: "o",
+        //     80: "p",
+        //     81: "q",
+        //     82: "r",
+        //     83: "s",
+        //     84: "t",
+        //     85: "u",
+        //     86: "v",
+        //     87: "w",
+        //     88: "x",
+        //     89: "y",
+        //     90: "z",
+        //     112: "F1",
+        //     113: "F2",
+        //     114: "F3",
+        //     115: "F4",
+        //     116: "F5",
+        //     117: "F6",
+        //     118: "F7",
+        //     119: "F8",
+        //     120: "F9",
+        //     121: "F10",
+        //     122: "F11",
+        //     123: "F12",
+        // }
 
-        function word_operation(direction, operation) {
-            return function () {
+        // function word_operation(direction, operation) {
+        //     return function () {
 
-                var mat = self.screen.matrix[self.screen.line];
-                var skipover = ("! @ # $ % ^ & * ( ) [ ] { }"
-                                + " / ? \\ | &nbsp; &gt; &lt;"
-                                + " = + - _ ` ~ ; : \" ' . ,").split(" ")
-                if (direction == "left") {
-                    var j = self.screen.column - 1;
-                    for (; j >= 0; j--) {
-                        if (skipover.indexOf(mat[j][0]) == -1) { break; }
-                        self.to_send += operation;
-                    }
-                    for (; j >= 0; j--) {
-                        if (skipover.indexOf(mat[j][0]) != -1) { break; }
-                        self.to_send += operation;
-                    }
-                }
-                else {
-                    var j = self.screen.column;
-                    for (; j < self.ncols; j++) {
-                        if (skipover.indexOf(mat[j][0]) == -1) { break; }
-                        self.to_send += operation;
-                    }
-                    for (; j < self.ncols; j++) {
-                        if (skipover.indexOf(mat[j][0]) != -1) { break; }
-                        self.to_send += operation;
-                    }
-                }
-                return true;
-            }
-        }
+        //         var mat = self.screen.matrix[self.screen.line];
+        //         var skipover = ("! @ # $ % ^ & * ( ) [ ] { }"
+        //                         + " / ? \\ | &nbsp; &gt; &lt;"
+        //                         + " = + - _ ` ~ ; : \" ' . ,").split(" ")
+        //         if (direction == "left") {
+        //             var j = self.screen.column - 1;
+        //             for (; j >= 0; j--) {
+        //                 if (skipover.indexOf(mat[j][0]) == -1) { break; }
+        //                 self.to_send += operation;
+        //             }
+        //             for (; j >= 0; j--) {
+        //                 if (skipover.indexOf(mat[j][0]) != -1) { break; }
+        //                 self.to_send += operation;
+        //             }
+        //         }
+        //         else {
+        //             var j = self.screen.column;
+        //             for (; j < self.ncols; j++) {
+        //                 if (skipover.indexOf(mat[j][0]) == -1) { break; }
+        //                 self.to_send += operation;
+        //             }
+        //             for (; j < self.ncols; j++) {
+        //                 if (skipover.indexOf(mat[j][0]) != -1) { break; }
+        //                 self.to_send += operation;
+        //             }
+        //         }
+        //         return true;
+        //     }
+        // }
 
-        self.app_keypad = function (suffix, kp_suffix) {
-            return function () {
-                if (self.app_key) {
-                    self.to_send += "\x1BO" + (kp_suffix || suffix);
-                }
-                else {
-                    self.to_send += "\x1B[" + suffix;
-                }
-            };
-        }
+        // self.app_keypad = function (suffix, kp_suffix) {
+        //     return function () {
+        //         if (self.app_key) {
+        //             self.to_send += "\x1BO" + (kp_suffix || suffix);
+        //         }
+        //         else {
+        //             self.to_send += "\x1B[" + suffix;
+        //         }
+        //     };
+        // }
 
-        self.csi_command = function (suffix) {
-            return "\x1B[" + suffix;
-        }
+        // self.csi_command = function (suffix) {
+        //     return "\x1B[" + suffix;
+        // }
 
-        self.commands = {
-            backspace: "\x7F",
-            enter: "\x0D",
-            tab: "\x09",
-            esc: "\x1B",
-            csi: "\x1B[",
-            noop: "",
+        // self.commands = {
+        //     backspace: "\x7F",
+        //     enter: "\x0D",
+        //     tab: "\x09",
+        //     esc: "\x1B",
+        //     csi: "\x1B[",
+        //     noop: "",
 
-            up: self.app_keypad("A"),
-            down: self.app_keypad("B"),
-            right: self.app_keypad("C"),
-            left: self.app_keypad("D"),
+        //     up: self.app_keypad("A"),
+        //     down: self.app_keypad("B"),
+        //     right: self.app_keypad("C"),
+        //     left: self.app_keypad("D"),
 
-            home: self.app_keypad("H"),
-            insert: self.csi_command("2~"),
-            "delete": self.csi_command("3~"),
-            end: self.app_keypad("F"),
-            pgup: self.csi_command("5~"),
-            pgdn: self.csi_command("6~"),
+        //     home: self.app_keypad("H"),
+        //     insert: self.csi_command("2~"),
+        //     "delete": self.csi_command("3~"),
+        //     end: self.app_keypad("F"),
+        //     pgup: self.csi_command("5~"),
+        //     pgdn: self.csi_command("6~"),
 
-            f1: "\x1BOP",
-            f2: "\x1BOQ",
-            f3: "\x1BOR",
-            f4: "\x1BOS",
-            f5: self.csi_command("15~"),
-            f6: self.csi_command("17~"),
-            f7: self.csi_command("18~"),
-            f8: self.csi_command("19~"),
-            f9: self.csi_command("20~"),
-            f10: self.csi_command("21~"),
-            f11: self.csi_command("23~"),
-            f12: self.csi_command("24~"),
+        //     f1: "\x1BOP",
+        //     f2: "\x1BOQ",
+        //     f3: "\x1BOR",
+        //     f4: "\x1BOS",
+        //     f5: self.csi_command("15~"),
+        //     f6: self.csi_command("17~"),
+        //     f7: self.csi_command("18~"),
+        //     f8: self.csi_command("19~"),
+        //     f9: self.csi_command("20~"),
+        //     f10: self.csi_command("21~"),
+        //     f11: self.csi_command("23~"),
+        //     f12: self.csi_command("24~"),
 
-            clear_up: function () {
-                self.remove_child(1);
-            },
+        //     clear_up: function () {
+        //         self.remove_child(1);
+        //     },
 
-            clear_down: function () {
-                self.remove_child(5);
-            },
+        //     clear_down: function () {
+        //         self.remove_child(5);
+        //     },
 
-            clear_left: function () {
-                self.remove_child(2);
-            },
+        //     clear_left: function () {
+        //         self.remove_child(2);
+        //     },
 
-            clear_right: function () {
-                self.remove_child(4);
-            },
+        //     clear_right: function () {
+        //         self.remove_child(4);
+        //     },
 
-            clear_scrollback: function () {
-                self.screend.clear_scrollback();
-                self.display();
-                return true;
-            },
+        //     clear_scrollback: function () {
+        //         self.screend.clear_scrollback();
+        //         self.display();
+        //         return true;
+        //     },
 
-            log_mode: function () {
-                self.logger.switch_state();
-                return "noscroll";
-            },
+        //     log_mode: function () {
+        //         self.logger.switch_state();
+        //         return "noscroll";
+        //     },
 
-            clear_log: function () {
-                self.logger.clear();
-                return "noscroll";
-            },
+        //     clear_log: function () {
+        //         self.logger.clear();
+        //         return "noscroll";
+        //     },
             
-            scroll_up_line: function () {
-                self.scroll_by(-self.char_height);
-                return "noscroll";
-            },
+        //     scroll_up_line: function () {
+        //         self.scroll_by(-self.char_height);
+        //         return "noscroll";
+        //     },
 
-            scroll_down_line: function () {
-                self.scroll_by(self.char_height);
-                return "noscroll";
-            },
+        //     scroll_down_line: function () {
+        //         self.scroll_by(self.char_height);
+        //         return "noscroll";
+        //     },
 
-            scroll_up_page: function () {
-                self.scroll_by(-self.char_height * self.nlines);
-                return "noscroll";
-            },
+        //     scroll_up_page: function () {
+        //         self.scroll_by(-self.char_height * self.nlines);
+        //         return "noscroll";
+        //     },
 
-            scroll_down_page: function () {
-                self.scroll_by(self.char_height * self.nlines);
-                return "noscroll";
-            },
+        //     scroll_down_page: function () {
+        //         self.scroll_by(self.char_height * self.nlines);
+        //         return "noscroll";
+        //     },
 
-            word_left: "\x1B[1;5D",
-            word_right: "\x1B[1;5C",
-            word_up: "\x1B[1;5A",
-            word_down: "\x1B[1;5B",
+        //     word_left: "\x1B[1;5D",
+        //     word_right: "\x1B[1;5C",
+        //     word_up: "\x1B[1;5A",
+        //     word_down: "\x1B[1;5B",
 
-            // word_left: word_operation("left", "\x1B[D"),
-            // word_right: word_operation("right", "\x1B[C"),
+        //     // word_left: word_operation("left", "\x1B[D"),
+        //     // word_right: word_operation("right", "\x1B[C"),
 
-            word_delete_left: word_operation("left", "\x7f"),
-            word_delete_right: word_operation("right", "\x1B[3~"),
+        //     word_delete_left: word_operation("left", "\x7f"),
+        //     word_delete_right: word_operation("right", "\x1B[3~"),
 
-            garbage: function () {
-                for (var j = 0; j < 10; j++) {
-                    var s = "";
-                    for (var i = 0; i < 50; i++) {
-                        // s += '\x1B[3' + ~~(Math.random()*7 + 1) + 'm'
-                        // s += Math.random().toString().substring(2) + "\n";
-                        s += '\x1B[?0;;99y:h <div style="color: green">'
-                        s += Math.random().toString().substring(2);
-                        s += '</div>\n'
-                    }
-                    self.to_write += s;
-                    self.write_all();
-                }
-            },
+        //     garbage: function () {
+        //         for (var j = 0; j < 10; j++) {
+        //             var s = "";
+        //             for (var i = 0; i < 50; i++) {
+        //                 // s += '\x1B[3' + ~~(Math.random()*7 + 1) + 'm'
+        //                 // s += Math.random().toString().substring(2) + "\n";
+        //                 s += '\x1B[?0;;99y:h <div style="color: green">'
+        //                 s += Math.random().toString().substring(2);
+        //                 s += '</div>\n'
+        //             }
+        //             self.to_write += s;
+        //             self.write_all();
+        //         }
+        //     },
 
-            space: " ",
-            tilde: "~",
-        }
+        //     space: " ",
+        //     tilde: "~",
+        // }
 
-        self.focus();
+        // self.focus();
 
-        self.keydown_fn = function(e) {
+        // self.keydown_fn = function(e) {
 
-            var bindings = (self.bindings
-                            || settings.bindings);
+        //     var bindings = (self.bindings
+        //                     || settings.bindings);
 
-            // var bindings = settings.bindings;
+        //     // var bindings = settings.bindings;
 
-            var orig_code = (self.keynames[e.which] || "<"+e.which+">");
-            var code = orig_code;
-            if (e.shiftKey && orig_code != "S-")
-                code = "S-" + code;
-            if (e.altKey && orig_code != "A-")
-                code = "A-" + code;
-            if ((e.ctrlKey || e.metaKey) && orig_code != "C-")
-                code = "C-" + code;
-            var just_modifiers = (code[code.length - 1] == '-');
+        //     var orig_code = (self.keynames[e.which] || "<"+e.which+">");
+        //     var code = orig_code;
+        //     if (e.shiftKey && orig_code != "S-")
+        //         code = "S-" + code;
+        //     if (e.altKey && orig_code != "A-")
+        //         code = "A-" + code;
+        //     if ((e.ctrlKey || e.metaKey) && orig_code != "C-")
+        //         code = "C-" + code;
+        //     var just_modifiers = (code[code.length - 1] == '-');
 
-            // this is needed for paste to work
-            if (code == "C-") {
-                // We only do this when the Control key is pressed, to
-                // avoid scrolling to the bottom in too many
-                // situations.
-                self.textarea.focus();
-            }
+        //     // this is needed for paste to work
+        //     if (code == "C-") {
+        //         // We only do this when the Control key is pressed, to
+        //         // avoid scrolling to the bottom in too many
+        //         // situations.
+        //         self.textarea.focus();
+        //     }
 
-            self.log('keydown', code);
+        //     self.log('keydown', code);
 
-            var commands = bindings[code];
+        //     var commands = bindings[code];
 
-            if (commands === undefined) {
-                if (self.bindings && self.bindings._eat) {
-                    // We delete the sub-bindings, except for when we
-                    // hit modifiers without any other key.
-                    if (!just_modifiers) {
-                        delete self.bindings;
-                    }
-                    e.stopPropagation();
-                    e.preventDefault();
-                    return;
-                }
-                else if (self.bindings && self.bindings._browser) {
-                    if (!just_modifiers) {
-                        delete self.bindings;
-                    }
-                    return;
-                }
-                else if (self.bindings && !just_modifiers) {
-                    delete self.bindings;
-                    return self.keydown_fn(e);
-                }
-                else {
-                    return;
-                }
-            }
+        //     if (commands === undefined) {
+        //         if (self.bindings && self.bindings._eat) {
+        //             // We delete the sub-bindings, except for when we
+        //             // hit modifiers without any other key.
+        //             if (!just_modifiers) {
+        //                 delete self.bindings;
+        //             }
+        //             e.stopPropagation();
+        //             e.preventDefault();
+        //             return;
+        //         }
+        //         else if (self.bindings && self.bindings._browser) {
+        //             if (!just_modifiers) {
+        //                 delete self.bindings;
+        //             }
+        //             return;
+        //         }
+        //         else if (self.bindings && !just_modifiers) {
+        //             delete self.bindings;
+        //             return self.keydown_fn(e);
+        //         }
+        //         else {
+        //             return;
+        //         }
+        //     }
 
-            if (typeof commands != "string") {
-                self.bindings = commands;
-                e.stopPropagation();
-                e.preventDefault();
-                return;
-            }
+        //     if (typeof commands != "string") {
+        //         self.bindings = commands;
+        //         e.stopPropagation();
+        //         e.preventDefault();
+        //         return;
+        //     }
 
-            if (self.bindings && !self.bindings._stick) {
-                delete self.bindings;
-            }
+        //     if (self.bindings && !self.bindings._stick) {
+        //         delete self.bindings;
+        //     }
 
-            self.log('exec', commands)
+        //     self.log('exec', commands)
 
-            var cancel = false;
-            commands = commands.split(" ");
-            for (var i = 0; i < commands.length; i++) {
-                var command = commands[i];
-                if (command[0] == "~") {
-                    if (command[1] == "~") {
-                        var s = command.slice(2).charCodeAt() - 64;
-                        self.to_send += String.fromCharCode(s);
-                        cancel = true;
-                    }
-                    else {
-                        var fn = self.commands[command.slice(1)];
-                        if (typeof fn == "string") {
-                            self.to_send += fn;
-                            cancel = true;
-                        }
-                        else if (typeof fn != "undefined") {
-                            cancel = fn();
-                        }
-                    }
-                }
-                else {
-                    self.to_send += command;
-                    cancel = true;
-                }
-            }
+        //     var cancel = false;
+        //     commands = commands.split(" ");
+        //     for (var i = 0; i < commands.length; i++) {
+        //         var command = commands[i];
+        //         if (command[0] == "~") {
+        //             if (command[1] == "~") {
+        //                 var s = command.slice(2).charCodeAt() - 64;
+        //                 self.to_send += String.fromCharCode(s);
+        //                 cancel = true;
+        //             }
+        //             else {
+        //                 var fn = self.commands[command.slice(1)];
+        //                 if (typeof fn == "string") {
+        //                     self.to_send += fn;
+        //                     cancel = true;
+        //                 }
+        //                 else if (typeof fn != "undefined") {
+        //                     cancel = fn();
+        //                 }
+        //             }
+        //         }
+        //         else {
+        //             self.to_send += command;
+        //             cancel = true;
+        //         }
+        //     }
             
-            if (cancel) {
-                if (cancel != "noscroll") {
-                    self.scroll_to_bottom();
-                }
-                e.stopPropagation();
-                e.preventDefault();
-            }
-            self.send();
-        };
+        //     if (cancel) {
+        //         if (cancel != "noscroll") {
+        //             self.scroll_to_bottom();
+        //         }
+        //         e.stopPropagation();
+        //         e.preventDefault();
+        //     }
+        //     self.send();
+        // };
 
-        self.terminal.bind('keydown', self.keydown_fn);
+        // self.terminal.bind('keydown', self.keydown_fn);
 
-        self.terminal.bind('keypress', function(e) {
-            if (!e.ctrlKey) {
-                var key = e.which;
-                if (key == 8) {
-                    return;
-                }
-                var s;
-                s = String.fromCharCode(key);
-                self.to_send += s;
-                if (e.charCode || e.keyCode == 13) {
-                    e.stopPropagation();
-                    e.preventDefault();
-                }
-                self.send();
-            }
-        });
+        // self.terminal.bind('keypress', function(e) {
+        //     if (!e.ctrlKey) {
+        //         var key = e.which;
+        //         if (key == 8) {
+        //             return;
+        //         }
+        //         var s;
+        //         s = String.fromCharCode(key);
+        //         self.to_send += s;
+        //         if (e.charCode || e.keyCode == 13) {
+        //             e.stopPropagation();
+        //             e.preventDefault();
+        //         }
+        //         self.send();
+        //     }
+        // });
     }
 
-    self.connect = function () {
-
-        self.send = function () {
-            if (self.to_send != "") {
-                var to_send = self.to_send;
-                self.to_send = "";
-                $.post(settings.path+"/send", {data: to_send, magic: settings.magic});
-            }
-        };
-
-        self.setsize = function (nlines, ncols) {
-            $.post(settings.path+'/setsize',
-                   {h: nlines, w: ncols, magic: settings.magic});
-        };
-
-        self.get_data = function () {
-            // setTimeout avoids the annoying "waiting..." message
-            // browsers display while the request hangs.
-            setTimeout(function () {
-                $.post(settings.path + "/get", {magic: settings.magic},
-                       function(data) {
-                           if (data != "") {
-                               self.to_write += data;
-                               self.write_all();
-                           }
-                           self.get_data();
-                       })
-                    .error(function () {
-                        self.to_write += '\n\x1B[1;31mConnection to server terminated';
-                        self.to_write += ' because this session was opened elsewhere.';
-                        self.to_write += '\nRefresh to reclaim session.\x1B[0m';
-                        self.write_all();
-                    })
-            }, 0)
-        };
+    self.connect = function (extern) {
+        self.extern = extern(self, settings);
 
         self.init(div, settings);
 
         setInterval(function () {
             self.adjust_size();
         }, 500)
-
-        self.get_data();
     }
 
-    self.connect_socket_io = function () {
+    // self.setsize = function (nlines, ncols) {
+    //     console.log(nlines + 'x' + ncols);
+    //     self.extern.setsize(nlines, ncols);
+    // };
 
-        var socket = io.connect('http://'
-                                + settings.server
-                                + ":" + settings.port);
+    self.send = function () {
+        if (self.to_send != "") {
+            var to_send = self.to_send;
+            self.to_send = "";
+            self.extern.send(to_send);
+        }
+    };
 
-        socket.emit('connect_to', {command: settings.termtype,
-                                   id: settings.id});
+    self.new_data = function (data) {
+        self.to_write += data;
+        self.write_all();
+    };
 
-        self.setsize = function (nlines, ncols) {
-            socket.emit('setsize', {h: nlines, w: ncols});
-        };
+    // self.connect_socket_io = function () {
 
-        self.send = function () {
-            if (self.to_send != "") {
-                var to_send = self.to_send;
-                self.to_send = "";
-                socket.emit('data', to_send);
-            }
-        };
+    //     var socket = io.connect('http://'
+    //                             + settings.server
+    //                             + ":" + settings.port);
+
+    //     socket.emit('connect_to', {command: settings.termtype,
+    //                                id: settings.id});
+
+    //     self.setsize = function (nlines, ncols) {
+    //         socket.emit('setsize', {h: nlines, w: ncols});
+    //     };
+
+    //     self.send = function () {
+    //         if (self.to_send != "") {
+    //             var to_send = self.to_send;
+    //             self.to_send = "";
+    //             socket.emit('data', to_send);
+    //         }
+    //     };
         
-        socket.on('data', function (data) {
-            if (data != "") {
-                self.to_write += data;
-                self.write_all();
-            }
-        });
+    //     socket.on('data', function (data) {
+    //         if (data != "") {
+    //             self.to_write += data;
+    //             self.write_all();
+    //         }
+    //     });
 
-        socket.on('exit', function (data) {
-            self.to_write += '\n\x1B[1;31mProcess ended.\x1B[0m';
-            self.write_all();
-        });
+    //     socket.on('exit', function (data) {
+    //         self.to_write += '\n\x1B[1;31mProcess ended.\x1B[0m';
+    //         self.write_all();
+    //     });
 
-        socket.on('disconnect', function (data) {
-            self.to_write += '\n\x1B[1;31mConnection to server terminated.\x1B[0m';
-            self.write_all();
-            socket.disconnect();
-        });
+    //     socket.on('disconnect', function (data) {
+    //         self.to_write += '\n\x1B[1;31mConnection to server terminated.\x1B[0m';
+    //         self.write_all();
+    //         socket.disconnect();
+    //     });
 
-        self.init(div, settings);
+    //     self.init(div, settings);
 
-        setInterval(function () {
-            self.adjust_size();
-        }, 500)
-    }
+    //     setInterval(function () {
+    //         self.adjust_size();
+    //     }, 500)
+    // }
 
     // self.init(div, settings);
     return self;
 }
 
 
+Terminus.interact = function (terminal, bindings) {
+
+    var keynames = {
+        8: "Backspace",
+        9: "Tab",
+        13: "Enter",
+        16: "S-",
+        17: "C-",
+        18: "A-",
+        27: "Esc",
+        32: "Space",
+        33: "PgUp",
+        34: "PgDn",
+        35: "End",
+        36: "Home",
+        37: "Left",
+        38: "Up",
+        39: "Right",
+        40: "Down",
+        45: "Insert",
+        46: "Delete",
+        48: "0",
+        49: "1",
+        50: "2",
+        51: "3",
+        52: "4",
+        53: "5",
+        54: "6",
+        55: "7",
+        56: "8",
+        57: "9",
+        65: "a",
+        66: "b",
+        67: "c",
+        68: "d",
+        69: "e",
+        70: "f",
+        71: "g",
+        72: "h",
+        73: "i",
+        74: "j",
+        75: "k",
+        76: "l",
+        77: "m",
+        78: "n",
+        79: "o",
+        80: "p",
+        81: "q",
+        82: "r",
+        83: "s",
+        84: "t",
+        85: "u",
+        86: "v",
+        87: "w",
+        88: "x",
+        89: "y",
+        90: "z",
+        112: "F1",
+        113: "F2",
+        114: "F3",
+        115: "F4",
+        116: "F5",
+        117: "F6",
+        118: "F7",
+        119: "F8",
+        120: "F9",
+        121: "F10",
+        122: "F11",
+        123: "F12",
+    }
+
+    function word_operation(direction, operation) {
+        return function () {
+
+            var mat = terminal.screen.matrix[terminal.screen.line];
+            var skipover = ("! @ # $ % ^ & * ( ) [ ] { }"
+                            + " / ? \\ | &nbsp; &gt; &lt;"
+                            + " = + - _ ` ~ ; : \" ' . ,").split(" ")
+            if (direction == "left") {
+                var j = terminal.screen.column - 1;
+                for (; j >= 0; j--) {
+                    if (skipover.indexOf(mat[j][0]) == -1) { break; }
+                    terminal.to_send += operation;
+                }
+                for (; j >= 0; j--) {
+                    if (skipover.indexOf(mat[j][0]) != -1) { break; }
+                    terminal.to_send += operation;
+                }
+            }
+            else {
+                var j = terminal.screen.column;
+                for (; j < terminal.ncols; j++) {
+                    if (skipover.indexOf(mat[j][0]) == -1) { break; }
+                    terminal.to_send += operation;
+                }
+                for (; j < terminal.ncols; j++) {
+                    if (skipover.indexOf(mat[j][0]) != -1) { break; }
+                    terminal.to_send += operation;
+                }
+            }
+            return true;
+        }
+    }
+
+    function app_keypad(suffix, kp_suffix) {
+        return function () {
+            if (terminal.app_key) {
+                terminal.to_send += "\x1BO" + (kp_suffix || suffix);
+            }
+            else {
+                terminal.to_send += "\x1B[" + suffix;
+            }
+        };
+    }
+
+    function csi_command(suffix) {
+        return "\x1B[" + suffix;
+    }
+
+    var all_commands = {
+        backspace: "\x7F",
+        enter: "\x0D",
+        tab: "\x09",
+        esc: "\x1B",
+        csi: "\x1B[",
+        noop: "",
+
+        up: app_keypad("A"),
+        down: app_keypad("B"),
+        right: app_keypad("C"),
+        left: app_keypad("D"),
+
+        home: app_keypad("H"),
+        insert: csi_command("2~"),
+        "delete": csi_command("3~"),
+        end: app_keypad("F"),
+        pgup: csi_command("5~"),
+        pgdn: csi_command("6~"),
+
+        f1: "\x1BOP",
+        f2: "\x1BOQ",
+        f3: "\x1BOR",
+        f4: "\x1BOS",
+        f5: csi_command("15~"),
+        f6: csi_command("17~"),
+        f7: csi_command("18~"),
+        f8: csi_command("19~"),
+        f9: csi_command("20~"),
+        f10: csi_command("21~"),
+        f11: csi_command("23~"),
+        f12: csi_command("24~"),
+
+        clear_up: function () {
+            terminal.remove_child(1);
+        },
+
+        clear_down: function () {
+            terminal.remove_child(5);
+        },
+
+        clear_left: function () {
+            terminal.remove_child(2);
+        },
+
+        clear_right: function () {
+            terminal.remove_child(4);
+        },
+
+        clear_scrollback: function () {
+            terminal.screend.clear_scrollback();
+            terminal.display();
+            return true;
+        },
+
+        log_mode: function () {
+            terminal.logger.switch_state();
+            return "noscroll";
+        },
+
+        clear_log: function () {
+            terminal.logger.clear();
+            return "noscroll";
+        },
+        
+        scroll_up_line: function () {
+            terminal.scroll_by(-terminal.char_height);
+            return "noscroll";
+        },
+
+        scroll_down_line: function () {
+            terminal.scroll_by(terminal.char_height);
+            return "noscroll";
+        },
+
+        scroll_up_page: function () {
+            terminal.scroll_by(-terminal.char_height * terminal.nlines);
+            return "noscroll";
+        },
+
+        scroll_down_page: function () {
+            terminal.scroll_by(terminal.char_height * terminal.nlines);
+            return "noscroll";
+        },
+
+        word_left: "\x1B[1;5D",
+        word_right: "\x1B[1;5C",
+        word_up: "\x1B[1;5A",
+        word_down: "\x1B[1;5B",
+
+        word_delete_left: word_operation("left", "\x7f"),
+        word_delete_right: word_operation("right", "\x1B[3~"),
+
+        garbage: function () {
+            for (var j = 0; j < 10; j++) {
+                var s = "";
+                for (var i = 0; i < 50; i++) {
+                    // s += '\x1B[3' + ~~(Math.random()*7 + 1) + 'm'
+                    // s += Math.random().toString().substring(2) + "\n";
+                    s += '\x1B[?0;;99y:h <div style="color: green">'
+                    s += Math.random().toString().substring(2);
+                    s += '</div>\n'
+                }
+                terminal.to_write += s;
+                terminal.write_all();
+            }
+        },
+
+        space: " ",
+        tilde: "~",
+    }
+
+    function keydown_fn(e) {
+
+        var bindings = (current_bindings || global_bindings);
+
+        var orig_code = (keynames[e.which] || "<"+e.which+">");
+        var code = orig_code;
+        if (e.shiftKey && orig_code != "S-")
+            code = "S-" + code;
+        if (e.altKey && orig_code != "A-")
+            code = "A-" + code;
+        if ((e.ctrlKey || e.metaKey) && orig_code != "C-")
+            code = "C-" + code;
+        var just_modifiers = (code[code.length - 1] == '-');
+
+        // this is needed for paste to work
+        if (code == "C-") {
+            // We only do this when the Control key is pressed, to
+            // avoid scrolling to the bottom in too many
+            // situations.
+            terminal.focus();
+        }
+
+        terminal.log('keydown', code);
+
+        var commands = bindings[code];
+
+        if (commands === undefined) {
+            if (current_bindings && current_bindings._eat) {
+                // We delete the sub-bindings, except for when we
+                // hit modifiers without any other key.
+                if (!just_modifiers) {
+                    current_bindings = null
+                }
+                e.stopPropagation();
+                e.preventDefault();
+                return;
+            }
+            else if (current_bindings && current_bindings._browser) {
+                if (!just_modifiers) {
+                    current_bindings = null
+                }
+                return;
+            }
+            else if (current_bindings && !just_modifiers) {
+                current_bindings = null;
+                return keydown_fn(e);
+            }
+            else {
+                return;
+            }
+        }
+
+        if (typeof commands != "string") {
+            current_bindings = commands;
+            e.stopPropagation();
+            e.preventDefault();
+            return;
+        }
+
+        if (current_bindings && !current_bindings._stick) {
+            current_bindings = null;
+        }
+
+        terminal.log('exec', commands)
+
+        var cancel = false;
+        commands = commands.split(" ");
+        for (var i = 0; i < commands.length; i++) {
+            var command = commands[i];
+            if (command[0] == "~") {
+                if (command[1] == "~") {
+                    var s = command.slice(2).charCodeAt() - 64;
+                    terminal.to_send += String.fromCharCode(s);
+                    cancel = true;
+                }
+                else {
+                    var fn = all_commands[command.slice(1)];
+                    if (typeof fn == "string") {
+                        terminal.to_send += fn;
+                        cancel = true;
+                    }
+                    else if (typeof fn != "undefined") {
+                        cancel = fn();
+                    }
+                }
+            }
+            else {
+                terminal.to_send += command;
+                cancel = true;
+            }
+        }
+        
+        if (cancel) {
+            if (cancel != "noscroll") {
+                terminal.scroll_to_bottom();
+            }
+            e.stopPropagation();
+            e.preventDefault();
+        }
+        terminal.send();
+    };
+
+    function keypress_fn(e) {
+        if (!e.ctrlKey) {
+            var key = e.which;
+            if (key == 8) {
+                return;
+            }
+            var s;
+            s = String.fromCharCode(key);
+            terminal.to_send += s;
+            if (e.charCode || e.keyCode == 13) {
+                e.stopPropagation();
+                e.preventDefault();
+            }
+            terminal.send();
+        }
+    }
+
+    terminal.focus();
+    var current_bindings = null;
+    var global_bindings = bindings;
+    terminal.terminal.bind('keydown', keydown_fn);
+    terminal.terminal.bind('keypress', keypress_fn);
+}
 
 Terminus.deco = function (x) {
     return function () {
@@ -2869,28 +3244,6 @@ Terminus.strdiff = function (before, after) {
 Terminus.constructors = {
     // DivNest (HTML)
     'h': function (command) {
-        // var div = makediv();
-        // var nest = DivNest(div);
-        // if (command.action == '+') {
-        //     div.innerHTML = command.text;
-        // }
-        // else {
-        //     nest.process(command);
-        // }
-        // return nest;
-
-        // var div = makediv();
-        // var nest = DivNest(div);
-        // if (command.action == '+') {
-        //     div = $(command.text)[0] || makediv();
-        //     nest = DivNest(div);
-        // }
-        // else {
-        //     nest.process(command);
-        // }
-        // return nest;
-
-
         if (command.action == '+') {
             var text = command.text.trim();
             var div;
