@@ -279,7 +279,7 @@ function DivNest(div) {
         child.demote = function () {
             delete self.children[id];
         }
-        child.log = self.log;
+        // child.log = self.log;
         return id;
     }
 
@@ -1317,7 +1317,7 @@ function Terminus(div, settings) {
         child.demote = function () {
             delete self.children[id];
         }
-        child.log = self.log;
+        // child.log = self.log;
         if (id == 1 || id == 2 || id == 4 || id == 5) {
             setTimeout(self.adjust_size, 10);
         }
@@ -2869,8 +2869,30 @@ Terminus.strdiff = function (before, after) {
 Terminus.constructors = {
     // DivNest (HTML)
     'h': function (command) {
+        // var div = makediv();
+        // var nest = DivNest(div);
+        // if (command.action == '+') {
+        //     div.innerHTML = command.text;
+        // }
+        // else {
+        //     nest.process(command);
+        // }
+        // return nest;
+
+        // var div = makediv();
+        // var nest = DivNest(div);
+        // if (command.action == '+') {
+        //     div = $(command.text)[0] || makediv();
+        //     nest = DivNest(div);
+        // }
+        // else {
+        //     nest.process(command);
+        // }
+        // return nest;
+
+
         if (command.action == '+') {
-            var div = $(command.text)[0];
+            var div = $(command.text)[0] || makediv();
             var nest = DivNest(div);
         }
         else {

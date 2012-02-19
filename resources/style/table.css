@@ -89,58 +89,58 @@
     color: white;
 }
 
-.file a.executable {
+.file .executable {
     color: #0f0;
 }
 
-.file a.link {
+.file .link {
     color: #0ff;
 }
 
-.file a.directory {
+.file .directory {
     color: #44f;
 }
 
-.file a.ext-avi,
-.file a.ext-mkv,
-.file a.ext-wmv,
-.file a.ext-mp4 {
+.file .ext-avi,
+.file .ext-mkv,
+.file .ext-wmv,
+.file .ext-mp4 {
     color: #f0a;
 }
 
-.file a.ext-gif,
-.file a.ext-jpg,
-.file a.ext-jpeg,
-.file a.ext-tiff,
-.file a.ext-svg,
-.file a.ext-bmp,
-.file a.ext-png {
+.file .ext-gif,
+.file .ext-jpg,
+.file .ext-jpeg,
+.file .ext-tiff,
+.file .ext-svg,
+.file .ext-bmp,
+.file .ext-png {
     color: #a0f;
 }
 
-.file a.ext-tar,
-.file a.ext-gz,
-.file a.ext-rar,
-.file a.ext-zip,
-.file a.ext-bz2 {
+.file .ext-tar,
+.file .ext-gz,
+.file .ext-rar,
+.file .ext-zip,
+.file .ext-bz2 {
     color: #f00;
 }
 
-.file a.ext-c,
-.file a.ext-cc,
-.file a.ext-js,
-.file a.ext-rb,
-.file a.ext-lua,
-.file a.ext-java,
-.file a.ext-py {
+.file .ext-c,
+.file .ext-cc,
+.file .ext-js,
+.file .ext-rb,
+.file .ext-lua,
+.file .ext-java,
+.file .ext-py {
     color: #f83;
 }
 
-.file a.save-file {
+.file .save-file {
     color: #888;
     font-weight: normal;
 }
 
-.file a.hidden-file {
+.file .hidden-file {
     font-weight: normal;
 }

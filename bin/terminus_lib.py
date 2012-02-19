@@ -11,6 +11,8 @@ class Printer:
         return Printer(self.nest_type, self.nest + nest)
 
     def command(self, action, *args, **kw):
+        if action not in '+:/~!':
+            raise TypeError('Not an allowed action: ' + action)
         nest = self.nest + kw.pop('nest', ())
         end = kw.pop('end', None)
         esc = kw.pop('esc', None)
@@ -18,7 +20,7 @@ class Printer:
         s = "\x1B[?0{end}{esc}{nest}y{action}{type} {contents}{endc}".format(
             end = ";" + end if end else "",
             esc = ";" + esc if esc else "",
-            nest = ";;" + ";".join(map(str, nest)) if nest else "",
+            nest = (";;" + ";".join(map(str, nest))) if nest else "",
             action = action,
             type = self.nest_type,
             contents = " ".join(args),

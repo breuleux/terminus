@@ -125,7 +125,10 @@ inline_handlers = {
                         + '</a></span>');
             }
             else {
-                return '<span class="file">' + filename + '</span>';
+                var rval = '<span class="file"><span class="' + (cls.join(' ')) + '">' + filename + '</span></span>';
+                console.log(rval);
+                return rval;
+                // return '<span class="file">' + filename + '</span>';
             }
         },
 
@@ -159,15 +162,9 @@ function TableNest(columns) {
     self.element.appendChild(table);
     self.table = table;
 
-    // var table = makenode('table');
-    // table.setAttribute('contenteditable', 'false');
-    // var self = DivNest(table);
-    // self.nest_type = 'tb';
-
     self.install_sorter = function (elem, i) {
         elem.onclick = function (evt) {
             self.toggle_sort(i);
-            // alert('something happened?');
         };
     }
 
@@ -211,12 +208,12 @@ function TableNest(columns) {
     }
 
     self.write_header = function () {
-        // self.types.push('header');
-        self.nh += 1;
-        self.nrows += 1;
         var header = makediv();
-        header.setAttribute('class', 'terminus-row terminus-header');
-        // self.element.appendChild(header);
+        header.setAttribute('class', ['terminus-row',
+                                      'terminus-header',
+                                      'terminus-staticrow',
+                                      'line-' + self.n,
+                                      'head-' + self.nh].join(' '));
         self.table.appendChild(header);
 
         for (var i = 0; i < self.ncolumns; i++) {
@@ -227,6 +224,10 @@ function TableNest(columns) {
             header.appendChild(th);
             self.install_sorter(th, i);
         }
+
+        self.nrows += 1;
+        self.nh += 1;
+        self.n += 1;
     }
 
     self.sort = function (colid, reverse) {
@@ -237,10 +238,10 @@ function TableNest(columns) {
         var type = (self.columns[colid].type || "normal").trim();
         var col_sort_fn = inline_handlers[type].sort_fn;
         function sort_fn(a, b) {
-            if ($(a).hasClass('terminus-header')) {
+            if ($(a).hasClass('terminus-staticrow')) {
                 return -1;
             }
-            if ($(b).hasClass('terminus-header')) {
+            if ($(b).hasClass('terminus-staticrow')) {
                 return 1;
             }
             var xa = a.childNodes[colid].childNodes[0];
@@ -254,7 +255,7 @@ function TableNest(columns) {
         var head = 0;
         var norm = self.nh;
         for (var i = 0; i < elems.length; i++) {
-            if ($(saved[i]).hasClass('terminus-header')) {
+            if ($(saved[i]).hasClass('terminus-staticrow')) {
                 self.table.appendChild(elems[head]);
                 head += 1;
             }
@@ -269,15 +270,18 @@ function TableNest(columns) {
                 norm += 1;
             }
         }
-        // $(self.element).append(elems);
         self.current_sort = [colid, !!reverse];
-        // self.install_sorters();
+    }
+
+    self.check_columns = function (values) {
+        if (values.length > self.ncolumns) {
+            self.add_columns(values.length - self.ncolumns);
+        }
     }
 
     self.add_columns = function (n) {
         var cn = self.table.childNodes;
         for (var j = 0; j < cn.length; j++) {
-            // var tag = self.types[j];
             for (var i = 0; i < n; i++) {
                 var node = makediv();
                 node.setAttribute('class', 'terminus-cell');
@@ -289,6 +293,30 @@ function TableNest(columns) {
         }
         self.ncolumns += n;
         self.install_sorters();
+    }
+
+    self.opt_setters.static = function (data) {
+        var pos = parseInt(data);
+        if (pos < 0) {
+            pos += self.nrows;
+        }
+        var target = $(self.table.childNodes[pos]);
+        if (!target.hasClass('terminus-staticrow')) {
+            target.addClass('terminus-staticrow');
+            self.nh += 1;
+        }
+    }
+
+    self.opt_setters.nostatic = function (data) {
+        var pos = parseInt(data);
+        if (pos < 0) {
+            pos += self.nrows;
+        }
+        var target = $(self.table.childNodes[pos]);
+        if (target.hasClass('terminus-staticrow')) {
+            target.removeClass('terminus-staticrow');
+            self.nh -= 1;
+        }
     }
 
     self.opt_setters.flow = function (data) {
@@ -317,11 +345,55 @@ function TableNest(columns) {
         var value = split[1];
         for (var i = 0; i < self.ncolumns; i++) {
             var settings = self.columns[i];
-            if (settings.name == name) {
-                // console.log('crazy' + i + " " + field + '+' + value);
+            if (settings.name == name || settings.label == name) {
                 settings[field] = value;
             }
         }
+    }
+
+    self.insert_row = function (i) {
+        var tr = makediv();
+        tr.setAttribute('class',
+                        ['terminus-row',
+                         i % 2 ? 'odd' : 'even',
+                         'line-' + self.n].join(' '));
+        var cn = self.table.childNodes;
+        if (i == cn.length) {
+            self.table.appendChild(tr);
+        }
+        else {
+            self.table.insertBefore(tr, cn[i]);
+        }
+        self.nrows += 1;
+        self.n += 1;
+    }
+
+    self.delete_row = function (i) {
+        var cn = self.table.childNodes;
+        var tr = cn[i];
+        if ($(tr).hasClass('terminus-header')) {
+            self.th -= 1;
+        }
+        self.table.removeChild(tr);
+        self.nrows -= 1;
+    }
+
+    self.fill_row = function (i, values) {
+        var tr = self.table.childNodes[i];
+        $(tr).empty();
+
+        for (var i = 0; i < self.ncolumns; i++) {
+            var desc = self.columns[i];
+            var td = makediv();
+            td.innerHTML = build_inline.call(self,
+                                             values[i] || "",
+                                             self.columns[i]);
+            td.setAttribute('class',
+                            ['terminus-cell',
+                             'col-' + desc.name,
+                             'type-' + (desc.type || 'normal')].join(' '));
+            tr.appendChild(td);
+        }        
     }
 
     $.extend(self.actions, {
@@ -339,58 +411,97 @@ function TableNest(columns) {
             // Nothing happens here. Might be used at some point to
             // update the header?
         },
+
+        // ':': function (command) {
+        //     var values = command.text.trim().split(self.sep);
+        //     if (values.length > self.ncolumns) {
+        //         self.add_columns(values.length - self.ncolumns);
+        //     }
+        //     if (self.header_freq && self.nrows % self.header_freq == 0) {
+        //         self.write_header();
+        //     }
+
+        //     var tr = makediv(); // makenode('tr');
+        //     tr.setAttribute('class',
+        //                     ['terminus-row',
+        //                      self.nrows % 2 ? 'odd' : 'even',
+        //                      'line-' + self.n].join(' '));
+        //     for (var i = 0; i < self.ncolumns; i++) {
+        //         var desc = self.columns[i];
+        //         var td = makediv(); // makenode('td');
+        //         td.innerHTML = build_inline.call(self,
+        //                                          values[i] || "",
+        //                                          self.columns[i]);
+        //         td.setAttribute('class',
+        //                         ['terminus-cell',
+        //                          'col-' + desc.name,
+        //                          'type-' + (desc.type || 'normal')].join(' '));
+        //         tr.appendChild(td);
+        //     }
+        //     self.table.appendChild(tr);
+        //     self.nrows += 1;
+        //     self.n += 1;
+        // }
+
+
         ':': function (command) {
             var values = command.text.trim().split(self.sep);
-            if (values.length > self.ncolumns) {
-                self.add_columns(values.length - self.ncolumns);
-            }
+            self.check_columns(values);
+
             if (self.header_freq && self.nrows % self.header_freq == 0) {
                 self.write_header();
             }
 
-            var tr = makediv(); // makenode('tr');
-            tr.setAttribute('class',
-                            ['terminus-row',
-                             self.nrows % 2 ? 'odd' : 'even'].join(' '));
-            for (var i = 0; i < self.ncolumns; i++) {
-                var desc = self.columns[i];
-                var td = makediv(); // makenode('td');
-                td.innerHTML = build_inline.call(self,
-                                                 values[i] || "",
-                                                 self.columns[i]);
-                td.setAttribute('class',
-                                ['terminus-cell',
-                                 'col-' + desc.name,
-                                 'type-' + (desc.type || 'normal')].join(' '));
-                // console.log('fuuu ' + values[i] + " " + self.columns[i].type);
-                tr.appendChild(td);
-            }
-            // cls = [];
-            // tr.setAttribute('class', cls.join(' '));
+            var pos = self.nrows;
+            self.insert_row(pos);
+            self.fill_row(pos, values);
+        },
 
-            // self.tbody.appendChild(tr);
-            // self.element.appendChild(tr);
-            self.table.appendChild(tr);
-            self.nrows += 1;
-            // self.types.push('normal');
+        '~': function (command) {
+            var text = command.text.trim();
+            var split = Terminus.split_one(text, ' ');
+            var i = split[0];
+            var insert = false;
+            if (i[0] == '+') {
+                i = i.substring(1);
+                insert = true;
+            }
+            var pos = parseInt(i);
+            if (pos < 0) {
+                pos += self.nrows;
+            }
+
+            var str = split[1].trim();
+            if (!str) {
+                self.delete_row(pos);
+            }
+            else {
+                var values = split[1].split(self.sep);
+                self.check_columns(values);
+                if (insert) {
+                    self.insert_row(pos);
+                }
+                self.fill_row(pos, values);
+            }
         }
     });
 
     self.ncolumns = columns.length;
     self.columns = [];
     self.nrows = 0;
-    // self.types = [];
     self.nh = 0;
+    self.n = 0;
 
     for (var i = 0; i < self.ncolumns; i++) {
         var col = columns[i].split(":");
-        var colobj = {name: col[0], label: col[1] || col[0]};
+        var name = col[0].trim();
+        var label = (col[1] || name).trim();
+        var colobj = {name: name, label: label};
         self.columns.push(colobj);
     }
 
     self.write_header();
     self.sep = " ";
-    // self.install_sorters();
 
     return self;
 }
