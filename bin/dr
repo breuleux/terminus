@@ -96,6 +96,7 @@ def extract_stat(entry, base, follow_dir):
     values['size'] = stats.st_size
     values['size_h'] = to_human(stats.st_size, 1024)
     values['size_si'] = to_human(stats.st_size, 1000)
+    # values['size_bar'] = int(10 * math.log(stats.st_size + 1))
     values['mtime'] = datetime.datetime.fromtimestamp(stats.st_mtime)
     values['atime'] = datetime.datetime.fromtimestamp(stats.st_atime)
     values['ctime'] = datetime.datetime.fromtimestamp(stats.st_ctime)
@@ -109,7 +110,6 @@ def extract_stat(entry, base, follow_dir):
     return rval
 
 def str_description(description, field_order, separator):
-    # print(description['name'])
     return separator.join(str(description[field]) for field in field_order)
 
 def column_name(results):
@@ -120,30 +120,33 @@ def column_nametag(results):
     printers.tb.set('c', 'nametag.type', 'file')
     printers.tb.set('c', 'nametag.tags', 'true')
     printers.tb.set('c', 'nametag.path', root + results['path'] + '/')
-    printers.tb.set('style', '.col-nametag', '{max-width: 300}')
+    # printers.tb.set('style', '.col-nametag', '{max-width: 300}')
 
-# def column_size(results):
-#     printers.tb.set('style', '.col-size', '{text-align: right}')
+def column_size_bar(results):
+    printers.tb.set('c', 'size_bar.type', 'bar')
 
-# def column_size_h(results):
-#     printers.tb.set('style', '.col-size_h', '{text-align: right}')
-
-# def column_size_si(results):
-#     printers.tb.set('style', '.col-size_si', '{text-align: right}')
+def add_fields(results):
+    max_size = max(result['size'] for result in results['values'])
+    for result in results['values']:
+        result['size_bar'] = int(200 * result['size'] / max_size);
 
 def print_results(results,
                   headers,
                   sort_column = None,
                   filter = lambda x: True,
-                  sepn = 160):
+                  sepn = 160,
+                  flow = False):
     fields = [h.split(":")[0] for h in headers.split(" ")]
     printers.tb.new(headers)
-    printers.tb.set('header_freq', '20')
     for field in fields:
         fn = globals().get('column_' + field, None)
         if fn:
             fn(results)
     printers.tb.set('sep', str(sepn))
+    if flow:
+        printers.tb.set('flow', 'true')
+    else:
+        printers.tb.set('header_freq', '20')
     if sort_column:
         if sort_column.startswith('~'):
             sorted_results = reversed(sorted(results['values'],
@@ -157,6 +160,7 @@ def print_results(results,
         if filter(data):
             s = str_description(data, fields, sep)
             printers.tb(s)
+    # printers.tb.set('style', '.terminus-header {display:none}');
     # printers.tb.do('sort', 'size');
 
 
@@ -185,6 +189,15 @@ if __name__ == '__main__':
     parser.add_option("--si", action="store_true", dest="si", default=False,
                       help="Display human-readable size (1K = 1000)")
 
+    parser.add_option("--flow", action="store_true", dest="force_flow", default=False,
+                      help="View the results as a sequence of inline cells")
+
+    parser.add_option("--table", action="store_true", dest="force_table", default=False,
+                      help="View the results as a table")
+
+    parser.add_option("--bars", action="store_true", dest="bars", default=False,
+                      help="View a size histogram.")
+
     (options, args) = parser.parse_args()
 
     if not args:
@@ -204,9 +217,24 @@ if __name__ == '__main__':
     root = '/f/' + (os.getenv("TERMINUS_NAME")
                     or "{user}@{host}".format(user = user, host = host))
 
-    headers = 'mode:Mode nlinks:# uname:User gname:Group size:Size mtime:Modified nametag:Filename'
     sort_by = 'name'
     filter = lambda x: not x['name'].startswith('.')
+
+    if options.bars:
+        flow = False
+        headers = 'nametag:Filename size:Size size_bar:Bar'
+        sort_by = '~size'
+    elif options.long:
+        flow = False
+        headers = 'mode:Mode nlinks:# uname:User gname:Group size:Size mtime:Modified nametag:Filename'
+    else:
+        flow = True
+        headers = 'nametag:Filename size_bar:Size'
+
+    if options.force_flow:
+        flow = True
+    if options.force_table:
+        flow = False
 
     if options.all:
         filter = lambda x: True
@@ -225,6 +253,9 @@ if __name__ == '__main__':
     if isinstance(results, list):
         for result in results:
             print(result['path'] + ":")
-            print_results(result, headers, sort_by, filter, sepn)
+            add_fields(result)
+            print_results(result, headers, sort_by, filter, sepn, flow)
     else:
-        print_results(results, headers, sort_by, filter, sepn)
+        add_fields(results)
+        print_results(results, headers, sort_by, filter, sepn, flow)
+

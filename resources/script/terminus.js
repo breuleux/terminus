@@ -254,6 +254,7 @@ function Nest(element) {
 
 function DivNest(div) {
     var self = Nest(div);
+    div.setAttribute('contenteditable', 'false');
     self.nest_type = 'h';
 
     self.set_child = function(id, child) {
@@ -278,6 +279,7 @@ function DivNest(div) {
         child.demote = function () {
             delete self.children[id];
         }
+        child.log = self.log;
         return id;
     }
 
@@ -1315,6 +1317,7 @@ function Terminus(div, settings) {
         child.demote = function () {
             delete self.children[id];
         }
+        child.log = self.log;
         if (id == 1 || id == 2 || id == 4 || id == 5) {
             setTimeout(self.adjust_size, 10);
         }
@@ -2930,4 +2933,15 @@ Terminus.construct_nest = function (command) {
         return constructor.call(this, command);
     }
 }
+
+Terminus.parse_bool = function (x) {
+    x = x.trim();
+    if (x == 'false' || x == '') {
+        return false;
+    }
+    else if (x == 'true') {
+        return true;
+    }
+}
+
 

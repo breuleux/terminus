@@ -60,6 +60,20 @@ inline_handlers = {
         }
     },
 
+    bar: {
+        make_inline: function (text, settings) {
+            var n = parseInt(text);
+            var w = n * (settings.scale || 1);
+            return '<div class="bar" style="width: ' + w + 'px"></div>';
+        },
+
+        sort_fn: function (a, b) {
+            var na = $(a).width();
+            var nb = $(b).width();
+            return Terminus.cmp(na, nb);
+        }
+    },
+
     file: {
         make_inline: function (text, settings) {
             var path = settings.path;
@@ -74,10 +88,33 @@ inline_handlers = {
                 cls.push(classes[filename[filename.length - 1]]);
                 filename = filename.substring(0, filename.length - 1);
             }
-            var split = filename.split('.');
-            if (split.length > 1) {
-                cls.push('ext-' + split.pop());
+
+            var matchers = [
+                [/\.([a-zA-Z]+)$/, function (whole, match) {
+                    // this.log('test', 'match! ' + match + " " + filename);
+                    cls.push('ext-' + match);
+                }],
+                [/([~#])$/, function (whole, match) {
+                    cls.push('save-file');
+                }],
+                [/^\./, function (whole, match) {
+                    cls.push('hidden-file');
+                }],
+            ]
+            for (var i = 0; i < matchers.length; i++) {
+                var matcher = matchers[i];
+                var match = filename.match(matcher[0]);
+                if (match !== null) {
+                    matcher[1].apply(this, match);
+                }
             }
+
+            // var last = filename[filename.length - 1];
+            // if (last == '~' || last == '#')
+            // var split = filename.split('.');
+            // if (split.length > 1) {
+            //     cls.push('ext-' + split.pop());
+            // }
 
             if (path) {
                 return ('<span class="file"><a contenteditable=false class="'
@@ -107,16 +144,25 @@ function build_inline(text, settings) {
         }
     }
     var type = (settings.type || "normal").trim();
-    return inline_handlers[type].make_inline(text, settings);
+    return inline_handlers[type].make_inline.call(this, text, settings);
 }
 
 
 function TableNest(columns) {
 
-    var table = makenode('table');
-    table.setAttribute('contenteditable', 'false');
-    var self = DivNest(table);
+    var div = makediv();
+    var self = DivNest(div);
     self.nest_type = 'tb';
+
+    var table = makediv();
+    table.setAttribute('class', 'terminus-table');
+    self.element.appendChild(table);
+    self.table = table;
+
+    // var table = makenode('table');
+    // table.setAttribute('contenteditable', 'false');
+    // var self = DivNest(table);
+    // self.nest_type = 'tb';
 
     self.install_sorter = function (elem, i) {
         elem.onclick = function (evt) {
@@ -126,9 +172,9 @@ function TableNest(columns) {
     }
 
     self.install_sorters = function () {
-        var cn = self.element.childNodes;
+        var cn = self.table.childNodes;
         for (var i = 0; i < cn.length; i++) {
-            if (self.types[i] == 'th') {
+            if ($(cn[i]).hasClass('terminus-header')) {
                 for (var j = 0; j < self.ncolumns; j++) {
                     var target = cn[i].childNodes[j];
                     console.log('install ' + i + ' ' + j);
@@ -165,15 +211,18 @@ function TableNest(columns) {
     }
 
     self.write_header = function () {
-        self.types.push('th');
+        // self.types.push('header');
         self.nh += 1;
         self.nrows += 1;
-        var header = makenode('tr');
-        self.element.appendChild(header);
+        var header = makediv();
+        header.setAttribute('class', 'terminus-row terminus-header');
+        // self.element.appendChild(header);
+        self.table.appendChild(header);
 
         for (var i = 0; i < self.ncolumns; i++) {
             var colobj = self.columns[i];
-            var th = makenode('th');
+            var th = makediv();
+            th.setAttribute('class', 'terminus-cell');
             th.innerHTML = colobj.label;
             header.appendChild(th);
             self.install_sorter(th, i);
@@ -182,52 +231,42 @@ function TableNest(columns) {
 
     self.sort = function (colid, reverse) {
         colid = self.find_column(colid);
-        var elems = Array.prototype.slice.call(self.element.childNodes);
+        var cn = self.table.childNodes;
+        var saved = Array.prototype.slice.call(cn);
+        var elems = Array.prototype.slice.call(cn);
         var type = (self.columns[colid].type || "normal").trim();
         var col_sort_fn = inline_handlers[type].sort_fn;
         function sort_fn(a, b) {
-            if (a.nodeName != 'TR') {
+            if ($(a).hasClass('terminus-header')) {
                 return -1;
             }
-            if (b.nodeName != 'TR') {
+            if ($(b).hasClass('terminus-header')) {
                 return 1;
             }
-            if (a.childNodes[colid].nodeName == 'TH') {
-                return -1;
-            }
-            if (b.childNodes[colid].nodeName == 'TH') {
-                return 1;
-            }
-            var xa = a.childNodes[colid];
-            var xb = b.childNodes[colid];
+            var xa = a.childNodes[colid].childNodes[0];
+            var xb = b.childNodes[colid].childNodes[0];
             var v = col_sort_fn(xa, xb);
             return reverse ? -v : v;
         }
-        elems = elems.sort(sort_fn);
-        $(self.element).empty();
+        elems.sort(sort_fn);
+        $(self.table).empty();
 
         var head = 0;
         var norm = self.nh;
-        var j = 0;
         for (var i = 0; i < elems.length; i++) {
-            if (elems[i].nodeName != 'TR') {
+            if ($(saved[i]).hasClass('terminus-header')) {
+                self.table.appendChild(elems[head]);
                 head += 1;
-                norm += 1;
-                self.element.appendChild(elems[i]);
-            }
-            else if (self.types[j] == 'td') {
-                elems[norm].setAttribute('class', (i % 2 == 0) ? 'even' : 'odd');
-                self.element.appendChild(elems[norm]);
-                norm += 1;
-                j += 1;
-            }
-            else if (self.types[j] == 'th') {
-                self.element.appendChild(elems[head]);
-                head += 1;
-                j += 1;
             }
             else {
-                j += 1;
+                if (i % 2 == 0) {
+                    $(elems[norm]).removeClass('odd').addClass('even')
+                }
+                else {
+                    $(elems[norm]).removeClass('even').addClass('odd')
+                }
+                self.table.appendChild(elems[norm]);
+                norm += 1;
             }
         }
         // $(self.element).append(elems);
@@ -236,17 +275,30 @@ function TableNest(columns) {
     }
 
     self.add_columns = function (n) {
-        var cn = self.element.childNodes;
+        var cn = self.table.childNodes;
         for (var j = 0; j < cn.length; j++) {
-            var tag = self.types[j];
+            // var tag = self.types[j];
             for (var i = 0; i < n; i++) {
-                cn[j].appendChild(makenode(tag));
+                var node = makediv();
+                node.setAttribute('class', 'terminus-cell');
+                cn[j].appendChild(node);
             }
         }
         for (var i = 0; i < n; i++) {
             self.columns.push({'name': '', 'label': ''});
         }
         self.ncolumns += n;
+        self.install_sorters();
+    }
+
+    self.opt_setters.flow = function (data) {
+        var opt = Terminus.parse_bool(data);
+        if (opt) {
+            self.table.setAttribute('class', 'terminus-flow');
+        }
+        else {
+            self.table.setAttribute('class', 'terminus-table');
+        }
     }
 
     self.opt_setters.sep = function (data) {
@@ -296,31 +348,38 @@ function TableNest(columns) {
                 self.write_header();
             }
 
-            var tr = makenode('tr');
+            var tr = makediv(); // makenode('tr');
+            tr.setAttribute('class',
+                            ['terminus-row',
+                             self.nrows % 2 ? 'odd' : 'even'].join(' '));
             for (var i = 0; i < self.ncolumns; i++) {
                 var desc = self.columns[i];
-                var td = makenode('td');
-                td.setAttribute('class', 'col-' + desc.name);
-                td.setAttribute('class', 'type-' + (desc.type || 'normal'));
+                var td = makediv(); // makenode('td');
+                td.innerHTML = build_inline.call(self,
+                                                 values[i] || "",
+                                                 self.columns[i]);
+                td.setAttribute('class',
+                                ['terminus-cell',
+                                 'col-' + desc.name,
+                                 'type-' + (desc.type || 'normal')].join(' '));
                 // console.log('fuuu ' + values[i] + " " + self.columns[i].type);
-                td.innerHTML = build_inline(values[i] || "",
-                                            self.columns[i]);
                 tr.appendChild(td);
             }
-            cls = [self.nrows % 2 ? 'even' : 'odd'];
-            tr.setAttribute('class', cls.join(' '));
+            // cls = [];
+            // tr.setAttribute('class', cls.join(' '));
 
             // self.tbody.appendChild(tr);
-            self.element.appendChild(tr);
+            // self.element.appendChild(tr);
+            self.table.appendChild(tr);
             self.nrows += 1;
-            self.types.push('td');
+            // self.types.push('normal');
         }
     });
 
     self.ncolumns = columns.length;
     self.columns = [];
     self.nrows = 0;
-    self.types = [];
+    // self.types = [];
     self.nh = 0;
 
     for (var i = 0; i < self.ncolumns; i++) {

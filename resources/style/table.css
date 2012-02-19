@@ -1,31 +1,81 @@
 
-table {
-    font-family: monospace;
-    font-size: 12pt;
-    color: white;
+.terminus-table {
     border: 2px solid white;
     margin: 5px;
-    border-collapse: collapse;
+    display: table;
 }
 
-td, th {
+.terminus-table .terminus-row {
+    display: table-row;
+}
+
+.terminus-table .terminus-header .terminus-cell {
+    font-weight: bold;
+    text-align: center;
+    background-color: #555;
+    border-top: 2px solid white;
+    border-bottom: 2px solid white;
+    border-left: none;
+    border-right: none;
+}
+
+.terminus-table .terminus-cell {
+    display: table-cell;
     border-left: 1px solid #888;
     border-right: 1px solid #888;
     padding-left: 5px;
     padding-right: 5px;
 }
 
-th {
-    background-color: #444;
-    border-bottom: 3px solid #888;
-}
-
-.odd {
+.terminus-table .odd {
     background-color: #000;
 }
 
-.even {
+.terminus-table .even {
     background-color: #222;
+}
+
+
+
+.terminus-flow {
+    display: block;
+}
+
+.terminus-flow .terminus-row {
+    display: inline-block;
+    margin: 5px;
+    vertical-align: middle;
+}
+
+.terminus-flow .terminus-header {
+    display: none;
+}
+
+.terminus-flow .terminus-cell {
+    display: inline-block;
+    padding-left: 5px;
+    padding-right: 5px;
+    display: block;
+}
+
+.terminus-flow .odd {
+    background-color: #222;
+}
+
+.terminus-flow .even {
+    background-color: #222;
+}
+
+
+.terminus-table .type-number {
+    text-align: right;
+}
+
+
+
+.bar {
+    background-color: #f83;
+    padding: 5px;
 }
 
 
@@ -51,8 +101,46 @@ th {
     color: #44f;
 }
 
-.type-number {
-    text-align: right;
+.file a.ext-avi,
+.file a.ext-mkv,
+.file a.ext-wmv,
+.file a.ext-mp4 {
+    color: #f0a;
 }
 
+.file a.ext-gif,
+.file a.ext-jpg,
+.file a.ext-jpeg,
+.file a.ext-tiff,
+.file a.ext-svg,
+.file a.ext-bmp,
+.file a.ext-png {
+    color: #a0f;
+}
 
+.file a.ext-tar,
+.file a.ext-gz,
+.file a.ext-rar,
+.file a.ext-zip,
+.file a.ext-bz2 {
+    color: #f00;
+}
+
+.file a.ext-c,
+.file a.ext-cc,
+.file a.ext-js,
+.file a.ext-rb,
+.file a.ext-lua,
+.file a.ext-java,
+.file a.ext-py {
+    color: #f83;
+}
+
+.file a.save-file {
+    color: #888;
+    font-weight: normal;
+}
+
+.file a.hidden-file {
+    font-weight: normal;
+}
