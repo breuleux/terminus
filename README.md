@@ -71,13 +71,34 @@ Ctrl+V or the mouse wheel.
 
 You can start exploring with the applications that are in `bin/`. So
 far, they are `dr`, `show`, `tcmd` and `xkcd`. You will have to add
-them to your `PATH` in order to execute them.
+them to your `PATH` in order to execute them unqualified.
+
+I have taken screenshots of myself using each of the commands. I think
+they speak for themselves.
+
+```
+dr
+```
 
 ![dr](https://raw.github.com/breuleux/terminus/master/media/screenshots/dr.png)
 
+```
+show
+```
+
 ![show](https://raw.github.com/breuleux/terminus/master/media/screenshots/limecat.png)
 
+
+```
+xkcd
+```
+
 ![xkcd](https://raw.github.com/breuleux/terminus/master/media/screenshots/xkcd.png)
+
+
+```
+tcmd
+```
 
 ![tcmd1](https://raw.github.com/breuleux/terminus/master/media/screenshots/tcmd.png)
 
