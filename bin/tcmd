@@ -1,0 +1,36 @@
+#!/usr/bin/env python3
+
+from terminus_lib import *
+import optparse
+
+if __name__ == '__main__':
+
+    parser = optparse.OptionParser(usage = "Usage: %prog [options] <command>",
+                                   description = "Send a Terminus command")
+
+    parser.add_option("-d", "--delim", dest="delimiter", default=";",
+                      help="Delimit commands with the given character (default: ;).")
+
+    parser.add_option("-e", "--end", dest="end", default="\n",
+                      help=("Use this character to end commands (default: \\n). "
+                            "Note: this may hang the terminal."))
+
+    parser.add_option("-n", "--nest", dest="nest", default="",
+                      help=("Nest to evaluate the command in. "
+                            "It may be a list of semicolon-separated numbers. "
+                            "(default: '')"))
+
+    (options, args) = parser.parse_args()
+
+    cmds = (" ".join(args)).split(options.delimiter);
+
+    for cmd in cmds:
+        cmd = cmd.strip()
+        action = cmd[0]
+        nest_type, data, *irrelevant = cmd[1:].split(' ', 1) + ['']
+
+        Printer(nest_type).command(action,
+                                   data,
+                                   nest = (tuple(options.nest.split(";"))
+                                           if options.nest else ()))
+
