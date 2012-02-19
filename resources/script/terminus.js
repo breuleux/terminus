@@ -227,15 +227,15 @@ function Nest(element) {
         }
         else if (self.nest_type == command.nest_type
                  || command.action == '+') {
-            try {
-                self.process(command);
-            }
-            catch(e) {
-                err = ('unknown action for nest type '
-                       + command.nest_type + ': '
-                       + command.action);
-                throw err;
-            }
+            // try {
+            self.process(command);
+            // }
+            // catch(e) {
+            //     err = ('unknown action for nest type '
+            //            + command.nest_type + ': '
+            //            + command.action);
+            //     throw err;
+            // }
             return;
         }
         else if (!second_pass) {
@@ -2892,7 +2892,15 @@ Terminus.constructors = {
 
 
         if (command.action == '+') {
-            var div = $(command.text)[0] || makediv();
+            var text = command.text.trim();
+            var div;
+            if (text) {
+                // this.log(text);
+                div = $(text)[0];
+            }
+            else {
+                div = makediv();
+            }
             var nest = DivNest(div);
         }
         else {

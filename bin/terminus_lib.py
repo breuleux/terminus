@@ -18,8 +18,8 @@ class Printer:
         esc = kw.pop('esc', None)
         where = kw.pop('where', sys.stdout)
         s = "\x1B[?0{end}{esc}{nest}y{action}{type} {contents}{endc}".format(
-            end = ";" + end if end else "",
-            esc = ";" + esc if esc else "",
+            end = ";" + str(end) if end else "",
+            esc = ";" + str(esc) if esc else "",
             nest = (";;" + ";".join(map(str, nest))) if nest else "",
             action = action,
             type = self.nest_type,
@@ -36,8 +36,8 @@ class Printer:
         esc = kw.pop('esc', None)
         where = kw.pop('where', sys.stdout)
         s = "\x1B[?100{end}{esc}{nest}y{contents}{endc}".format(
-            end = ";" + end if end else "",
-            esc = ";" + esc if esc else "",
+            end = ";" + str(end) if end else "",
+            esc = ";" + str(esc) if esc else "",
             nest = ";;" + ";".join(map(str, nest)) if nest else "",
             contents = ";".join(args),
             endc = chr(end or 10))

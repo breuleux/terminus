@@ -38,8 +38,7 @@ if __name__ == '__main__':
                 target = data['img']))
 
     if options.showalt:
-        print('\x1B[1;32m{alt}\x1B[0m').format(
-            alt = data['alt'])
+        print(data['alt'])
 
     if options.info:
         data['url'] = comic
@@ -51,8 +50,10 @@ if __name__ == '__main__':
         del data['year']
 
         printers.tb.new('prop', 'value');
+        printers.tb.set('style', '.terminus-header {display:none}');
+        printers.tb.set('c', 'value.type', 'normal');
         printers.tb.set('sep', '7');
         printers.tb.set('style', '.col-prop {color: #0f0; font-weight: bold}');
         for k, v in sorted(data.items()):
             if v:
-                printers.tb("{k}\a{v}".format(k = k, v = v))
+                printers.tb("{k}\a{v}".format(k = k, v = v), end = 2)

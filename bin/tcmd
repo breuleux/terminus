@@ -22,10 +22,16 @@ if __name__ == '__main__':
 
     (options, args) = parser.parse_args()
 
+    if not args:
+        parser.print_help()
+        sys.exit(0)
+
     cmds = (" ".join(args)).split(options.delimiter);
 
     for cmd in cmds:
         cmd = cmd.strip()
+        if not cmd:
+            continue
         action = cmd[0]
         nest_type, data, *irrelevant = cmd[1:].split(' ', 1) + ['']
 

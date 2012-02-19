@@ -96,7 +96,6 @@ def extract_stat(entry, base, follow_dir):
     values['size'] = stats.st_size
     values['size_h'] = to_human(stats.st_size, 1024)
     values['size_si'] = to_human(stats.st_size, 1000)
-    # values['size_bar'] = int(10 * math.log(stats.st_size + 1))
     values['mtime'] = datetime.datetime.fromtimestamp(stats.st_mtime)
     values['atime'] = datetime.datetime.fromtimestamp(stats.st_atime)
     values['ctime'] = datetime.datetime.fromtimestamp(stats.st_ctime)
@@ -222,14 +221,14 @@ if __name__ == '__main__':
 
     if options.bars:
         flow = False
-        headers = 'nametag:Filename size:Size size_bar:Bar'
+        headers = 'nametag:Filename size:Size size_bar:'
         sort_by = '~size'
     elif options.long:
         flow = False
         headers = 'mode:Mode nlinks:# uname:User gname:Group size:Size mtime:Modified nametag:Filename'
     else:
         flow = True
-        headers = 'nametag:Filename size_bar:Size'
+        headers = 'nametag:Filename'
 
     if options.force_flow:
         flow = True
