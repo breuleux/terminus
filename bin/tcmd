@@ -17,7 +17,7 @@ if __name__ == '__main__':
 
     parser.add_option("-n", "--nest", dest="nest", default="",
                       help=("Nest to evaluate the command in. "
-                            "It may be a list of semicolon-separated numbers. "
+                            "It may be a list of comma-separated numbers. "
                             "(default: '')"))
 
     (options, args) = parser.parse_args()
@@ -37,6 +37,6 @@ if __name__ == '__main__':
 
         Printer(nest_type).command(action,
                                    data,
-                                   nest = (tuple(options.nest.split(";"))
+                                   nest = (tuple(options.nest.split(","))
                                            if options.nest else ()))
 

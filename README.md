@@ -69,42 +69,19 @@ that are, so commands like reset (!) and screen are iffy, and for some
 reason ipython seems to show the wrong colors. You can paste with
 Ctrl+V or the mouse wheel.
 
-Right now, Terminus's novel capabilities are not really shown off
-because my priority is to make the whole system as solid as
-possible. It is very easy to use, though. Start with typing this in
-the terminal:
+You can start exploring with the applications that are in `bin/`. So
+far, they are `dr`, `show`, `tcmd` and `xkcd`. You will have to add
+them to your `PATH` in order to execute them.
 
-``` bash
-echo -e '\x1B[?0y:h <img src="http://www.catfacts.org/american-bobtail-cat-facts.jpg" />'
-```
+![dr](https://raw.github.com/breuleux/terminus/master/media/screenshots/dr.png)
 
-Note that this is the standard echo, *not* a hacked up version. Have
-some fun using an <img> tag instead, or make a table (you might have
-to style it, else it'll be black on black). Now try this:
+![show](https://raw.github.com/breuleux/terminus/master/media/screenshots/limecat.png)
 
-``` bash
-echo -e '\x1B[?0;;19y/h style b {color: red}'
-echo -e '\x1B[?0;;19y:h <b>Hello</b>'
-sleep 1
-echo -e '\x1B[?0;;19y:h <b> world!</b>'
-```
+![xkcd](https://raw.github.com/breuleux/terminus/master/media/screenshots/xkcd.png)
 
-This will write "Hello world!" in red in the same cell. The 19 is
-arbitrary: it's a "nest id" telling Terminus where to put stuff. The
-first command will create the div since it doesn't already exist and
-the second command will append to what was already created. The nests
-1, 2, 4 and 5 are special: they represent top, left, right and bottom
-respectively.
+![tcmd1](https://raw.github.com/breuleux/terminus/master/media/screenshots/tcmd.png)
 
-`:h` is the HTML writer. There is also `:svg`, which allows you to
-insert SVG, and automatically adds code to zoom and pan (note: doesn't
-work in Firefox). I will add `:plot` and `:table` soon.
-
-You can also execute some JavaScript:
-
-``` bash
-echo -e '\x1B[?100ythis.push_command({action: "+", nest_type: "h", text: "<b>hello</b>"})'
-```
+![tcmd2](https://raw.github.com/breuleux/terminus/master/media/screenshots/sandwich.png)
 
 The Terminus server gives access to the filesystem in
 `/f/path/from/root`, so you can link to files or images on the
@@ -122,8 +99,7 @@ is not my problem :)
 Documentation
 -------------
 
-There is more documentation in doc/, use `make html` (you'll need
-`sphinx`), or you can read as plain text if it suits your fancy.
+There is more documentation in doc/.
 
 Do note that the documentation is a bit of a design document
 sometimes, and some features it describes might not really be
