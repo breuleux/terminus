@@ -301,6 +301,7 @@ function TableNest(columns) {
                 var desc = self.columns[i];
                 var td = makenode('td');
                 td.setAttribute('class', 'col-' + desc.name);
+                td.setAttribute('class', 'type-' + (desc.type || 'normal'));
                 // console.log('fuuu ' + values[i] + " " + self.columns[i].type);
                 td.innerHTML = build_inline(values[i] || "",
                                             self.columns[i]);

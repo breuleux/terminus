@@ -2866,12 +2866,13 @@ Terminus.strdiff = function (before, after) {
 Terminus.constructors = {
     // DivNest (HTML)
     'h': function (command) {
-        var div = makediv();
-        var nest = DivNest(div);
         if (command.action == '+') {
-            div.innerHTML = command.text;
+            var div = $(command.text)[0];
+            var nest = DivNest(div);
         }
         else {
+            var div = makediv();
+            var nest = DivNest(div);
             nest.process(command);
         }
         return nest;
