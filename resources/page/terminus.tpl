@@ -42,6 +42,16 @@
             <!-- terminal.connect_socket_io(); -->
             term = terminal;
 
+            setInterval(function () {
+                // Blinking cursor
+                $('.cursor').each (function () {
+                    var elem = $(this);
+                    var c = elem.css('color');
+                    var bgc = elem.css('background-color');
+                    elem.css('color', bgc);
+                    elem.css('background-color', c);
+                })}, 500)
+
             $(window).bind('resize', function (e) {
                 setTimeout(term.adjust_size, 10);
             });

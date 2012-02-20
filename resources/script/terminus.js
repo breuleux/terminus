@@ -123,7 +123,9 @@ function Logger(settings) {
                 self.what[type] = true;
             }
         }
-        self.clear();
+        self.target = undefined;
+        self.last = -settings.group_delay - 1;
+        // self.clear();
     }
 
     self.init(settings);
@@ -214,11 +216,12 @@ function Nest(element) {
     }
 
     self.process = function(command) {
-        self.actions[command.action](command);
+        self.actions[command.action].call(self, command);
+        setTimeout(self.focus, 100); // why is a timeout needed? I have no idea
     }
 
     self.push_command = function(command, second_pass) {
-        // self.terminal.log('test', 'ok...');
+        // self.log('test', self.nest_type + ' ' + command.action + ' ' + command.nest_type);
         var latest = self.get_latest();
         if (latest !== null
             && latest.nest_type == command.nest_type
@@ -247,6 +250,11 @@ function Nest(element) {
             // var id = self.create(child);
             // self.latest = id;
         }
+    }
+
+    self.focus = function () {
+        $(self.element).focus();
+        // self.log('test', 'spurious focus on: ' + self.nestid);
     }
 
     return self;
@@ -279,7 +287,7 @@ function DivNest(div) {
         child.demote = function () {
             delete self.children[id];
         }
-        // child.log = self.log;
+        child.log = self.log;
         return id;
     }
 
@@ -966,6 +974,7 @@ function Screen(term, settings) {
             s += c;
         }
         var span = makenode('span');
+        span.setAttribute('class', 'terminal-text');
         span.innerHTML = s;
 
         var save = "";
@@ -1009,7 +1018,8 @@ function Screen(term, settings) {
         self.lost_nests = [];
 
         self.text_properties = self.no_text_properties();
-        self.default_character = "&nbsp;";
+        // self.default_character = "&nbsp;";
+        self.default_character = " ";
         // The following is useful for debug:
         // self.default_character = ".";
 
@@ -1180,6 +1190,25 @@ function ScreenDisplay(terminal, screen, settings) {
 }
 
 
+function SlaveExtern(parent) {
+    return function (terminal, settings) {
+        var self = obj();
+
+        self.setsize = function (nlines, ncols) {
+            // parent does not care about child's size
+        };
+
+        self.send = function (data) {
+            // alert(data);
+            parent.to_send += data;
+            parent.send();
+        };
+
+        return self;
+    }
+}
+
+
 function SocketIOExtern(terminal, settings) {
     var self = obj();
 
@@ -1197,7 +1226,7 @@ function SocketIOExtern(terminal, settings) {
     self.send = function (data) {
         socket.emit('data', data);
     };
-        
+
     socket.on('data', function (data) {
         if (data != "") {
             terminal.new_data(data);
@@ -1212,6 +1241,10 @@ function SocketIOExtern(terminal, settings) {
         terminal.new_data('\n\x1B[1;31mConnection to server terminated.\x1B[0m');
         socket.disconnect();
     });
+
+    setInterval(function () {
+        terminal.adjust_size();
+    }, 500)
 
     return self;
 }
@@ -1271,7 +1304,9 @@ function Terminus(div, settings) {
             }
         }
 
-        self.extern.setsize(self.nlines, self.ncols);
+        if (self.extern) {
+            self.extern.setsize(self.nlines, self.ncols);
+        }
     }
 
 
@@ -1353,7 +1388,7 @@ function Terminus(div, settings) {
         child.demote = function () {
             delete self.children[id];
         }
-        // child.log = self.log;
+        child.log = self.log;
         if (id == 1 || id == 2 || id == 4 || id == 5) {
             setTimeout(self.adjust_size, 10);
         }
@@ -1394,41 +1429,31 @@ function Terminus(div, settings) {
         return div;
     }
 
+    // var _superplus = self.actions['+'];
+    // self.actions = {
+    //     '+': function (command) {
+    //         var child = Terminus.construct_nest.call(self, command);
+    //         var id = self.create(child);
+    //         self.latest = id;
+    //     }
+    // }
+
+    $.extend(self.actions, {
+        ':': function (command) {
+            // self.log('test', 'heh! ' + command.text + '\n\n');
+            self.to_write += command.text;
+            // self.to_write += (command.text + '\n\n\n');
+            self.write_all();
+        }
+    });
+
     self.handlers = {
 
-        // push_stream: function (data, parameters) {
-        //     var nest = parameters.nest;
-        //     var latest = self
-
-        //     var target = self.find(nest.slice(0, nest.length), true);
-        //     var command = Terminus.parse_command(data);
-        //     self.log('test', command.action);
-        //     self.log('test', command.nest_type);
-        //     self.log('test', command.text);
-        //     try {
-        //         target.push_command(command);
-        //     }
-        //     catch(e) {
-        //         self.log('error', e);
-        //     }
-        // },
-
         push: function (data, parameters) {
-            // try {
-                // self.log('test', self.screen.line + " " + self.screen.nests + " " + self.screen.nests[self.screen.line]);
-                var nest = parameters.nest;
-                var target = self.find(nest, true);
-                var command = Terminus.parse_command(data);
-                // self.log('test', data + "/");
-                // self.log('test', command.action + "/");
-                // self.log('test', command.nest_type + "/");
-                // self.log('test', command.text + "/");
-                target.push_command(command);
-            // }
-            // catch(e) {
-            //     self.log('error', e);
-            //     throw e;
-            // }
+            var nest = parameters.nest;
+            var target = self.find(nest, true);
+            var command = Terminus.parse_command(data);
+            target.push_command(command);
         },
 
         text_set: function (data, parameters) {
@@ -1552,11 +1577,14 @@ function Terminus(div, settings) {
     // WRITING
 
     self.write_all = function() {
+        if (self.writing) { return; }
+        self.writing = true;
         while (self.to_write) {
             var tow = self.to_write;
             self.to_write = "";
             self.write_string(tow);
         }
+        self.writing = false;
         self.display();
     }
 
@@ -1578,14 +1606,21 @@ function Terminus(div, settings) {
     }
 
     self.focus = function() {
-        self.textarea.focus();
+        // self.log('test', 'focus on: ' + self.nestid);
+        self.textarea[0].focus();
     }
 
     self.init = function (div, settings) {
 
         // LOG
 
-        self.logger = Logger(settings.log);
+        self.nest_type = 't';
+        if (settings.logger) {
+            self.logger = settings.logger;
+        }
+        else {
+            self.logger = Logger(settings.log);
+        }
 
         // HANDY POINTERS
 
@@ -1724,427 +1759,35 @@ function Terminus(div, settings) {
 
         self.sm = Terminus.state_machine(Terminus.input_state_machine, 'init', self);
 
-        // WORKERS
-
-        // setInterval(function () {
-        //     self.adjust_size();
-        // }, 500)
-
-        setInterval(function () {
-            $('.cursor').each (function () {
-                var elem = $(this);
-                var c = elem.css('color');
-                var bgc = elem.css('background-color');
-                elem.css('color', bgc);
-                elem.css('background-color', c);
-            })}, 500)
-
-        // self.get_data();
+        // TO_WRITE/TO_SEND
 
         self.to_write = "";
         self.to_send = "";
 
-        // self.send = function () {
-        //     if (self.to_send != "") {
-        //         var to_send = self.to_send;
-        //         self.to_send = "";
-        //         $.post(settings.path+"/send", {data: to_send, magic: settings.magic});
-        //     }
-        // };
-
-
         // BINDINGS
-
-        // $(window).bind('resize', function (e) {
-        //     setTimeout(self.adjust_size, 10);
-        // });
 
         self.terminal.bind('paste', function(e) {
             var target = self.textarea;
             target.val("");
-            // target.html("");
             setTimeout(function() {
                 var text = target.val();
-                // alert(text);
                 self.to_send += text;
                 self.textarea.focus();
                 self.send();
             }, 0);
         });
-
-        // self.keynames = {
-        //     8: "Backspace",
-        //     9: "Tab",
-        //     13: "Enter",
-        //     16: "S-",
-        //     17: "C-",
-        //     18: "A-",
-        //     27: "Esc",
-        //     32: "Space",
-        //     33: "PgUp",
-        //     34: "PgDn",
-        //     35: "End",
-        //     36: "Home",
-        //     37: "Left",
-        //     38: "Up",
-        //     39: "Right",
-        //     40: "Down",
-        //     45: "Insert",
-        //     46: "Delete",
-        //     48: "0",
-        //     49: "1",
-        //     50: "2",
-        //     51: "3",
-        //     52: "4",
-        //     53: "5",
-        //     54: "6",
-        //     55: "7",
-        //     56: "8",
-        //     57: "9",
-        //     65: "a",
-        //     66: "b",
-        //     67: "c",
-        //     68: "d",
-        //     69: "e",
-        //     70: "f",
-        //     71: "g",
-        //     72: "h",
-        //     73: "i",
-        //     74: "j",
-        //     75: "k",
-        //     76: "l",
-        //     77: "m",
-        //     78: "n",
-        //     79: "o",
-        //     80: "p",
-        //     81: "q",
-        //     82: "r",
-        //     83: "s",
-        //     84: "t",
-        //     85: "u",
-        //     86: "v",
-        //     87: "w",
-        //     88: "x",
-        //     89: "y",
-        //     90: "z",
-        //     112: "F1",
-        //     113: "F2",
-        //     114: "F3",
-        //     115: "F4",
-        //     116: "F5",
-        //     117: "F6",
-        //     118: "F7",
-        //     119: "F8",
-        //     120: "F9",
-        //     121: "F10",
-        //     122: "F11",
-        //     123: "F12",
-        // }
-
-        // function word_operation(direction, operation) {
-        //     return function () {
-
-        //         var mat = self.screen.matrix[self.screen.line];
-        //         var skipover = ("! @ # $ % ^ & * ( ) [ ] { }"
-        //                         + " / ? \\ | &nbsp; &gt; &lt;"
-        //                         + " = + - _ ` ~ ; : \" ' . ,").split(" ")
-        //         if (direction == "left") {
-        //             var j = self.screen.column - 1;
-        //             for (; j >= 0; j--) {
-        //                 if (skipover.indexOf(mat[j][0]) == -1) { break; }
-        //                 self.to_send += operation;
-        //             }
-        //             for (; j >= 0; j--) {
-        //                 if (skipover.indexOf(mat[j][0]) != -1) { break; }
-        //                 self.to_send += operation;
-        //             }
-        //         }
-        //         else {
-        //             var j = self.screen.column;
-        //             for (; j < self.ncols; j++) {
-        //                 if (skipover.indexOf(mat[j][0]) == -1) { break; }
-        //                 self.to_send += operation;
-        //             }
-        //             for (; j < self.ncols; j++) {
-        //                 if (skipover.indexOf(mat[j][0]) != -1) { break; }
-        //                 self.to_send += operation;
-        //             }
-        //         }
-        //         return true;
-        //     }
-        // }
-
-        // self.app_keypad = function (suffix, kp_suffix) {
-        //     return function () {
-        //         if (self.app_key) {
-        //             self.to_send += "\x1BO" + (kp_suffix || suffix);
-        //         }
-        //         else {
-        //             self.to_send += "\x1B[" + suffix;
-        //         }
-        //     };
-        // }
-
-        // self.csi_command = function (suffix) {
-        //     return "\x1B[" + suffix;
-        // }
-
-        // self.commands = {
-        //     backspace: "\x7F",
-        //     enter: "\x0D",
-        //     tab: "\x09",
-        //     esc: "\x1B",
-        //     csi: "\x1B[",
-        //     noop: "",
-
-        //     up: self.app_keypad("A"),
-        //     down: self.app_keypad("B"),
-        //     right: self.app_keypad("C"),
-        //     left: self.app_keypad("D"),
-
-        //     home: self.app_keypad("H"),
-        //     insert: self.csi_command("2~"),
-        //     "delete": self.csi_command("3~"),
-        //     end: self.app_keypad("F"),
-        //     pgup: self.csi_command("5~"),
-        //     pgdn: self.csi_command("6~"),
-
-        //     f1: "\x1BOP",
-        //     f2: "\x1BOQ",
-        //     f3: "\x1BOR",
-        //     f4: "\x1BOS",
-        //     f5: self.csi_command("15~"),
-        //     f6: self.csi_command("17~"),
-        //     f7: self.csi_command("18~"),
-        //     f8: self.csi_command("19~"),
-        //     f9: self.csi_command("20~"),
-        //     f10: self.csi_command("21~"),
-        //     f11: self.csi_command("23~"),
-        //     f12: self.csi_command("24~"),
-
-        //     clear_up: function () {
-        //         self.remove_child(1);
-        //     },
-
-        //     clear_down: function () {
-        //         self.remove_child(5);
-        //     },
-
-        //     clear_left: function () {
-        //         self.remove_child(2);
-        //     },
-
-        //     clear_right: function () {
-        //         self.remove_child(4);
-        //     },
-
-        //     clear_scrollback: function () {
-        //         self.screend.clear_scrollback();
-        //         self.display();
-        //         return true;
-        //     },
-
-        //     log_mode: function () {
-        //         self.logger.switch_state();
-        //         return "noscroll";
-        //     },
-
-        //     clear_log: function () {
-        //         self.logger.clear();
-        //         return "noscroll";
-        //     },
-            
-        //     scroll_up_line: function () {
-        //         self.scroll_by(-self.char_height);
-        //         return "noscroll";
-        //     },
-
-        //     scroll_down_line: function () {
-        //         self.scroll_by(self.char_height);
-        //         return "noscroll";
-        //     },
-
-        //     scroll_up_page: function () {
-        //         self.scroll_by(-self.char_height * self.nlines);
-        //         return "noscroll";
-        //     },
-
-        //     scroll_down_page: function () {
-        //         self.scroll_by(self.char_height * self.nlines);
-        //         return "noscroll";
-        //     },
-
-        //     word_left: "\x1B[1;5D",
-        //     word_right: "\x1B[1;5C",
-        //     word_up: "\x1B[1;5A",
-        //     word_down: "\x1B[1;5B",
-
-        //     // word_left: word_operation("left", "\x1B[D"),
-        //     // word_right: word_operation("right", "\x1B[C"),
-
-        //     word_delete_left: word_operation("left", "\x7f"),
-        //     word_delete_right: word_operation("right", "\x1B[3~"),
-
-        //     garbage: function () {
-        //         for (var j = 0; j < 10; j++) {
-        //             var s = "";
-        //             for (var i = 0; i < 50; i++) {
-        //                 // s += '\x1B[3' + ~~(Math.random()*7 + 1) + 'm'
-        //                 // s += Math.random().toString().substring(2) + "\n";
-        //                 s += '\x1B[?0;;99y:h <div style="color: green">'
-        //                 s += Math.random().toString().substring(2);
-        //                 s += '</div>\n'
-        //             }
-        //             self.to_write += s;
-        //             self.write_all();
-        //         }
-        //     },
-
-        //     space: " ",
-        //     tilde: "~",
-        // }
-
-        // self.focus();
-
-        // self.keydown_fn = function(e) {
-
-        //     var bindings = (self.bindings
-        //                     || settings.bindings);
-
-        //     // var bindings = settings.bindings;
-
-        //     var orig_code = (self.keynames[e.which] || "<"+e.which+">");
-        //     var code = orig_code;
-        //     if (e.shiftKey && orig_code != "S-")
-        //         code = "S-" + code;
-        //     if (e.altKey && orig_code != "A-")
-        //         code = "A-" + code;
-        //     if ((e.ctrlKey || e.metaKey) && orig_code != "C-")
-        //         code = "C-" + code;
-        //     var just_modifiers = (code[code.length - 1] == '-');
-
-        //     // this is needed for paste to work
-        //     if (code == "C-") {
-        //         // We only do this when the Control key is pressed, to
-        //         // avoid scrolling to the bottom in too many
-        //         // situations.
-        //         self.textarea.focus();
-        //     }
-
-        //     self.log('keydown', code);
-
-        //     var commands = bindings[code];
-
-        //     if (commands === undefined) {
-        //         if (self.bindings && self.bindings._eat) {
-        //             // We delete the sub-bindings, except for when we
-        //             // hit modifiers without any other key.
-        //             if (!just_modifiers) {
-        //                 delete self.bindings;
-        //             }
-        //             e.stopPropagation();
-        //             e.preventDefault();
-        //             return;
-        //         }
-        //         else if (self.bindings && self.bindings._browser) {
-        //             if (!just_modifiers) {
-        //                 delete self.bindings;
-        //             }
-        //             return;
-        //         }
-        //         else if (self.bindings && !just_modifiers) {
-        //             delete self.bindings;
-        //             return self.keydown_fn(e);
-        //         }
-        //         else {
-        //             return;
-        //         }
-        //     }
-
-        //     if (typeof commands != "string") {
-        //         self.bindings = commands;
-        //         e.stopPropagation();
-        //         e.preventDefault();
-        //         return;
-        //     }
-
-        //     if (self.bindings && !self.bindings._stick) {
-        //         delete self.bindings;
-        //     }
-
-        //     self.log('exec', commands)
-
-        //     var cancel = false;
-        //     commands = commands.split(" ");
-        //     for (var i = 0; i < commands.length; i++) {
-        //         var command = commands[i];
-        //         if (command[0] == "~") {
-        //             if (command[1] == "~") {
-        //                 var s = command.slice(2).charCodeAt() - 64;
-        //                 self.to_send += String.fromCharCode(s);
-        //                 cancel = true;
-        //             }
-        //             else {
-        //                 var fn = self.commands[command.slice(1)];
-        //                 if (typeof fn == "string") {
-        //                     self.to_send += fn;
-        //                     cancel = true;
-        //                 }
-        //                 else if (typeof fn != "undefined") {
-        //                     cancel = fn();
-        //                 }
-        //             }
-        //         }
-        //         else {
-        //             self.to_send += command;
-        //             cancel = true;
-        //         }
-        //     }
-            
-        //     if (cancel) {
-        //         if (cancel != "noscroll") {
-        //             self.scroll_to_bottom();
-        //         }
-        //         e.stopPropagation();
-        //         e.preventDefault();
-        //     }
-        //     self.send();
-        // };
-
-        // self.terminal.bind('keydown', self.keydown_fn);
-
-        // self.terminal.bind('keypress', function(e) {
-        //     if (!e.ctrlKey) {
-        //         var key = e.which;
-        //         if (key == 8) {
-        //             return;
-        //         }
-        //         var s;
-        //         s = String.fromCharCode(key);
-        //         self.to_send += s;
-        //         if (e.charCode || e.keyCode == 13) {
-        //             e.stopPropagation();
-        //             e.preventDefault();
-        //         }
-        //         self.send();
-        //     }
-        // });
     }
 
     self.connect = function (extern) {
         self.extern = extern(self, settings);
+        self.extern.setsize(self.nlines, self.ncols);
+    };
 
-        self.init(div, settings);
-
-        setInterval(function () {
-            self.adjust_size();
-        }, 500)
-    }
-
-    // self.setsize = function (nlines, ncols) {
-    //     console.log(nlines + 'x' + ncols);
-    //     self.extern.setsize(nlines, ncols);
-    // };
+    // Interaction methods with self.extern
+    self.new_data = function (data) {
+        self.to_write += data;
+        self.write_all();
+    };
 
     self.send = function () {
         if (self.to_send != "") {
@@ -2154,63 +1797,14 @@ function Terminus(div, settings) {
         }
     };
 
-    self.new_data = function (data) {
-        self.to_write += data;
-        self.write_all();
-    };
-
-    // self.connect_socket_io = function () {
-
-    //     var socket = io.connect('http://'
-    //                             + settings.server
-    //                             + ":" + settings.port);
-
-    //     socket.emit('connect_to', {command: settings.termtype,
-    //                                id: settings.id});
-
-    //     self.setsize = function (nlines, ncols) {
-    //         socket.emit('setsize', {h: nlines, w: ncols});
-    //     };
-
-    //     self.send = function () {
-    //         if (self.to_send != "") {
-    //             var to_send = self.to_send;
-    //             self.to_send = "";
-    //             socket.emit('data', to_send);
-    //         }
-    //     };
-        
-    //     socket.on('data', function (data) {
-    //         if (data != "") {
-    //             self.to_write += data;
-    //             self.write_all();
-    //         }
-    //     });
-
-    //     socket.on('exit', function (data) {
-    //         self.to_write += '\n\x1B[1;31mProcess ended.\x1B[0m';
-    //         self.write_all();
-    //     });
-
-    //     socket.on('disconnect', function (data) {
-    //         self.to_write += '\n\x1B[1;31mConnection to server terminated.\x1B[0m';
-    //         self.write_all();
-    //         socket.disconnect();
-    //     });
-
-    //     self.init(div, settings);
-
-    //     setInterval(function () {
-    //         self.adjust_size();
-    //     }, 500)
-    // }
-
-    // self.init(div, settings);
+    self.init(div, settings);
     return self;
 }
 
 
 Terminus.interact = function (terminal, bindings) {
+
+    // alert('interact ' + terminal);
 
     var keynames = {
         8: "Backspace",
@@ -2288,6 +1882,7 @@ Terminus.interact = function (terminal, bindings) {
             var skipover = ("! @ # $ % ^ & * ( ) [ ] { }"
                             + " / ? \\ | &nbsp; &gt; &lt;"
                             + " = + - _ ` ~ ; : \" ' . ,").split(" ")
+            skipover.push(" ")
             if (direction == "left") {
                 var j = terminal.screen.column - 1;
                 for (; j >= 0; j--) {
@@ -2465,6 +2060,8 @@ Terminus.interact = function (terminal, bindings) {
 
         terminal.log('keydown', code);
 
+        // terminal.log('test', '==> ' + terminal.nestid + ' ' + code);
+
         var commands = bindings[code];
 
         if (commands === undefined) {
@@ -2560,11 +2157,39 @@ Terminus.interact = function (terminal, bindings) {
         }
     }
 
+    function click_fn(e) {
+        terminal.focus();
+        e.stopPropagation();
+        e.preventDefault();
+    }
+
     terminal.focus();
     var current_bindings = null;
     var global_bindings = bindings;
-    terminal.terminal.bind('keydown', keydown_fn);
-    terminal.terminal.bind('keypress', keypress_fn);
+
+    var target = terminal.terminal[0];
+    target.onkeydown = keydown_fn;
+    target.onkeypress = keypress_fn;
+    target.onclick = click_fn;
+
+    // terminal.log('test', 'fuck this fucking shit');
+    // terminal.textarea[0].onfocus = function (e) {
+    //     terminal.log('test', 'really focused! ' + terminal.nestid);
+    // };
+    // terminal.terminal[0].onfocus = function (e) {
+    //     terminal.log('test', 'really really focused! ' + terminal.nestid);
+    // };
+
+    // terminal.terminal.bind('keydown', keydown_fn);
+    // terminal.terminal.bind('keypress', keypress_fn);
+
+    // if (terminal.toString() != '#0') {
+    //     terminal.terminal[0].onclick = click_fn;
+    // }
+    // if (terminal.toString() != '#0') {
+    //     alert('binding click ' + terminal.nlines);
+    //     terminal.terminal.bind('click', click_fn);
+    // }
 }
 
 Terminus.deco = function (x) {
@@ -2685,7 +2310,8 @@ Terminus.input_state_machine = {
     chr_31: Terminus.deco('v'),
 
     // Characters that need to be escaped in HTML
-    chr_32: Terminus.raw_text('&nbsp;'),
+    // chr_32: Terminus.raw_text('&nbsp;'),
+    chr_32: Terminus.raw_text(' '),
     chr_38: Terminus.raw_text('&amp;'),
     chr_60: Terminus.raw_text('&lt;'),
     chr_62: Terminus.raw_text('&gt;'),
@@ -2785,6 +2411,26 @@ Terminus.input_state_machine = {
     // verbatim in the accumulator.
 
     seek0: function (c) {
+        // this.log('test', c + " " + this.ext._backlog + " " + this.ext.delim);
+
+        if (this.ext.delim == 1310) {
+            // if delim == 1310 we delimit with CR/LF
+            if (c != 10 && this.ext._backlog) {
+                this.ext.accum += this.ext._backlog;
+                this.ext._backlog = null;
+            }
+            else if (c == 10 && this.ext._backlog) {
+                // DELIMITER
+                this.handle_ext(this.ext);
+                this.ext = undefined;
+                return ['', 'init'];
+            }
+            else if (c == 13) {
+                this.ext._backlog = '\r';
+                return ['', 'seek0'];
+            }
+        }
+        
         if (c == 27) {
             // ESC
             return ['', 'seek1'];
@@ -3133,7 +2779,7 @@ Terminus.csi = {
                     type: desc[0],
                     args: data,
                     accum: "",
-                    delim: data.delim === undefined ? 10 : data.delim,
+                    delim: data.delim === undefined ? 1310 : data.delim,
                     escape: data.escape === undefined ? 1 : data.escape
                 }
                 return 'seek0';
@@ -3266,18 +2912,49 @@ Terminus.constructors = {
 
     // Terminus
     't': function (command) {
-    },
+        if (this.nest_type != 't') {
+            this.log('error',
+                     'could not create `t` nest in '
+                     + this.nest_type + ' nest');
+            return null;
+        }
 
-    // TableNest
-    'tb': function (command) {
+        var parent_settings = this.settings;
+        if (!parent_settings) {
+            this.log('error',
+                     'could not create `t` nest because of '
+                     + 'a lack of settings to use');
+            return null;
+        }
+        var settings = $.extend(true, {}, parent_settings);
+        settings.logger = this.logger;
+        if (command.action == '+') {
+            var parameters = command.text.trim().split(' ');
+            var nlines = parseInt(parameters[0] || this.nlines);
+            var ncols = parseInt(parameters[1] || this.ncols);
+            settings.nlines = nlines;
+            settings.ncols = ncols;
+        }
+        else {
+            settings.nlines = this.nlines;
+            settings.ncols = this.ncols - 2;
+        }
+
+        var div = makediv();
+
+        $(div).height(this.font_control.height() * settings.nlines);
+        $(div).width(this.font_control.width() * settings.ncols + 20);
+
+        var nest = Terminus($(div), settings);
+        nest.connect(SlaveExtern(this));
+        Terminus.interact(nest, settings.bindings);
+        nest.char_height = this.char_height;
+        nest.char_width = this.char_width;
+        return nest;
     },
 
     // PlotNest
     'plot': function (command) {
-    },
-
-    // FileNest
-    'f': function (command) {
     },
 
     // ProgressBarNest

@@ -2,6 +2,7 @@
 
 from terminus_lib import *
 import optparse
+import re
 
 if __name__ == '__main__':
 
@@ -11,14 +12,23 @@ if __name__ == '__main__':
     parser.add_option("-d", "--delim", dest="delimiter", default=";",
                       help="Delimit commands with the given character (default: ;).")
 
-    parser.add_option("-e", "--end", dest="end", default="\n",
-                      help=("Use this character to end commands (default: \\n). "
+    parser.add_option("-e", "--end", dest="end", default=1310,
+                      help=("Use this character number to end commands "
+                            "(default: 1310 (\\r\\n) "
+                            "(1310 is the only two-char combination)). "
                             "Note: this may hang the terminal."))
+
+    parser.add_option("-x", "--escape", dest="escape", default=1,
+                      help=("Use this character number to escape characters "
+                            "(default: 1 (\\x01)). "))
 
     parser.add_option("-n", "--nest", dest="nest", default="",
                       help=("Nest to evaluate the command in. "
                             "It may be a list of comma-separated numbers. "
                             "(default: '')"))
+
+    parser.add_option("-r", "--raw", dest="raw", action="store_true", default=False,
+                      help=("Do not expand \\a, \\n, \\r or \\x control codes."))
 
     (options, args) = parser.parse_args()
 
@@ -35,8 +45,20 @@ if __name__ == '__main__':
         action = cmd[0]
         nest_type, data, *irrelevant = cmd[1:].split(' ', 1) + ['']
 
+        if not options.raw:
+            data = re.sub(r'\\x([0-9A-Fa-f]{2})',
+                          lambda x: chr(int(x.groups()[0], base = 16)),
+                          data)
+            data = re.sub(r'\\([anr])',
+                          lambda x: chr(dict(a = 7,
+                                             n = 10,
+                                             r = 13)[x.groups()[0]]),
+                          data)
+
         Printer(nest_type).command(action,
                                    data,
                                    nest = (tuple(options.nest.split(","))
-                                           if options.nest else ()))
+                                           if options.nest else ()),
+                                   end = int(options.end),
+                                   esc = int(options.escape))
 

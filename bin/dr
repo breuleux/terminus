@@ -133,7 +133,7 @@ def print_results(results,
                   headers,
                   sort_column = None,
                   filter = lambda x: True,
-                  sepn = 160,
+                  sepn = 9,
                   flow = False):
     fields = [h.split(":")[0] for h in headers.split(" ")]
     printers.tb.new(headers)
@@ -208,7 +208,7 @@ if __name__ == '__main__':
                 True)
             for entry in args])
 
-    sepn = 160
+    sepn = 9
     sep = chr(sepn)
 
     user = os.getenv("USER")

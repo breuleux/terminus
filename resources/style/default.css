@@ -7,8 +7,12 @@
     resize: none;
 }
 
+.terminal-text {
+    white-space: pre;
+}
+
 .term_area {
-    /* background: -webkit-linear-gradient(-45deg, #000000 0%,#424242 79%,#515151 100%);  */
+    /* background: -webkit-linear-gradient(-45deg, #000000 0%,#424242 79%,#515151 100%); */
     background-color: black;
     color: white;
     font-family: monospace;

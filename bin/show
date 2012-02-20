@@ -74,6 +74,7 @@ if __name__ == '__main__':
     parser = optparse.OptionParser(usage = "Usage: %prog [options] <file>",
                                    description = "Show or play a media file in the terminal.")
     parser.set_conflict_handler('resolve')
+
     parser.add_option("-h", "--height", dest="height", default=None,
                       help="Specify the height of the element to show.")
     parser.add_option("-w", "--width", dest="width", default=None,
