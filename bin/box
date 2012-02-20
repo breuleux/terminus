@@ -11,7 +11,8 @@ import threading
 import tty
 import thread
 import subprocess
-
+import time
+import traceback
 
 def setecho(state):
     # Extracted this from pexpect
@@ -33,13 +34,18 @@ def filter(text):
 
 class Proc:
 
-    def __init__(self, command, nrows, ncols, wait):
+    def __init__(self, command, nrows, ncols, wait, nest):
 
         self.wait = wait
+        self.nest = nest
 
         def sig_winch(signum, frame):
             pass
             # print('winch!')
+
+        def sig_back(signum, frame):
+            # print('back!')
+            self.enter()
 
         def sig_kill(signum, frame):
             # print('killed!')
@@ -47,19 +53,22 @@ class Proc:
 
         def sig_stop(signum, frame):
             # print('stopped!')
-            self.exit()
+            # self.exit()
+            self.exit_soft()
+            os.kill(os.getpid(), signal.SIGSTOP)
+            # pass
 
         signal.signal(signal.SIGWINCH, sig_winch)
         signal.signal(signal.SIGTERM, sig_kill)
         signal.signal(signal.SIGTSTP, sig_stop)
         signal.signal(signal.SIGINT, sig_kill)
+        signal.signal(signal.SIGCONT, sig_back)
 
-        self.fd = sys.stdin.fileno()
-        self.old_settings = termios.tcgetattr(self.fd)
-        tty.setraw(sys.stdin.fileno())
+        # self.enter()
 
         self.nrows = nrows
         self.ncols = ncols
+        self.enter()
         try:
             self.proc = pexpect.spawn(command, init_r = rows, init_c = columns)
             self.thread = threading.Thread(target = self.read_stdin) #self.process)
@@ -67,29 +76,30 @@ class Proc:
             self.thread.start()
             self.process()
         except Exception as e:
-            print(e)
+            traceback.print_exc()
             self.exit()
 
     def process(self):
-        sys.stdout.write("\x1B[?0;7y+t {r} {c}\a".format(r = self.nrows,
-                                                         c = self.ncols))
-        to_write = ""
+        printers.t.new(self.nrows, self.ncols, end = 7, nest = (self.nest, ))
         while True:
             try:
                 x = self.proc.read_nonblocking(100, timeout = 1)
-                x = "\x1B[?0;7y:t {filtered}\a".format(filtered = filter(x))
-                to_write += x
-                if ord(to_write[-1]) > 127:
-                    continue
-                sys.stdout.write(to_write);
-                sys.stdout.flush();
-                to_write = ""
+                printers.t(str(filter(x)), end = 7, nest = (self.nest, ))
             except pexpect.TIMEOUT:
                 continue
             except pexpect.EOF:
                 self.proc.close()
                 self.exit()
                 return
+
+    def enter(self):
+        sys.stdout.write('\x1B[?204;{n}y'.format(n = ";".join(map(str, [self.nest]))));
+        self.fd = sys.stdin.fileno()
+        self.old_settings = termios.tcgetattr(self.fd)
+        tty.setraw(sys.stdin.fileno())
+
+    def exit_soft(self):
+        termios.tcsetattr(self.fd, termios.TCSADRAIN, self.old_settings)
 
     def set_size(self, w, h):
         self.proc.setwinsize(h, w)
@@ -98,13 +108,15 @@ class Proc:
         self.proc.send(new)
 
     def exit(self):
-        termios.tcsetattr(self.fd, termios.TCSADRAIN, self.old_settings)
+        self.exit_soft()
         sys.exit(0)
 
     def read_stdin(self):
         try:
             while True:
                 ch = sys.stdin.read(1)
+                if (ch == '\x1A'):
+                    os.kill(os.getpid(), signal.SIGTSTP)
                 self.send(ch)
         finally:
             self.exit()
@@ -138,6 +150,12 @@ if __name__ == '__main__':
 
     (options, args) = parser.parse_args()
 
+    if not options.nest:
+        nest = time.time() / 10000000.0
+        nest = int((nest - int(nest)) * 10000000000) + 1000
+    else:
+        nest = int(options.nest)
+
     try:
         prows, pcolumns = map(int, subprocess.Popen(
                 ['stty', 'size'],
@@ -150,8 +168,9 @@ if __name__ == '__main__':
     columns = int(options.cols or (pcolumns - 2))
 
     if not args:
-        sys.stdout.write("\x1B[?0;7y+t {r} {c}\a".format(r = rows,
-                                                         c = columns))
+        printers.t.new(rows, columns, end = 7)
+        # sys.stdout.write("\x1B[?0;7y+t {r} {c}\a".format(r = rows,
+        #                                                  c = columns))
         while True:
             text = sys.stdin.readline()
             if not text:
@@ -161,4 +180,4 @@ if __name__ == '__main__':
             sys.stdout.write(text);
         sys.exit(0)
 
-    proc = Proc(" ".join(args), rows, columns, options.wait)
+    proc = Proc(" ".join(args), rows, columns, options.wait, nest)

@@ -254,6 +254,14 @@ function Nest(element) {
         // self.log('test', 'spurious focus on: ' + self.nestid);
     }
 
+    self.scroll_to_bottom = function() {
+        var latest = self.get_latest();
+        if (latest !== null) {
+            latest.focus();
+            latest.scroll_to_bottom();
+        }
+    }
+
     return self;
 }
 
@@ -284,7 +292,15 @@ function DivNest(div) {
         child.demote = function () {
             delete self.children[id];
         }
+        child.bump = function () {
+            $(child.element).detach();
+            self.element.appendChild(child.element);
+            // child.scroll_to_bottom();
+            setTimeout(child.scroll_to_bottom, 10);
+        }
         child.log = self.log;
+        child.parent_terminal = self.parent_terminal || self;
+
         return id;
     }
 
@@ -1214,7 +1230,7 @@ function SocketIOExtern(terminal, settings) {
 
 
 function Terminus(div, settings) {
-    var self = Nest(div);
+    var self = Nest(div[0]);
 
     // SIZE
 
@@ -1351,7 +1367,14 @@ function Terminus(div, settings) {
         child.demote = function () {
             delete self.children[id];
         }
+        child.bump = function () {
+            child.remove();
+            self.set_child(id, child);
+            // child.scroll_to_bottom();
+            setTimeout(child.scroll_to_bottom, 10);
+        }
         child.log = self.log;
+        child.parent_terminal = self;
         if (id == 1 || id == 2 || id == 4 || id == 5) {
             setTimeout(self.adjust_size, 10);
         }
@@ -1482,6 +1505,12 @@ function Terminus(div, settings) {
         remove: function (data, parameters) {
             var target = self.find(parameters.nest, true);
             target.remove();
+        },
+
+        bump: function (data, parameters) {
+            self.log('nest', 'bumping nest #' + parameters.nest.length);
+            var target = self.find(parameters.nest, true);
+            target.bump();
         },
 
         move: function (data, parameters) {
@@ -2665,6 +2694,8 @@ Terminus.csi = {
                   true],
             203: [['move', '*source', ';;', '*dest'],
                   true],
+            204: [['bump', '*nest'],
+                  true],
         };
         var type = n[0];
         if (types[type] === undefined) {
@@ -2845,14 +2876,9 @@ Terminus.constructors = {
 
     // Terminus
     't': function (command) {
-        if (this.nest_type != 't') {
-            this.log('error',
-                     'could not create `t` nest in '
-                     + this.nest_type + ' nest');
-            return null;
-        }
 
-        var parent_settings = this.settings;
+        var parent = this.parent_terminal || this;
+        var parent_settings = parent.settings;
         if (!parent_settings) {
             this.log('error',
                      'could not create `t` nest because of '
@@ -2863,26 +2889,26 @@ Terminus.constructors = {
         settings.logger = this.logger;
         if (command.action == '+') {
             var parameters = command.text.trim().split(' ');
-            var nlines = parseInt(parameters[0] || this.nlines);
-            var ncols = parseInt(parameters[1] || this.ncols);
+            var nlines = parseInt(parameters[0] || parent.nlines);
+            var ncols = parseInt(parameters[1] || parent.ncols);
             settings.nlines = nlines;
             settings.ncols = ncols;
         }
         else {
-            settings.nlines = this.nlines;
-            settings.ncols = this.ncols - 2;
+            settings.nlines = parent.nlines;
+            settings.ncols = parent.ncols - 2;
         }
 
         var div = makediv();
 
-        $(div).height(this.font_control.height() * settings.nlines);
-        $(div).width(this.font_control.width() * settings.ncols + 20);
+        $(div).height(parent.font_control.height() * settings.nlines + 5);
+        $(div).width(parent.font_control.width() * settings.ncols + 20);
 
         var nest = Terminus($(div), settings);
-        nest.connect(SlaveExtern(this));
+        nest.connect(SlaveExtern(parent));
         Terminus.interact(nest, settings.bindings);
-        nest.char_height = this.char_height;
-        nest.char_width = this.char_width;
+        nest.char_height = parent.char_height;
+        nest.char_width = parent.char_width;
         return nest;
     },
 

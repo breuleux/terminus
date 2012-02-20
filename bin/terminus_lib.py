@@ -23,10 +23,11 @@ class Printer:
             nest = (";;" + ";".join(map(str, nest))) if nest else "",
             action = action,
             type = self.nest_type,
-            contents = " ".join(args),
+            contents = " ".join(map(str, args)),
             endc = chr(end) if end != 1310 else '\n')
         try:
             where.write(s)
+            where.flush()
         except IOError:
             pass
 
@@ -39,10 +40,11 @@ class Printer:
             end = ";" + str(end) if end else "",
             esc = ";" + str(esc) if esc else "",
             nest = ";;" + ";".join(map(str, nest)) if nest else "",
-            contents = ";".join(args),
+            contents = ";".join(map(str, args)),
             endc = chr(end or 10))
         try:
             where.write(s)
+            where.flush()
         except IOError:
             pass
 
@@ -68,6 +70,7 @@ class printers:
     h = Printer("h")
     svg = Printer("svg")
     tb = Printer("tb")
+    t = Printer("t")
 
 
 if __name__ == '__main__':
