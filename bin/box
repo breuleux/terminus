@@ -1,0 +1,164 @@
+#!/usr/bin/env python
+
+from terminus_lib import *
+import optparse
+import pexpect
+import signal
+import sys
+import termios
+import os
+import threading
+import tty
+import thread
+import subprocess
+
+
+def setecho(state):
+    # Extracted this from pexpect
+    attr = termios.tcgetattr(sys.stdout)
+    if state:
+        attr[3] = attr[3] | termios.ECHO
+    else:
+        attr[3] = attr[3] & ~termios.ECHO
+    termios.tcsetattr(sys.stdout, termios.TCSANOW, attr)
+
+
+def filter(text):
+    for a, b in [('\x01', '\x01\x01'),
+                 ('\a',   '\x01\a'),
+                 ('\x1B', '\x01\x1B')]:
+        text = text.replace(a, b)
+    return text
+
+
+class Proc:
+
+    def __init__(self, command, nrows, ncols, wait):
+
+        self.wait = wait
+
+        def sig_winch(signum, frame):
+            pass
+            # print('winch!')
+
+        def sig_kill(signum, frame):
+            # print('killed!')
+            self.exit()
+
+        def sig_stop(signum, frame):
+            # print('stopped!')
+            self.exit()
+
+        signal.signal(signal.SIGWINCH, sig_winch)
+        signal.signal(signal.SIGTERM, sig_kill)
+        signal.signal(signal.SIGTSTP, sig_stop)
+        signal.signal(signal.SIGINT, sig_kill)
+
+        self.fd = sys.stdin.fileno()
+        self.old_settings = termios.tcgetattr(self.fd)
+        tty.setraw(sys.stdin.fileno())
+
+        self.nrows = nrows
+        self.ncols = ncols
+        try:
+            self.proc = pexpect.spawn(command, init_r = rows, init_c = columns)
+            self.thread = threading.Thread(target = self.read_stdin) #self.process)
+            self.thread.daemon = not self.wait
+            self.thread.start()
+            self.process()
+        except Exception as e:
+            print(e)
+            self.exit()
+
+    def process(self):
+        sys.stdout.write("\x1B[?0;7y+t {r} {c}\a".format(r = self.nrows,
+                                                         c = self.ncols))
+        to_write = ""
+        while True:
+            try:
+                x = self.proc.read_nonblocking(100, timeout = 1)
+                x = "\x1B[?0;7y:t {filtered}\a".format(filtered = filter(x))
+                to_write += x
+                if ord(to_write[-1]) > 127:
+                    continue
+                sys.stdout.write(to_write);
+                sys.stdout.flush();
+                to_write = ""
+            except pexpect.TIMEOUT:
+                continue
+            except pexpect.EOF:
+                self.proc.close()
+                self.exit()
+                return
+
+    def set_size(self, w, h):
+        self.proc.setwinsize(h, w)
+
+    def send(self, new):
+        self.proc.send(new)
+
+    def exit(self):
+        termios.tcsetattr(self.fd, termios.TCSADRAIN, self.old_settings)
+        sys.exit(0)
+
+    def read_stdin(self):
+        try:
+            for i in range(100):
+                ch = sys.stdin.read(1)
+                self.send(ch)
+        finally:
+            self.exit()
+
+
+
+if __name__ == '__main__':
+
+    parser = optparse.OptionParser(usage = "Usage: %prog [options] <command>",
+                                   description = "Box a command in its own mini-terminal.")
+    parser.set_conflict_handler('resolve')
+
+    parser.add_option("-r", "--rows", dest="rows", default="10",
+                      help=("Number of rows of the sub-terminal to create."
+                            " By default, the sub-terminal will hold 10 lines."))
+
+    parser.add_option("-c", "--cols", dest="cols", default="",
+                      help=("Number of columns of the sub-terminal to create."
+                            " By default, this will be two less columns as the"
+                            " enclosing terminal."))
+
+    parser.add_option("-n", "--nest", dest="nest", default="",
+                      help=("Nest to put the sub-terminal in. "
+                            "It may be a list of comma-separated numbers. "
+                            "(default: '')"))
+
+    parser.add_option("-w", "--wait", dest="wait", action="store_true", default=False,
+                      help=("True if the process should wait"
+                            " for a keystroke before ending."
+                            " Does not work if piping to box"))
+
+    (options, args) = parser.parse_args()
+
+    try:
+        prows, pcolumns = map(int, subprocess.Popen(
+                ['stty', 'size'],
+                stderr = subprocess.PIPE,
+                stdout = subprocess.PIPE).stdout.read().split())
+    except ValueError:
+        prows = 10
+        pcolumns = 80
+    rows = int(options.rows)
+    columns = int(options.cols or (pcolumns - 2))
+
+    if not args:
+        sys.stdout.write("\x1B[?0;7y+t {r} {c}\a".format(r = rows,
+                                                         c = columns))
+        while True:
+            text = sys.stdin.readline()
+            if not text:
+                break
+            text = "\x1B[?0;7y:t {filtered}\a".format(
+                filtered = filter(text))
+            sys.stdout.write(text);
+        sys.exit(0)
+
+    proc = Proc(" ".join(args), rows, columns, options.wait)

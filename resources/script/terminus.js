@@ -246,9 +246,6 @@ function Nest(element) {
                           nest_type: command.nest_type,
                           text: ""});
             self.push_command(command, true);
-            // var child = Terminus.construct_nest.call(self, command);
-            // var id = self.create(child);
-            // self.latest = id;
         }
     }
 
@@ -336,24 +333,6 @@ function DivNest(div) {
             var split = Terminus.split_one(command.text, " ");
             (self.opt_setters[split[0]]
              || self.opt_setters._default)(split[1]);
-            // var txt = command.text;
-            // var pos = txt.indexOf(" ");
-            // var setting = txt.substring(0, pos);
-            // var data = txt.substring(pos + 1);
-            // if (setting == "style") {
-            //     var data = txt.substring(pos + 1);
-            //     var style = makenode('style');
-            //     // The style will only apply under self div.
-            //     style.innerHTML = "#" + self.nestid + " " + data;
-            //     // It is not standards compliant to put <style>
-            //     // tags outside <head>, but it is practical to do
-            //     // so since the style will be removed if the nest
-            //     // is deleted.
-            //     $(self.element).append(style);
-            // }
-            // else {
-            //     self.set_option();
-            // }
         },
         '~': function (command) {
             // TODO: verify that this always works
@@ -391,20 +370,6 @@ function DivNest(div) {
                     var value = split[1].trim();
                     target.setAttribute(attr, value);
                 }
-
-
-                // if (contents[0] == "<") {
-                //     var new_child = self.make_node(contents);
-                //     target.parentNode.replaceChild(
-                //         new_child,
-                //         target);
-                // }
-                // else {
-                //     var split = Terminus.split_one(contents, "=");
-                //     var attr = split[0].trim();
-                //     var value = split[1].trim();
-                //     target.setAttribute(attr, value);
-                // }
             }, 0);
         }
     })
@@ -1018,7 +983,6 @@ function Screen(term, settings) {
         self.lost_nests = [];
 
         self.text_properties = self.no_text_properties();
-        // self.default_character = "&nbsp;";
         self.default_character = " ";
         // The following is useful for debug:
         // self.default_character = ".";
@@ -1199,7 +1163,6 @@ function SlaveExtern(parent) {
         };
 
         self.send = function (data) {
-            // alert(data);
             parent.to_send += data;
             parent.send();
         };
@@ -1429,20 +1392,9 @@ function Terminus(div, settings) {
         return div;
     }
 
-    // var _superplus = self.actions['+'];
-    // self.actions = {
-    //     '+': function (command) {
-    //         var child = Terminus.construct_nest.call(self, command);
-    //         var id = self.create(child);
-    //         self.latest = id;
-    //     }
-    // }
-
     $.extend(self.actions, {
         ':': function (command) {
-            // self.log('test', 'heh! ' + command.text + '\n\n');
             self.to_write += command.text;
-            // self.to_write += (command.text + '\n\n\n');
             self.write_all();
         }
     });
@@ -2171,25 +2123,6 @@ Terminus.interact = function (terminal, bindings) {
     target.onkeydown = keydown_fn;
     target.onkeypress = keypress_fn;
     target.onclick = click_fn;
-
-    // terminal.log('test', 'fuck this fucking shit');
-    // terminal.textarea[0].onfocus = function (e) {
-    //     terminal.log('test', 'really focused! ' + terminal.nestid);
-    // };
-    // terminal.terminal[0].onfocus = function (e) {
-    //     terminal.log('test', 'really really focused! ' + terminal.nestid);
-    // };
-
-    // terminal.terminal.bind('keydown', keydown_fn);
-    // terminal.terminal.bind('keypress', keypress_fn);
-
-    // if (terminal.toString() != '#0') {
-    //     terminal.terminal[0].onclick = click_fn;
-    // }
-    // if (terminal.toString() != '#0') {
-    //     alert('binding click ' + terminal.nlines);
-    //     terminal.terminal.bind('click', click_fn);
-    // }
 }
 
 Terminus.deco = function (x) {
