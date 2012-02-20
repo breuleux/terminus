@@ -103,7 +103,7 @@ class Proc:
 
     def read_stdin(self):
         try:
-            for i in range(100):
+            while True:
                 ch = sys.stdin.read(1)
                 self.send(ch)
         finally:
