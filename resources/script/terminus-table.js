@@ -2,7 +2,9 @@
 Terminus.constructors['tb'] = function (command) {
     var nest;
     if (command.action == '+') {
-        nest = TableNest(command.text.split(" "));
+        // alert(command.text.replace(/\t/g, '!!!'))
+        nest = TableNest(command.text.split("\t"));
+        // nest = TableNest(command.text.split(" "));
     }
     else {
         nest = TableNest([]);
@@ -83,7 +85,7 @@ inline_handlers = {
             if (settings.tags) {
                 classes = {'*': 'executable',
                            '/': 'directory',
-                           '@': 'link',
+                           '@': 'symlink',
                            '.': 'normal'}
                 cls.push(classes[filename[filename.length - 1]]);
                 filename = filename.substring(0, filename.length - 1);
@@ -144,6 +146,9 @@ function build_inline(text, settings) {
     if (!settings.type) {
         if (text.trim().match(/^[0-9]*(\.[0-9]*)?([eE][0-9]+)?[kKMG]?$/)) {
             settings.type = 'number';
+        }
+        else {
+            settings.type = 'normal';
         }
     }
     var type = (settings.type || "normal").trim();
@@ -212,7 +217,7 @@ function TableNest(columns) {
         header.setAttribute('class', ['terminus-row',
                                       'terminus-header',
                                       'terminus-staticrow',
-                                      'line-' + self.n,
+                                      'row-' + self.n,
                                       'head-' + self.nh].join(' '));
         self.table.appendChild(header);
 
@@ -356,7 +361,7 @@ function TableNest(columns) {
         tr.setAttribute('class',
                         ['terminus-row',
                          i % 2 ? 'odd' : 'even',
-                         'line-' + self.n].join(' '));
+                         'row-' + self.n].join(' '));
         var cn = self.table.childNodes;
         if (i == cn.length) {
             self.table.appendChild(tr);
@@ -411,38 +416,6 @@ function TableNest(columns) {
             // Nothing happens here. Might be used at some point to
             // update the header?
         },
-
-        // ':': function (command) {
-        //     var values = command.text.trim().split(self.sep);
-        //     if (values.length > self.ncolumns) {
-        //         self.add_columns(values.length - self.ncolumns);
-        //     }
-        //     if (self.header_freq && self.nrows % self.header_freq == 0) {
-        //         self.write_header();
-        //     }
-
-        //     var tr = makediv(); // makenode('tr');
-        //     tr.setAttribute('class',
-        //                     ['terminus-row',
-        //                      self.nrows % 2 ? 'odd' : 'even',
-        //                      'line-' + self.n].join(' '));
-        //     for (var i = 0; i < self.ncolumns; i++) {
-        //         var desc = self.columns[i];
-        //         var td = makediv(); // makenode('td');
-        //         td.innerHTML = build_inline.call(self,
-        //                                          values[i] || "",
-        //                                          self.columns[i]);
-        //         td.setAttribute('class',
-        //                         ['terminus-cell',
-        //                          'col-' + desc.name,
-        //                          'type-' + (desc.type || 'normal')].join(' '));
-        //         tr.appendChild(td);
-        //     }
-        //     self.table.appendChild(tr);
-        //     self.nrows += 1;
-        //     self.n += 1;
-        // }
-
 
         ':': function (command) {
             var values = command.text.trim().split(self.sep);
@@ -501,7 +474,7 @@ function TableNest(columns) {
     }
 
     self.write_header();
-    self.sep = " ";
+    self.sep = "\t";
 
     return self;
 }

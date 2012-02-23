@@ -102,11 +102,14 @@ tcmd
 
 ![tcmd1](https://raw.github.com/breuleux/terminus/master/media/screenshots/tcmd.png)
 
+(note: the tb example doesn't work like that anymore, you now have to
+use \t as a separator instead of a space)
+
 ![tcmd2](https://raw.github.com/breuleux/terminus/master/media/screenshots/sandwich.png)
 
 The Terminus server gives access to the filesystem in
-`/f/path/from/root`, so you can link to files or images on the
-filesystem that way.
+`/f/user@host/path/from/root`, so you can link to files or images on
+the filesystem that way.
 
 So, you see, it's really easy. Since it works with escape codes on
 stdout, you can take advantage of the features in any language without
@@ -120,11 +123,10 @@ is not my problem :)
 Documentation
 -------------
 
-There is more documentation in doc/.
-
-Do note that the documentation is a bit of a design document
-sometimes, and some features it describes might not really be
-implemented yet.
+See
+ [protocol](https://github.com/breuleux/terminus/blob/master/doc/protocol.md),
+ [commands](https://github.com/breuleux/terminus/blob/master/doc/commands.md),
+ [apps](https://github.com/breuleux/terminus/blob/master/doc/apps.md).
 
 Configuration
 -------------
@@ -132,15 +134,6 @@ Configuration
 See `server/server.yaml` and `resources/settings/default.yaml`. The
 options are extensive (including nearly total customization of key
 bindings), and documented. If you change default.yaml you can just
-refresh the page to see the changes.
-
-What needs to be fixed
-----------------------
-
-Terminus is still under heavy development. It is usable in its current
-state, but there are some cases where it'll hang up (just refresh if
-that happens, it won't lose your session). Many standard VT100 escape
-codes are not implemented yet (and some of them I'm not even sure what
-they do exactly). There are some graphical glitches appearing
-inconsistently from time to time.
+refresh the page to see the changes (you won't lose your session - it
+will connect right back to it).
 

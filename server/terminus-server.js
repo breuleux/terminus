@@ -228,7 +228,19 @@ function TerminusServer(settings) {
         name = expand_env(name);
         app.get('/f/' + name + "/*", function (req, res) {
             var file = req.params[0]
-            res.sendfile(path.join(mountpoint, file));
+            var fullpath = path.join(mountpoint, file);
+
+            // var redirect = 'file://' + fullpath;
+            // console.log(redirect);
+
+            // res.writeHead(302, {
+            //     location: fullpath
+            // });
+            // res.end();
+
+            // res.redirect('file://' + fullpath);
+
+            res.sendfile(fullpath);
         });
         console.log('mounted ' + mountpoint + ' on /' + name);
     }

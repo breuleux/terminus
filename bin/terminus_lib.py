@@ -71,7 +71,7 @@ class printers:
     svg = Printer("svg")
     tb = Printer("tb")
     t = Printer("t")
-
+    xy = Printer("xy")
 
 if __name__ == '__main__':
     pr = printers.h.at(0, 99)

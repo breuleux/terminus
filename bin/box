@@ -35,9 +35,13 @@ def filter(text):
 class Proc:
 
     def __init__(self, command, nrows, ncols, wait, nest):
-
+        self.command = command
+        self.nrows = nrows
+        self.ncols = ncols
         self.wait = wait
         self.nest = nest
+
+    def run(self):
 
         def sig_winch(signum, frame):
             pass
@@ -66,11 +70,9 @@ class Proc:
 
         # self.enter()
 
-        self.nrows = nrows
-        self.ncols = ncols
         self.enter()
         try:
-            self.proc = pexpect.spawn(command, init_r = rows, init_c = columns)
+            self.proc = pexpect.spawn(self.command, init_r = rows, init_c = columns)
             self.thread = threading.Thread(target = self.read_stdin) #self.process)
             self.thread.daemon = not self.wait
             self.thread.start()
@@ -169,15 +171,13 @@ if __name__ == '__main__':
 
     if not args:
         printers.t.new(rows, columns, end = 7)
-        # sys.stdout.write("\x1B[?0;7y+t {r} {c}\a".format(r = rows,
-        #                                                  c = columns))
         while True:
             text = sys.stdin.readline()
             if not text:
                 break
-            text = "\x1B[?0;7y:t {filtered}\a".format(
-                filtered = filter(text))
-            sys.stdout.write(text);
+            printers.t(filter(text), end = 7)
         sys.exit(0)
 
-    proc = Proc(" ".join(args), rows, columns, options.wait, nest)
+    else:
+        proc = Proc(" ".join(args), rows, columns, options.wait, nest)
+        proc.run()

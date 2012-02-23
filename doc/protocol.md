@@ -54,7 +54,7 @@ created.
 
 **Syntax**: `CSI` `?` `0` `[;<terminator>[;<escape>]]` `[;;<nest>]` `y` `<action><nest_type>` `<data>` `<terminator>`
 
-**Defaults**: `terminator = 13 (\n)` and `escape = 1`.
+**Defaults**: `terminator = 1310 (\r\n)` and `escape = 1`.
 
 **Example**: `\x1B[?0;7y+h <b>BOLD TEXT</b>\a` (note that `\a` is
   the bell character, i.e. the ASCII character #7, i.e. `\x07`).
@@ -62,11 +62,12 @@ created.
 Whew. Let's break this down:
 
 **terminator**: you can specify the ASCII character that will end the
-  sequence. By default, it is the newline character (ASCII character
-  13, `\n`, or `\x0C`), so the command ends with the newline. If your
-  command contains newlines, you can pick the bell character instead
-  (ASCII character 7, `\a`, or `\x07`). Note that the ESC character
-  (`\x1B`) *always* ends the command.
+  sequence. By default, it is the newline character, so the command
+  ends with the newline (technically, a newline sends both the CR and
+  LF characters to the terminal, so this is the actual delimiter). If
+  your command contains newlines, you can pick the bell character
+  instead (ASCII character 7, `\a`, or `\x07`). Note that the ESC
+  character (`\x1B`) *always* ends the command.
 
 **escape**: this character will escape the character that follows
   it. By default this is the ASCII character 1 `\x01`. What this means
@@ -101,44 +102,11 @@ Whew. Let's break this down:
     argument may vary. The nest must already exist and it must have
     the right type for this action to work.
 
-**nest_type**: this can be one of the following values:
+  * `!<nest_type> <command>`: *perform* a command, such as sorting.
 
-  * `h`: HTML element.
-
-    * `+h <html>`: create a new `div` and populate it with the
-      given html.
-
-    * `:h <html>`: append a new child with the given html to the
-      latest `h` nest created. Create one if needed.
-
-    * `/h style <selector> {<css>}`: set a css style for the given
-      selector. The style will only apply in the target nest, not
-      outside.
-
-    * `~h #<id> <html>`: append the html to the element with the
-      given id.
-
-    * `~h #<id> = <html>`: replace the element with the given id
-      with the given html.
-
-    * `~h #<id>`: remove the element with the given id.
-
-    * **Note**: if the latest subnest of the target nest has type
-      `h` as well and that the action is not `+`, the command will
-      be executed in the context of the subnest.
-
-  * `svg`: SVG element. Works just like the HTML element, with one
-    difference: the generated SVG element is automatically set up to
-    allow panning and zooming. The following settings also exist:
-
-    * `/svg pan <bool>`: allow/disallow panning (set to true or
-      false).
-
-    * `/svg zoom <bool>`: allow/disallow zooming (set to true or
-      false).
-
-    * `/svg zoom_speed <float>`: set the zoom factor. 1.0 is no
-      zoom, 2.0 means 200% zoom with each scroll, etc.
+**nest_type**: see the
+  [commands](https://github.com/breuleux/terminus/blob/master/doc/commands.md)
+  page.
 
 
 ## Scripting
@@ -239,4 +207,10 @@ the element from the stream.
 This moves the source nest to the target nest. The original element
 disappears from the source and cannot be addressed at that path
 anymore.
+
+### 204: bump
+
+**Syntax**: `CSI` `?` `204` `[<nest>]` `z`
+
+"Bump" the element, if possible, so that it becomes the latest nest.
 

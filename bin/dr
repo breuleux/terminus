@@ -135,7 +135,7 @@ def print_results(results,
                   filter = lambda x: True,
                   sepn = 9,
                   flow = False):
-    fields = [h.split(":")[0] for h in headers.split(" ")]
+    fields = [h.split(":")[0] for h in headers.split("\t")]
     printers.tb.new(headers)
     for field in fields:
         fn = globals().get('column_' + field, None)
@@ -221,11 +221,19 @@ if __name__ == '__main__':
 
     if options.bars:
         flow = False
-        headers = 'nametag:Filename size:Size size_bar:'
+        headers = '\t'.join(['nametag:Filename',
+                             'size:Size',
+                             'size_bar: '])
         sort_by = '~size'
     elif options.long:
         flow = False
-        headers = 'mode:Mode nlinks:# uname:User gname:Group size:Size mtime:Modified nametag:Filename'
+        headers = '\t'.join(['mode:Mode',
+                             'nlinks:#',
+                             'uname:User',
+                             'gname:Group',
+                             'size:Size',
+                             'mtime:Modified',
+                             'nametag:Filename'])
     else:
         flow = True
         headers = 'nametag:Filename'

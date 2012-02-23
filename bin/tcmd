@@ -28,7 +28,7 @@ if __name__ == '__main__':
                             "(default: '')"))
 
     parser.add_option("-r", "--raw", dest="raw", action="store_true", default=False,
-                      help=("Do not expand \\a, \\n, \\r or \\x control codes."))
+                      help=("Do not expand \\a, \\t, \\n, \\r or \\x control codes."))
 
     (options, args) = parser.parse_args()
 
@@ -49,8 +49,9 @@ if __name__ == '__main__':
             data = re.sub(r'\\x([0-9A-Fa-f]{2})',
                           lambda x: chr(int(x.groups()[0], base = 16)),
                           data)
-            data = re.sub(r'\\([anr])',
+            data = re.sub(r'\\([atnr])',
                           lambda x: chr(dict(a = 7,
+                                             t = 9,
                                              n = 10,
                                              r = 13)[x.groups()[0]]),
                           data)

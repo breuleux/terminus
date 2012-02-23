@@ -2151,7 +2151,7 @@ Terminus.interact = function (terminal, bindings) {
     var target = terminal.terminal[0];
     target.onkeydown = keydown_fn;
     target.onkeypress = keypress_fn;
-    target.onclick = click_fn;
+    // target.onclick = click_fn;
 }
 
 Terminus.deco = function (x) {

@@ -49,7 +49,7 @@ if __name__ == '__main__':
         del data['day']
         del data['year']
 
-        printers.tb.new('prop', 'value');
+        printers.tb.new('prop\tvalue');
         printers.tb.set('style', '.terminus-header {display:none}');
         printers.tb.set('c', 'value.type', 'normal');
         printers.tb.set('sep', '7');
