@@ -1,16 +1,10 @@
 
-Future features
-===============
-
-There are several huge features planned for Terminus. Here's an
-overview:
+Issues
+======
 
 
 Security (1)
 ------------
-
-Right now, Terminus's security model is similar to Superman, in the
-sense that it's a damn shame it doesn't exist.
 
 Terminus currently runs a server on localhost, to which it connects
 using a browser. Not only is all traffic unencrypted, but on a shared

@@ -81,7 +81,9 @@ X, append Y to all, revert cursor".
 Ultimately, this is intended to act as a "rich stdout": lightweight
 enough that anyone can make a correct parser with a bunch of loops and
 counters, powerful enough to represent any kind of structure, flexible
-enough to encode structural modifications as afterthoughts, and 
+enough to encode structural modifications as afterthoughts, and usable
+just by printing on stdout, as long as there is a compatible terminal
+on the user end.
 
 
 
