@@ -70,8 +70,8 @@ reason ipython seems to show the wrong colors. You can paste with
 Ctrl+V or the mouse wheel.
 
 You can start exploring with the applications that are in `bin/`. So
-far, they are `dr`, `show`, `tcmd` and `xkcd`. You will have to add
-them to your `PATH` in order to execute them unqualified.
+far, they are `dr`, `show`, `tcmd`, `box` and `xkcd`. You will have to
+add them to your `PATH` in order to execute them unqualified.
 
 I have taken screenshots of myself using each of the commands. I think
 they speak for themselves.
@@ -94,6 +94,13 @@ xkcd
 ```
 
 ![xkcd](https://raw.github.com/breuleux/terminus/master/media/screenshots/xkcd.png)
+
+
+```
+box
+```
+
+![box](https://raw.github.com/breuleux/terminus/master/media/screenshots/box.png)
 
 
 ```

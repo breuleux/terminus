@@ -131,9 +131,9 @@ if __name__ == '__main__':
                                    description = "Box a command in its own mini-terminal.")
     parser.set_conflict_handler('resolve')
 
-    parser.add_option("-r", "--rows", dest="rows", default="10",
+    parser.add_option("-r", "--rows", dest="rows", default="24",
                       help=("Number of rows of the sub-terminal to create."
-                            " By default, the sub-terminal will hold 10 lines."))
+                            " By default, the sub-terminal will hold 24 lines."))
 
     parser.add_option("-c", "--cols", dest="cols", default="",
                       help=("Number of columns of the sub-terminal to create."
@@ -164,7 +164,7 @@ if __name__ == '__main__':
                 stderr = subprocess.PIPE,
                 stdout = subprocess.PIPE).stdout.read().split())
     except ValueError:
-        prows = 10
+        prows = 24
         pcolumns = 80
     rows = int(options.rows)
     columns = int(options.cols or (pcolumns - 2))
