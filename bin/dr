@@ -141,7 +141,8 @@ def print_results(results,
         fn = globals().get('column_' + field, None)
         if fn:
             fn(results)
-    printers.tb.set('sep', str(sepn))
+    if sepn != 9:
+        printers.tb.set('sep', str(sepn))
     if flow:
         printers.tb.set('flow', 'true')
     else:

@@ -120,8 +120,8 @@ The `-n` option can be used to set the nest.
 Example uses:
 
 ```bash
-tcmd '+h; :h <span>This soup is </span>; :h <b>AMAZING</b>'`
-tcmd '+tb color\tfruit; :tb yellow\tlemon; :tb orange\torange; :tb red\tstrawberry; !tb sort color'`
+tcmd '+h; :h <span>This soup is </span>; :h <b>AMAZING</b>'
+tcmd '+tb color\tfruit; :tb yellow\tlemon; :tb orange\torange; :tb red\tstrawberry; !tb sort color'
 ```
 
 

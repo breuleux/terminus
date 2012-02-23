@@ -1,11 +1,17 @@
 
-Terminus - xterm++
-==================
+Terminus - VT100 emulator + inline HTML
+=======================================
 
 Terminus is a terminal emulator with the ability to create and
 manipulate inline HTML cells in addition to plain text. In its current
 state, it can already serve as an xterm replacement (bar some escape
 codes that are not yet supported).
+
+Terminus's extra capabilities also work through SSH, and for the most
+part I have organized them in a line-based approach, so
+notwithstanding one or two gotchas, they also play nice with
+command-line utilities such as `grep`.
+
 
 Install
 -------
@@ -62,8 +68,8 @@ JavaScript within JavaScript to avoid this gets a cookie.
 Using
 -----
 
-Terminus is used much like a normal xterm. You can run commands, top,
-emacs, vi, ipython, irb, ssh, without many problems. Not all escape
+Terminus is used much like a normal xterm. You can run commands like
+top, emacs, vi, ipython or ssh without many problems. Not all escape
 codes are handled yet and there might be some slight bugs in those
 that are, so commands like reset (!) and screen are iffy, and for some
 reason ipython seems to show the wrong colors. You can paste with
@@ -121,11 +127,8 @@ the filesystem that way.
 So, you see, it's really easy. Since it works with escape codes on
 stdout, you can take advantage of the features in any language without
 any special libraries, and it works through plain SSH as well (except
-obviously for the fact that the remote filesystem won't be on /f, so
-don't bother linking to images, you'll have to transmit them
-somehow). It doesn't work with screen, though, because screen actually
-eats up the escape codes - they never get to the terminal. I'd say it
-is not my problem :)
+obviously for the fact that the remote filesystem is not mounted by
+default - but you can do it with sshfs and config).
 
 Documentation
 -------------
