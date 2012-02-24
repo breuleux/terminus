@@ -147,6 +147,10 @@ is handy if a program prints data faster than Terminus can handle it.
 at the top, left, right and bottom of the terminal screen, if they are
 present.
 
+`Control-Shift-d <shortcut>`: bypasses Terminus's key bindings and
+uses the browser's default bindings instead. For instance, `C-S-d C-l`
+will focus the url bar.
+
 `Control-Shift-l`: Clear all lines in the scrollback.
 
 `F5`: Refresh the page. This does not terminate your session and will
