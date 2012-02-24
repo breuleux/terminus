@@ -24,6 +24,9 @@ ncols_sub: 2
 # a multiple of the character height.
 fiddle: -2
 
+# Number of characters to process in each batch.
+processing_length: 1000
+
 
 ## BUFFERS
 
@@ -268,17 +271,12 @@ bindings:
         # inherited (and _stick is not inherited either)
         _stick: true
 
-
-  # switch logging on or off
-  C-S-p: ~log_mode
-
-  # this allows to get the browser key binding for the next key
-  # e.g. C-S-d C-l will focus the location bar, etc.
-  C-S-d:
-    _browser: true
+  # handy
+  C-S-b: ~clear_processing_backlog
 
   # clear stuff
   C-S-c:
+    b: ~clear_processing_backlog
     l: ~clear_log
     s: ~clear_scrollback
     Up: ~clear_up
@@ -287,8 +285,16 @@ bindings:
     Right: ~clear_right
     Space: ~clear_up ~clear_down ~clear_left ~clear_right
 
+  # this allows to get the browser key binding for the next key
+  # e.g. C-S-d C-l will focus the location bar, etc.
+  C-S-d:
+    _browser: true
+
   # clear scrollback
   C-S-l: ~clear_scrollback
+
+  # switch logging on or off
+  C-S-p: ~log_mode
 
   # navigation
   C-Left: ~word_left

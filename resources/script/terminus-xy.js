@@ -203,6 +203,7 @@ function XYNest(settings) {
                 }
             }
             series.acquire(point);
+            self.changes = true;
             // self.redraw();
         }
     });
@@ -234,10 +235,16 @@ function XYNest(settings) {
         }
 
         series = self.add_series(series_name, linker, point_handlers, classes, split[1], true);
+
+        self.changes = true;
         // self.redraw();
     };
 
     self.redraw = function () {
+
+        if (!self.changes) {
+            return;
+        }
 
         self.update_scales();
 
@@ -293,6 +300,7 @@ function XYNest(settings) {
                 this.appendChild(circle);
             });
 
+        self.changes = false;
         
 
             //   // .attr("cx", function (d) { return self.x(d.x); })
@@ -375,6 +383,7 @@ function XYNest(settings) {
 
     self.series = [];
     self.series_idx = {};
+    self.changes = true;
 
     var sel = d3.select(self.element);
     var svg = sel.append('svg:svg');

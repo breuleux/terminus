@@ -869,12 +869,16 @@ function Screen(term, settings) {
         if (end < start)
             end = start;
 
+        // self.modified[self.line] = true;
+        self.no_cursor_here();
         var fields = 'matrix lines ext nests dirty heights modified'.split(' ')
         for (var i in fields) {
             var field = fields[i];
             self[field] = self.push_to_end(self[field], start, end);
         }
         self.all_modified(self.scroll1, self.nlines);
+        self.cursor_here();
+        // self.modified[self.line] = true;
 
         self.log_action('ins', line, n)
         self.log_action('rm', self.nlines, n)
@@ -893,12 +897,16 @@ function Screen(term, settings) {
         if (end > self.scroll1)
             end = self.scroll1;
 
+        // self.modified[self.line] = true;
+        self.no_cursor_here();
         var fields = 'matrix lines ext nests dirty heights modified'.split(' ')
         for (var i in fields) {
             var field = fields[i];
             self[field] = self.push_to_end(self[field], start, end);
         }
         self.all_modified(self.scroll1, self.nlines);
+        self.cursor_here();
+        // self.modified[self.line] = true;
 
         self.log_action('ins', self.nlines, n)
         self.log_action('rm', line, n)
@@ -914,6 +922,12 @@ function Screen(term, settings) {
     self.scroll = function() {
         self.send_line_to_scroll(0);
         self.delete_lines(0, 1);
+    }
+
+    self.scroll_n = function(n) {
+        for (var i = 0; i < n; i++) {
+            self.scroll();
+        }
     }
 
     self.scroll_page = function() {
@@ -1565,16 +1579,42 @@ function Terminus(div, settings) {
     self.write_all = function() {
         if (self.writing) { return; }
         self.writing = true;
+        var maxl = self.settings.processing_length;
         while (self.to_write) {
             var tow = self.to_write;
-            self.to_write = "";
-            self.write_string(tow);
+            if (tow.length > maxl) {
+                // alert('soooo long!');
+                self.to_write = tow.substring(maxl);
+                tow = tow.substring(0, maxl);
+                // self.log('test', tow.length);
+                self.write_string(tow);
+                setTimeout(self.write_all, 1);
+                break;
+            }
+            else {
+                self.to_write = "";
+                // self.log('test', tow.length);
+                self.write_string(tow);
+            }
         }
         self.writing = false;
         self.display();
     }
 
+    // self.write_all = function() {
+    //     if (self.writing) { return; }
+    //     self.writing = true;
+    //     while (self.to_write) {
+    //         var tow = self.to_write;
+    //         self.to_write = "";
+    //         self.write_string(tow);
+    //     }
+    //     self.writing = false;
+    //     self.display();
+    // }
+
     self.write_string = function(data) {
+        // console.log('-> ' + data.length);
         for (var i in data) {
             var s = data[i];
             var c = s.charCodeAt();
@@ -1962,6 +2002,15 @@ Terminus.interact = function (terminal, bindings) {
         clear_scrollback: function () {
             terminal.screend.clear_scrollback();
             terminal.display();
+            return true;
+        },
+
+        clear_processing_backlog: function () {
+            var tow = terminal.to_write;
+            if (tow.length > 1000) {
+                var msg = '<< ' + (tow.length - 1000) + " CHARS DROPPED >> ";
+                terminal.to_write = msg + tow.substring(tow.length - 1000);
+            }
             return true;
         },
 
@@ -2626,6 +2675,12 @@ Terminus.csi = {
     P1: function(n) {
         this.screen.delete_characters(this.screen.line, this.screen.column, n[0]);
     },
+
+    S0: function(_) { this.screen.delete_lines(this.screen.scroll0, 1); },
+    S1: function(n) { this.screen.delete_lines(this.screen.scroll0, n[0]); },
+
+    T0: function(_) { this.screen.insert_lines(this.screen.scroll0, 1); },
+    T1: function(n) { this.screen.insert_lines(this.screen.scroll0, n[0]); },
 
     // ">c0": function (_) { this.to_send += "\x1B[>0;0;0c"; },
     ">c0": function (_) { },

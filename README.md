@@ -131,6 +131,32 @@ any special libraries, and it works through plain SSH as well (except
 obviously for the fact that the remote filesystem is not mounted by
 default - but you can do it with sshfs and config).
 
+Useful shortcuts
+----------------
+
+`Shift-Space <letter>`: Same as `Control-<letter>`, but since most
+browsers don't allow catching some shortcuts (e.g. `Control-w`) this
+is the only way to send some control codes. I might change that
+binding, because it's too easy to accidentally hit shift-space right
+after a shifted characted.
+
+`Control-Shift-b`: Drop all unprocessed characters in the queue. This
+is handy if a program prints data faster than Terminus can handle it.
+
+`Control-Shift-c Space`: Clear elements that are absolutely positioned
+at the top, left, right and bottom of the terminal screen, if they are
+present.
+
+`Control-Shift-l`: Clear all lines in the scrollback.
+
+`F5`: Refresh the page. This does not terminate your session and will
+solve most problems, at the expense of losing the screen's contents
+and the scrollback.
+
+The list of key bindings can be found
+[here](https://github.com/breuleux/terminus/blob/master/resources/settings/default.yaml).
+
+
 Documentation
 -------------
 
