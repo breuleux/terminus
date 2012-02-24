@@ -1425,10 +1425,15 @@ function Terminus(div, settings) {
     self.handlers = {
 
         push: function (data, parameters) {
-            var nest = parameters.nest;
-            var target = self.find(nest, true);
-            var command = Terminus.parse_command(data);
-            target.push_command(command);
+            try {
+                var nest = parameters.nest;
+                var target = self.find(nest, true);
+                var command = Terminus.parse_command(data);
+                target.push_command(command);
+            }
+            catch(e) {
+                self.log('error', e);
+            }
         },
 
         text_set: function (data, parameters) {
@@ -2144,13 +2149,25 @@ Terminus.interact = function (terminal, bindings) {
         e.preventDefault();
     }
 
+    function wrap_exception(fn) {
+        return function () {
+            try {
+                return fn.apply(this, arguments);
+            }
+            catch (e) {
+                terminal.log('error', e);
+                return null;
+            }
+        }
+    }
+
     terminal.focus();
     var current_bindings = null;
     var global_bindings = bindings;
 
     var target = terminal.terminal[0];
-    target.onkeydown = keydown_fn;
-    target.onkeypress = keypress_fn;
+    target.onkeydown = wrap_exception(keydown_fn);
+    target.onkeypress = wrap_exception(keypress_fn);
     // target.onclick = click_fn;
 }
 

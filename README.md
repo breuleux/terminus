@@ -7,10 +7,11 @@ manipulate inline HTML cells in addition to plain text. In its current
 state, it can already serve as an xterm replacement (bar some escape
 codes that are not yet supported).
 
-Terminus's extra capabilities work through SSH. For the most part they
-work through plain stdout/stderr, and I have organized them in a
-line-based approach, so notwithstanding one or two gotchas, they play
-nice with command-line utilities such as `grep` or `sed`.
+For the most part, Terminus plays nice with existing UNIX utilities: I
+have organized most of its capabilities in a line-based approach, so
+notwithstanding one or two gotchas, they play nice with command-line
+utilities such as `grep` or `sed`. Since it's all based on escape
+codes, the enhanced display options also work through SSH.
 
 
 Install

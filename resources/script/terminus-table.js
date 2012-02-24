@@ -411,6 +411,9 @@ function TableNest(columns) {
                 else
                     self.sort(sort_by);
             }
+            else {
+                throw "unknown !action for tb nest: " + split[0];
+            }
         },
         '+': function (command) {
             // Nothing happens here. Might be used at some point to
