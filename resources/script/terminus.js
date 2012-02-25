@@ -2414,7 +2414,8 @@ Terminus.input_state_machine = {
         this.ext = {
             type: 'OSC',
             args: {},
-            accum: ""
+            accum: "",
+            delim: 7
         }
         return ['', 'seek0'];
     },
