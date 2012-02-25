@@ -537,9 +537,29 @@ function Screen(term, settings) {
         // self.log_action('mod', self.line)
     }
 
-    self.move_to = function(line, column) {
+    self.move_to = function(line, column, scroll) {
+        
+        // if (line < 0) { line = 0; }
+        // if (line >= self.nlines) { line = self.nlines - 1; }
+
         if (line < 0) { line = 0; }
-        if (line >= self.nlines) { line = self.nlines - 1; }
+        else if (line == self.scroll0 - 1) {
+            line = self.scroll0;
+        }
+
+        if (line >= self.nlines) {
+            line = self.nlines - 1;
+            if (scroll) {
+                self.next_line();
+            }
+        }
+        else if (line == self.scroll1) {
+            line = self.scroll1;
+            if (scroll) {
+                self.next_line();
+            }
+        }
+
         if (column < 0) { column = 0; }
         // We allow overshoot by one column (can't write there though)
         if (column > self.ncols) { column = self.ncols; }
@@ -549,9 +569,10 @@ function Screen(term, settings) {
         self.cursor_here();
     }
 
-    self.move_rel = function(dline, dcolumn) {
+    self.move_rel = function(dline, dcolumn, scroll) {
         self.move_to(self.line + dline,
-                     self.column + dcolumn);
+                     self.column + dcolumn,
+                     scroll);
     }
 
     self.advance = function() {
@@ -736,7 +757,8 @@ function Screen(term, settings) {
     }
 
     self.next_line = function() {
-        var next = (self.line + 1) % self.nlines;
+        // var next = (self.line + 1) % self.nlines;
+        var next = (self.line + 1) % self.scroll1;
         if (next == 0) {
             self.no_cursor_here();
             self.scroll();
@@ -754,7 +776,11 @@ function Screen(term, settings) {
     }
 
     self.send_line_to_scroll = function(i) {
+        if (i == self.line)
+            self.no_cursor_here()
         var line = self.get_line(i);
+        if (i == self.line) 
+            self.cursor_here()
         self.log_action('scroll', self.modified[i], self.nests[i], line);
     }
 
@@ -920,8 +946,10 @@ function Screen(term, settings) {
     }
 
     self.scroll = function() {
-        self.send_line_to_scroll(0);
-        self.delete_lines(0, 1);
+        self.send_line_to_scroll(self.scroll0);
+        self.delete_lines(self.scroll0, 1);
+        // self.send_line_to_scroll(0);
+        // self.delete_lines(0, 1);
     }
 
     self.scroll_n = function(n) {
@@ -931,11 +959,13 @@ function Screen(term, settings) {
     }
 
     self.scroll_page = function() {
-        self.no_cursor_here();
-        for (var i = 0; i < self.nlines; i++) {
-            self.scroll();
-        }
-        self.cursor_here();
+        self.scroll_n(self.nlines);
+
+        // self.no_cursor_here();
+        // for (var i = 0; i < self.nlines; i++) {
+        //     self.scroll();
+        // }
+        // self.cursor_here();
     }
 
 
@@ -1624,6 +1654,7 @@ function Terminus(div, settings) {
     }
 
     self.write = function(c) {
+        // self.log('char', c + " (" + String.fromCharCode(c) + ")");
         var s = self.sm.run(c);
         if (s != '') {
             self.screen.write_at_cursor([s, self.screen.text_properties.slice(0)]);
@@ -2297,7 +2328,8 @@ Terminus.input_state_machine = {
 
     chr_10: function () {
         // Newline
-        this.screen.next_line();
+        // this.screen.next_line();
+        this.screen.move_rel(1, 0, true);
         return ['', 'init'];
     },
     chr_11: Terminus.deco('b'),
