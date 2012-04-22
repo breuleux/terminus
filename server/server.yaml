@@ -1,6 +1,6 @@
 
 host: 'localhost'
-port: 8080
+port: 8181
 
 # TODO
 # If ssl = true you will have to use https to connect.
