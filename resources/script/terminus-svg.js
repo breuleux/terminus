@@ -6,20 +6,20 @@ Terminus.constructors['svg'] = function (command) {
         // this.log('test', command.action);
         // this.log('test', command.nest_type);
         // this.log('test', Terminus.sanitize(command.text));
-        nest = SVGNest($(command.text.trim()
-                         || "<svg></svg>")[0]);
+        nest = Terminus.SVGNest($(command.text.trim()
+                                   || "<svg></svg>")[0]);
     }
     else {
-        var div = makenode('svg');
-        nest = SVGNest(div);
+        var div = document.createElement('svg');
+        nest = Terminus.SVGNest(div);
         nest.process(command);
     }
     return nest;
 }
 
 
-function SVGNest(div) {
-    var self = DivNest(div);
+Terminus.SVGNest = function(div) {
+    var self = Terminus.DivNest(div);
     self.nest_type = 'svg';
     self.interactor = svg_interact(div, {zoom: true,
                                          pan: true,
@@ -64,7 +64,7 @@ function SVGNest(div) {
 
 function svg_interact(svg_element, settings) {
 
-    var self = obj();
+    var self = Terminus.obj();
     self.svg_element = svg_element;
     self.settings = settings;
 

@@ -31,14 +31,14 @@ Terminus.constructors['xy'] = function (command) {
         var h = args[1];
         var scalex = args[2];
         var scaley = args[3];
-        nest = XYNest({w: w,
-                       h: h,
-                       scale: {x: scalex, y: scaley}});
+        nest = Terminus.XYNest({w: w,
+                                 h: h,
+                                 scale: {x: scalex, y: scaley}});
     }
     else {
-        nest = XYNest({w: 700,
-                       h: 400,
-                       scale: {x: "linear", y: "linear"}});
+        nest = Terminus.XYNest({w: 700,
+                                 h: 400,
+                                 scale: {x: "linear", y: "linear"}});
         nest.process(command);
     }
     return nest;
@@ -94,10 +94,10 @@ function Sorter(data, major) {
 }
 
 
-function XYNest(settings) {
+Terminus.XYNest = function(settings) {
 
-    var div = makediv();
-    var self = DivNest(div);
+    var div = document.createElement('div');
+    var self = Terminus.DivNest(div);
     self.nest_type = 'xy';
 
     self.add_series = function (name, linker, point_handlers, classes, key, overwrite) {
@@ -397,7 +397,7 @@ function XYNest(settings) {
 
 function svg_interact(svg_element, settings) {
 
-    var self = obj();
+    var self = Terminus.obj();
     self.svg_element = svg_element;
     self.settings = settings;
 

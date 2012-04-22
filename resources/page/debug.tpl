@@ -33,7 +33,7 @@
 
         var setting_files = "{{settings}}".split(":");
 
-        grab_settings({}, setting_files, function (settings) {
+        Terminus.grab_settings({}, setting_files, function (settings) {
             console.log(settings);
             settings.termtype = "{{termtype}}";
             settings.id = "{{id}}";
@@ -46,8 +46,8 @@
             <!-- terminal.connect_socket_io(); -->
             <!-- term = terminal; -->
 
-            terminal = Terminus(term_div, settings);
-            terminal.connect(SocketIOExtern);
+            terminal = Terminus.Terminal(term_div, settings);
+            terminal.connect(Terminus.SocketIOExtern);
             Terminus.interact(terminal, settings.bindings);
             <!-- terminal.connect_socket_io(); -->
             term = terminal;

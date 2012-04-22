@@ -3,11 +3,11 @@ Terminus.constructors['tb'] = function (command) {
     var nest;
     if (command.action == '+') {
         // alert(command.text.replace(/\t/g, '!!!'))
-        nest = TableNest(command.text.split("\t"));
+        nest = Terminus.TableNest(command.text.split("\t"));
         // nest = TableNest(command.text.split(" "));
     }
     else {
-        nest = TableNest([]);
+        nest = Terminus.TableNest([]);
         nest.process(command);
     }
     return nest;
@@ -156,13 +156,13 @@ function build_inline(text, settings) {
 }
 
 
-function TableNest(columns) {
+Terminus.TableNest = function(columns) {
 
-    var div = makediv();
-    var self = DivNest(div);
+    var div = document.createElement('div');
+    var self = Terminus.DivNest(div);
     self.nest_type = 'tb';
 
-    var table = makediv();
+    var table = document.createElement('div');
     table.setAttribute('class', 'terminus-table');
     self.element.appendChild(table);
     self.table = table;
@@ -213,7 +213,7 @@ function TableNest(columns) {
     }
 
     self.write_header = function () {
-        var header = makediv();
+        var header = document.createElement('div');
         header.setAttribute('class', ['terminus-row',
                                       'terminus-header',
                                       'terminus-staticrow',
@@ -223,7 +223,7 @@ function TableNest(columns) {
 
         for (var i = 0; i < self.ncolumns; i++) {
             var colobj = self.columns[i];
-            var th = makediv();
+            var th = document.createElement('div');
             th.setAttribute('class', 'terminus-cell');
             th.innerHTML = colobj.label;
             header.appendChild(th);
@@ -288,7 +288,7 @@ function TableNest(columns) {
         var cn = self.table.childNodes;
         for (var j = 0; j < cn.length; j++) {
             for (var i = 0; i < n; i++) {
-                var node = makediv();
+                var node = document.createElement('div');
                 node.setAttribute('class', 'terminus-cell');
                 cn[j].appendChild(node);
             }
@@ -357,7 +357,7 @@ function TableNest(columns) {
     }
 
     self.insert_row = function (i) {
-        var tr = makediv();
+        var tr = document.createElement('div');
         tr.setAttribute('class',
                         ['terminus-row',
                          i % 2 ? 'odd' : 'even',
@@ -389,7 +389,7 @@ function TableNest(columns) {
 
         for (var i = 0; i < self.ncolumns; i++) {
             var desc = self.columns[i];
-            var td = makediv();
+            var td = document.createElement('div');
             td.innerHTML = build_inline.call(self,
                                              values[i] || "",
                                              self.columns[i]);

@@ -1,45 +1,39 @@
 
-GID = 0;
-function obj() {
+Terminus = {}
+
+Terminus.GID = 0;
+Terminus.obj = function() {
     // Return a new object, with an id field set to a unique number
     // (converted to a string). Its toString() method returns the id,
     // meaning that it can be set as an attribute in an object (for
     // what it is worth).
     var self = {};
-    self.id = "#" + GID.toString();
-    GID += 1;
-    self.toString = function () {
+    self.id = "#" + Terminus.GID.toString();
+    Terminus.GID += 1;
+    self.toString = function() {
         return self.id;
     }
     return self;
 }
 
 
-function grab_settings(accum, files, fn) {
+Terminus.grab_settings = function(accum, files, fn) {
     if (!files.length) {
         fn(accum);
     }
     else {
         var file = files.shift();
-        $.get(file, function (data) {
+        $.get(file, function(data) {
             data = jsyaml.load(data);
             $.extend(true, accum, data);
-            grab_settings(accum, files, fn);
+            Terminus.grab_settings(accum, files, fn);
         });
     }
 }
 
-function makenode(type) {
-    return document.createElement(type);
-}
 
-function makediv() {
-    return makenode('div');
-}
-
-
-function Logger(settings) {
-    var self = obj();
+Terminus.Logger = function(settings) {
+    var self = Terminus.obj();
 
     self.log = function(type, data) {
         if (!self.active || (!self.all && !self.what[type])) {
@@ -76,7 +70,7 @@ function Logger(settings) {
             self.fresh.empty();
         }
 
-        self.target = $(makediv());
+        self.target = $(document.createElement('div'));
         self.target.attr('class', 'log_entry');
         self.fresh.append(self.target);
 
@@ -89,7 +83,7 @@ function Logger(settings) {
 
         if (settings.animate) {
             self.target.hide();
-            setTimeout(function () {
+            setTimeout(function() {
                 self.target.slideDown('fast');
             }, 10);
         }
@@ -134,8 +128,9 @@ function Logger(settings) {
 }
 
 
-function Nest(element) {
-    var self = obj();
+Terminus.Nest = function(element) {
+// function Nest(element) {
+    var self = Terminus.obj();
 
     self.n = 1;
     self.element = element;
@@ -149,7 +144,7 @@ function Nest(element) {
         while (self.children[self.n] !== undefined) {
             self.n++;
         }
-        self.set_child(self.n, child || EmptyNest());
+        self.set_child(self.n, child || Terminus.EmptyNest());
         self.latest = self.n;
         return self.n;
     }
@@ -165,7 +160,7 @@ function Nest(element) {
             }
         }
         else if (create && (self.children[id] == null)) {
-            self.set_child(id, EmptyNest());
+            self.set_child(id, Terminus.EmptyNest());
             self.latest = id;
         }
         return self.children[id];
@@ -198,7 +193,7 @@ function Nest(element) {
         return child._find(nest.slice(1), create);
     }
 
-    self.get_latest = function () {
+    self.get_latest = function() {
         if (self.latest == null) {
             return null;
         }
@@ -208,7 +203,7 @@ function Nest(element) {
     }
 
     self.actions = {
-        '+': function (command) {
+        '+': function(command) {
             var child = Terminus.construct_nest.call(self, command);
             var id = self.create(child);
             self.latest = id;
@@ -249,7 +244,7 @@ function Nest(element) {
         }
     }
 
-    self.focus = function () {
+    self.focus = function() {
         $(self.element).focus();
         // self.log('test', 'spurious focus on: ' + self.nestid);
     }
@@ -265,8 +260,8 @@ function Nest(element) {
     return self;
 }
 
-function DivNest(div) {
-    var self = Nest(div);
+Terminus.DivNest = function(div) {
+    var self = Terminus.Nest(div);
     div.setAttribute('contenteditable', 'false');
     self.nest_type = 'h';
 
@@ -313,7 +308,7 @@ function DivNest(div) {
     self.append = function(sub_element) {
         // DEPRECATED
         if (typeof sub_element == "string") {
-            var div = $(makediv()).html(Terminus.sanitize(sub_element));
+            var div = $(document.createElement('div')).html(Terminus.sanitize(sub_element));
             $(self.element).append(div);
         }
         else {
@@ -327,7 +322,7 @@ function DivNest(div) {
 
     self.opt_setters = {
         'style': function (data) {
-            var style = makenode('style');
+            var style = document.createElement('style');
             // The style will only apply under self div.
             style.innerHTML = "#" + self.nestid + " " + data;
             // It is not standards compliant to put <style>
@@ -393,14 +388,14 @@ function DivNest(div) {
     return self;
 }
 
-function EmptyNest() {
-    var div = makediv();
-    return DivNest(div);
+Terminus.EmptyNest = function() {
+    var div = document.createElement('div');
+    return Terminus.DivNest(div);
 }
 
 
-function Screen(term, settings) {
-    var self = obj();
+Terminus.Screen = function(term, settings) {
+    var self = Terminus.obj();
 
     self.no_text_properties = function() {
         return new Array();
@@ -746,7 +741,7 @@ function Screen(term, settings) {
             self.heights[line] = Math.ceil(h / self.terminal.char_height);
         }
         else {
-            var node2 = makediv();
+            var node2 = document.createElement('div');
             self.heights[line] = 1;
             self.lines[line] = node2;
             $(self.lines[line]).html('<span style="color: #808080;">...</span>').append(node);
@@ -998,7 +993,7 @@ function Screen(term, settings) {
             }
             s += c;
         }
-        var span = makenode('span');
+        var span = document.createElement('span');
         span.setAttribute('class', 'terminal-text');
         span.innerHTML = s;
 
@@ -1063,9 +1058,9 @@ function Screen(term, settings) {
 }
 
 
-function ScreenDisplay(terminal, screen, settings) {
+Terminus.ScreenDisplay = function(terminal, screen, settings) {
 
-    var self = obj();
+    var self = Terminus.obj();
 
     self.display = function() {
         var scr = self.screen;
@@ -1101,7 +1096,7 @@ function ScreenDisplay(terminal, screen, settings) {
                     $(child).empty();
                     child.appendChild(value);
                 }
-                var div = makediv();
+                var div = document.createElement('div');
                 $(div).text('-- SHOULD NOT BE HERE (from scroll) --');
                 self.nests.splice(self.nscroll + 1, 0, null);
                 self.box.insertBefore(div, child.nextSibling);
@@ -1121,7 +1116,7 @@ function ScreenDisplay(terminal, screen, settings) {
                 var idx = self.nscroll + line;
                 var elem = self.box.childNodes[idx];
                 for (var j = 0; j < n; j++) {
-                    var div = makediv();
+                    var div = document.createElement('div');
                     $(div).text('-- SHOULD NOT BE HERE (from insert) --')
                     if (elem === undefined) {
                         self.box.appendChild(div);
@@ -1197,7 +1192,7 @@ function ScreenDisplay(terminal, screen, settings) {
         self.screen = screen;
         self.settings = settings;
 
-        self.box = makediv();
+        self.box = document.createElement('div');
 
         // SCROLLBACK
 
@@ -1214,9 +1209,9 @@ function ScreenDisplay(terminal, screen, settings) {
 }
 
 
-function SlaveExtern(parent) {
+Terminus.SlaveExtern = function(parent) {
     return function (terminal, settings) {
-        var self = obj();
+        var self = Terminus.obj();
 
         self.setsize = function (nlines, ncols) {
             // parent does not care about child's size
@@ -1232,8 +1227,8 @@ function SlaveExtern(parent) {
 }
 
 
-function SocketIOExtern(terminal, settings) {
-    var self = obj();
+Terminus.SocketIOExtern = function(terminal, settings) {
+    var self = Terminus.obj();
 
     var socket = io.connect('http://'
                             + settings.server
@@ -1257,11 +1252,11 @@ function SocketIOExtern(terminal, settings) {
     });
 
     socket.on('exit', function (data) {
-        terminal.new_data('\n\x1B[1;31mProcess ended.\x1B[0m');
+        terminal.new_data('\r\n\x1B[1;31mProcess ended.\x1B[0m');
     });
 
     socket.on('disconnect', function (data) {
-        terminal.new_data('\n\x1B[1;31mConnection to server terminated.\x1B[0m');
+        terminal.new_data('\r\n\x1B[1;31mConnection to server terminated.\x1B[0m');
         socket.disconnect();
     });
 
@@ -1273,8 +1268,8 @@ function SocketIOExtern(terminal, settings) {
 }
 
 
-function Terminus(div, settings) {
-    var self = Nest(div[0]);
+Terminus.Terminal = function (div, settings) {
+    var self = Terminus.Nest(div[0]);
 
     // SIZE
 
@@ -1395,7 +1390,7 @@ function Terminus(div, settings) {
         }
         else {
             self.log('nest', 'creating nest #' + id);
-            wrap = makediv();
+            wrap = document.createElement('div');
             $(wrap).append(child.element);
             self.screen.write_html_line(wrap, id);
             self.screen.move_to(self.screen.line, self.ncols);
@@ -1448,7 +1443,7 @@ function Terminus(div, settings) {
     }
 
     self.create_div_for_html = function(html, parameters) {
-        var div = makediv();
+        var div = document.createElement('div');
         if (parameters.height) {
             $(div).height(parameters.height * self.char_height);
         }
@@ -1485,10 +1480,10 @@ function Terminus(div, settings) {
                 return;
             }
             data = Terminus.sanitize(data);
-            var div = $(makediv()).html("<span>"+data+"</span>")[0];
+            var div = $(document.createElement('div')).html("<span>"+data+"</span>")[0];
             var nest = parameters.nest;
             var target = self.find(nest.slice(0, nest.length - 1), true);
-            var id = target.set_child(nest[nest.length-1], DivNest(div));
+            var id = target.set_child(nest[nest.length-1], Terminus.DivNest(div));
             var wrap = self.children_wrappers[id];
             if(parameters.height)
                 $(wrap.element).height($(div).height());
@@ -1503,7 +1498,7 @@ function Terminus(div, settings) {
             var div = self.create_div_for_html(data, parameters);
             var nest = parameters.nest;
             var target = self.find(nest.slice(0, nest.length - 1), true);
-            var id = target.set_child(nest[nest.length-1], DivNest(div));
+            var id = target.set_child(nest[nest.length-1], Terminus.DivNest(div));
             var wrap = self.children_wrappers[id];
             if(parameters.height)
                 $(wrap.element).height($(div).height());
@@ -1676,7 +1671,7 @@ function Terminus(div, settings) {
             self.logger = settings.logger;
         }
         else {
-            self.logger = Logger(settings.log);
+            self.logger = Terminus.Logger(settings.log);
         }
 
         // HANDY POINTERS
@@ -1692,9 +1687,9 @@ function Terminus(div, settings) {
         
         // FONT CONTROL
 
-        var font_control_div = $(makediv());
+        var font_control_div = $(document.createElement('div'));
         font_control_div.attr('class', 'font_control_div');
-        var font_control = $(makenode('span'));
+        var font_control = $(document.createElement('span'));
         font_control.attr('class', 'font_control');
         font_control.append('X');
         font_control_div.append(font_control);
@@ -1715,7 +1710,7 @@ function Terminus(div, settings) {
 
         // STRUCTURE
         function make_positional_nojscroll(parent, name, index) {
-            var div = makediv();
+            var div = document.createElement('div');
             var jdiv = $(div);
             jdiv.attr('id', name);
             jdiv.attr('class', name);
@@ -1735,7 +1730,7 @@ function Terminus(div, settings) {
 
         function make_positional(parent, name, index) {
 
-            var div = makediv();
+            var div = document.createElement('div');
             var jdiv = $(div);
             jdiv.attr('id', name);
             jdiv.attr('class', name);
@@ -1786,9 +1781,9 @@ function Terminus(div, settings) {
         self.screends = [];
         for (var i = 0; i < settings.screens.length; i++) {
             var sgr = $.extend(true, {}, self.settings.sgr, settings.screens[i].sgr || {});
-            var screen = Screen(self, sgr);
+            var screen = Terminus.Screen(self, sgr);
             self.screens.push(screen);
-            var screend = ScreenDisplay(self, screen, settings.screens[i]);
+            var screend = Terminus.ScreenDisplay(self, screen, settings.screens[i]);
             self.screends.push(screend);
             self.center.append(screend.box);
             $(screend.box).hide();
@@ -1800,7 +1795,7 @@ function Terminus(div, settings) {
         // text area, check what appears in it, and we'll send the
         // contents over to the pty. I don't yet know how to make middle
         // click paste work, unfortunately, so we'll make do with Ctrl+V.
-        var textarea = $(makenode('textarea'));
+        var textarea = $(document.createElement('textarea'));
         textarea.attr('class', 'pastegrab');
         self.textarea = textarea;
         self.textarea.css('height', 0).css('width', 0);
@@ -2583,7 +2578,7 @@ Terminus.input_state_machine = {
 
 
 Terminus.state_machine = function(machine, initial_state, target) {
-    var self = obj();
+    var self = Terminus.obj();
     self.machine = machine;
     self.state = initial_state;
     self.target = target;
@@ -2967,13 +2962,13 @@ Terminus.constructors = {
                 div = $(text)[0];
             }
             else {
-                div = makediv();
+                div = document.createElement('div');
             }
-            var nest = DivNest(div);
+            var nest = Terminus.DivNest(div);
         }
         else {
-            var div = makediv();
-            var nest = DivNest(div);
+            var div = document.createElement('div');
+            var nest = Terminus.DivNest(div);
             nest.process(command);
         }
         return nest;
@@ -3004,13 +2999,13 @@ Terminus.constructors = {
             settings.ncols = parent.ncols - 2;
         }
 
-        var div = makediv();
+        var div = document.createElement('div');
 
         $(div).height(parent.font_control.height() * settings.nlines + 5);
         $(div).width(parent.font_control.width() * settings.ncols + 20);
 
-        var nest = Terminus($(div), settings);
-        nest.connect(SlaveExtern(parent));
+        var nest = Terminus.Terminal($(div), settings);
+        nest.connect(Terminus.SlaveExtern(parent));
         Terminus.interact(nest, settings.bindings);
         nest.char_height = parent.char_height;
         nest.char_width = parent.char_width;
