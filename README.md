@@ -1,4 +1,10 @@
 
+**Note:** even though the project might seem dead, I do use this
+  terminal. It just happens to be good enough for my purposes so I
+  don't bother updating it. If you have trouble making it work, have
+  suggestions or want to contribute anything, please do tell me about
+  it :)
+
 Terminus - VT100 emulator + inline HTML
 =======================================
 
