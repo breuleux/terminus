@@ -33,7 +33,7 @@ npm install
 node terminus-server.js server.yaml
 
 # open the client (chrome recommended, but firefox should work ok)
-google-chrome http://localhost:8080/bash
+google-chrome http://localhost:8181/bash
 ```
 
 You can also go to /debug or /python instead of /bash. Read the
