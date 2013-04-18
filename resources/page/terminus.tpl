@@ -3,7 +3,7 @@
   <head>
     <meta charset="utf-8">
     <title>Terminus</title>
-    <link type="text/css" href="/resources/style/{{style}}" rel="stylesheet"/>
+    <link type="text/css" href="/resources/style/{{{style}}}" rel="stylesheet"/>
     <link type="text/css" href="/resources/style/table.css" rel="stylesheet"/>
     <link type="text/css" href="/resources/style/jquery.jscrollpane.css" rel="stylesheet" media="all" />
     <script type="text/javascript" src="/resources/script/jquery.js"></script>
@@ -28,16 +28,16 @@
     <script>
       $(document).ready(function() {
 
-        var setting_files = "{{settings}}".split(":");
+        var setting_files = "{{{settings}}}".split(":");
 
         Terminus.grab_settings({}, setting_files, function (settings) {
             console.log(settings);
-            settings.termtype = "{{termtype}}";
-            settings.id = "{{id}}";
-            settings.magic = "{{magic}}";
+            settings.termtype = "{{{termtype}}}";
+            settings.id = "{{{id}}}";
+            settings.magic = "{{{magic}}}";
             settings.path = "/" + settings.termtype + "/" + settings.id;
-            settings.server = "{{server}}";
-            settings.port = "{{port}}";
+            settings.server = "{{{server}}}";
+            settings.port = "{{{port}}}";
             term_div = $("#terminal");
             terminal = Terminus.Terminal(term_div, settings);
             terminal.connect(Terminus.SocketIOExtern);
