@@ -9,9 +9,10 @@
     "main": "./terminus-server.js",
 
     "dependencies": {
+        "pty.js": "*",
         "js-yaml": "*",
         "socket.io": "*",
-        "express": "*",
+        "express": "2.x",
         "mustache": "*"
     }
 }

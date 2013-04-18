@@ -17,26 +17,14 @@ codes, the enhanced display options also work through SSH.
 Install
 -------
 
-Terminus requires `node` to be installed. A bit annoyingly, the
-`tty.setWindowSize` function, which allows terminal resizing,
-disappeared in node 0.6.0, so you'll have to install an older version
-for the time being. Here's exactly what to do:
+Terminus requires `node` and its package manager, `npm`, to be installed.
 
 ``` bash
-# install node
-wget http://nodejs.org/dist/v0.5.9/node-v0.5.9.tar.gz
-tar -zxvf node-v0.5.9.tar.gz
-cd node-v0.5.9
-./configure && make && make install
-
-# install npm
-curl http://npmjs.org/install.sh | sh
-
-# start the server
-cd /path/to/terminus
+# Start the server
+cd path/to/terminus
 cd server
 npm install
-node --use-legacy terminus-server.js server.yaml
+node terminus-server.js server.yaml
 
 # open the client (chrome recommended, but firefox should work ok)
 google-chrome http://localhost:8080/bash

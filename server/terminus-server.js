@@ -1,7 +1,7 @@
 
 var os = require('os')
 var path = require('path');
-var tty = require('tty');
+var pty = require('pty.js');
 
 var yaml = require('js-yaml');
 var mustache = require('mustache');
@@ -12,34 +12,32 @@ function TTY(command, actions) {
     var self = {};
 
     command = command.split(" ");
-    var tty_values = tty.open(command[0], command.slice(1));
-    var slave = tty_values[0];
-    var proc = tty_values[1];
-    var fd = proc.fds[0];
+    mytty = pty.spawn(command[0], command.slice(1));
 
     self.set_window_size = function(nrows, ncols) {
-        tty.setWindowSize(fd, nrows, ncols);
+	mypty.resize(ncols, nrows);
     }
 
     self.send = function(data) {
-        slave.write(data);
+	mypty.write(data);
     }
 
     self.send_signal = function(signal) {
-        proc.kill(signal);
+        mypty.kill(signal);
     }
 
     self.terminate = function(signal) {
         self.send_signal(signal);
-        slave.destroy();
+        mypty.destroy();
     }
 
-    slave.on('data', function () {
+    mypty.on('data', function () {
         actions.data.apply(self, arguments);
     });
-    proc.on('exit', function () {
+    mypty.on('exit', function () {
         actions.exit.apply(self, arguments);
     });
+
 
     return self;
 }
@@ -229,17 +227,6 @@ function TerminusServer(settings) {
         app.get('/f/' + name + "/*", function (req, res) {
             var file = req.params[0]
             var fullpath = path.join(mountpoint, file);
-
-            // var redirect = 'file://' + fullpath;
-            // console.log(redirect);
-
-            // res.writeHead(302, {
-            //     location: fullpath
-            // });
-            // res.end();
-
-            // res.redirect('file://' + fullpath);
-
             res.sendfile(fullpath);
         });
         console.log('mounted ' + mountpoint + ' on /' + name);
@@ -314,7 +301,7 @@ function main() {
 
     process.env['/'] = settings_dir;
 
-    var settings = require(settings_file)[0];
+    var settings = require(settings_file);
     settings.path = path.resolve(expand_env(resource_path || settings.path));
 
     console.log('resource path: ' + settings.path);
