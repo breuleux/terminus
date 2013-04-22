@@ -12,7 +12,7 @@ function TTY(command, actions) {
     var self = {};
 
     command = command.split(" ");
-    mytty = pty.spawn(command[0], command.slice(1));
+    mypty = pty.spawn(command[0], command.slice(1));
 
     self.set_window_size = function(nrows, ncols) {
 	mypty.resize(ncols, nrows);
