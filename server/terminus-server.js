@@ -11,8 +11,8 @@ var sio = require('socket.io')
 function TTY(command, actions) {
     var self = {};
 
-    command = command.split(" ");
-    mypty = pty.spawn(command[0], command.slice(1));
+    var command = command.split(" ");
+    var mypty = pty.spawn(command[0], command.slice(1));
 
     self.set_window_size = function(nrows, ncols) {
 	mypty.resize(ncols, nrows);
@@ -240,7 +240,8 @@ function TerminusServer(settings) {
 
     app.get('/resources/*', function (req, res) {
         var file = req.params[0]
-        res.sendfile(path.join(settings.path, file));
+        res.sendfile(file, {root: settings.path});
+        // res.sendfile(path.join(settings.path, file));
     });
 
     for (var type in settings.configurations) {
