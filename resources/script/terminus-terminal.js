@@ -884,6 +884,15 @@ Terminus.Terminal = function (div, settings) {
         self.char_width = Math.max(self.font_control.width(), 1);
         self.char_height = Math.max(self.font_control.height(), 1);
 
+        if (settings.nlines) {
+            self.terminal.height(self.char_height *
+                                 (settings.nlines + settings.nlines_sub))
+        }
+        if (settings.ncols) {
+            self.terminal.width(self.char_width *
+                                (settings.ncols + settings.ncols_sub))
+        }
+
         var h = self.terminal.height() - (self.top.height() + self.bottom.height());
         var w = self.terminal.width() - (self.left.width() + self.right.width());
 
