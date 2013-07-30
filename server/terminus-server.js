@@ -225,9 +225,11 @@ function TerminusServer(settings) {
     self.register_filesystem = function (name, mountpoint) {
         name = expand_env(name);
         app.get('/f/' + name + "/*", function (req, res) {
-            var file = req.params[0]
-            var fullpath = path.join(mountpoint, file);
-            res.sendfile(fullpath);
+            var file = req.params[0];
+            res.sendfile(file, {root: mountpoint});
+            // var fullpath = path.join(mountpoint, file);
+            // res.sendfile(fullpath, {root: ""});
+            // res.sendfile(fullpath);
         });
         console.log('mounted ' + mountpoint + ' on /' + name);
     }
