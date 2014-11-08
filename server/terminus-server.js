@@ -1,5 +1,6 @@
 
 var os = require('os')
+var fs = require('fs')
 var path = require('path');
 var pty = require('pty.js');
 
@@ -304,7 +305,7 @@ function main() {
 
     process.env['/'] = settings_dir;
 
-    var settings = require(settings_file);
+    var settings = yaml.safeLoad(fs.readFileSync(settings_file));
     settings.path = path.resolve(expand_env(resource_path || settings.path));
 
     console.log('resource path: ' + settings.path);
